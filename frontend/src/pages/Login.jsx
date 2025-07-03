@@ -1,56 +1,214 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  FaEye,
+  FaEyeSlash,
+  FaGoogle,
+  FaApple,
+  FaXTwitter,
+  FaMicrosoft,
+  FaMoon,
+  FaSun,
+} from "react-icons/fa6";
+import { motion } from "framer-motion";
+import { useAuth } from "../hooks/useAuth";
+import Navbar from "../components/Navbar";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    const storedTheme = localStorage.getItem("theme");
+    setDarkMode(storedTheme === "dark");
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", darkMode);
+    localStorage.setItem("theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Add authentication logic here
-    alert(`Email: ${email}\nPassword: ${password}`);
+    try {
+      setLoading(true);
+      await login(email, password);
+      navigate("/customer");
+    } catch (err) {
+      alert("Login failed. Check credentials.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSocialLogin = (provider) => {
+    alert(`Redirecting to ${provider} login...`);
   };
 
   return (
-    <div className="w-full max-w-md bg-white rounded-lg shadow p-8">
-      <h2 className="text-2xl font-bold text-primary mb-6 text-center">
-        Login to QuickBite
-      </h2>
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-secondary mb-1">Email</label>
-          <input
-            type="email"
-            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoFocus
-          />
-        </div>
-        <div>
-          <label className="block text-secondary mb-1">Password</label>
-          <input
-            type="password"
-            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-primary"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Navbar */}
+      <Navbar />
+
+      {/* Background */}
+      <div
+        className="fixed top-0 left-0 w-full h-full bg-cover bg-center z-[-2]"
+        style={{
+          backgroundImage: "url('/QuickBite1.jpg')",
+          filter: "blur(6px) brightness(0.7)",
+        }}
+      />
+      <div className="absolute inset-0 bg-black/30 z-[-1]" />
+
+      {/* Main Content */}
+      <div className="pt-20 min-h-screen grid grid-cols-1 md:grid-cols-2 gap-2 bg-transparent dark:bg-transparent relative transition-colors duration-500">
+        {/* Theme Toggle */}
         <button
-          type="submit"
-          className="w-full bg-primary text-white py-2 rounded hover:bg-opacity-90 transition"
+          className="absolute top-5 right-5 z-50 text-primary dark:text-white text-xl"
+          onClick={() => setDarkMode((prev) => !prev)}
+          aria-label="Toggle dark mode"
         >
-          Login
+          {darkMode ? <FaSun /> : <FaMoon />}
         </button>
-      </form>
-      <p className="mt-4 text-center text-sm text-secondary">
-        Don't have an account?{" "}
-        <Link to="/register" className="text-primary hover:underline">
-          Register
-        </Link>
-      </p>
+
+        {/* Left Section */}
+        <motion.div
+          className="hidden md:flex items-center justify-center p-10"
+          initial={{ x: -100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+        >
+          <div className="text-center max-w-md space-y-6 bg-orange-100/30 dark:bg-orange-400/10 backdrop-blur-md rounded-xl p-6 shadow-md text-gray-900 dark:text-white border border-orange-200/50 dark:border-orange-400/30">
+            <img
+              src="/QuickBite.png"
+              alt="QuickBite Logo"
+              className="mx-auto w-24 h-24 rounded-full shadow-lg"
+              onError={(e) => (e.target.style.display = "none")}
+            />
+            <h1 className="text-4xl font-extrabold tracking-tight">
+              Welcome to QuickBite
+            </h1>
+            <p className="text-lg">
+              Fast. Delicious. At your doorstep. Sign in and satisfy your
+              cravings.
+            </p>
+            <img
+              src="/QuickBite2.jpg"
+              alt="Delicious food"
+              className="rounded-xl shadow-xl"
+              onError={(e) => (e.target.style.display = "none")}
+            />
+          </div>
+        </motion.div>
+
+        {/* Right Section */}
+        <motion.div
+          className="flex items-center justify-center p-8"
+          initial={{ x: 100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+        >
+          <div className="w-full max-w-md bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-xl shadow-xl p-8">
+            <h2 className="text-2xl font-bold text-center text-secondary dark:text-white mb-6">
+              Login to <span className="text-primary">QuickBite</span>
+            </h2>
+
+            {/* Social Logins */}
+            <div className="flex flex-wrap justify-center gap-3 mb-6">
+              <button
+                type="button"
+                onClick={() => handleSocialLogin("Google")}
+                className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-[#DB4437] hover:bg-[#c33d30] shadow-md hover:shadow-lg transition"
+              >
+                <FaGoogle /> Google
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSocialLogin("Apple")}
+                className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-black hover:bg-gray-900 shadow-md hover:shadow-lg transition"
+              >
+                <FaApple /> Apple
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSocialLogin("Twitter")}
+                className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-[#1DA1F2] hover:bg-[#0d8ddb] shadow-md hover:shadow-lg transition"
+              >
+                <FaXTwitter /> Twitter
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSocialLogin("Microsoft")}
+                className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-[#2F2F2F] hover:bg-[#1f1f1f] shadow-md hover:shadow-lg transition"
+              >
+                <FaMicrosoft /> Microsoft
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-secondary dark:text-gray-300 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-secondary dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                  placeholder="you@example.com"
+                />
+              </div>
+
+              <div className="relative">
+                <label className="block text-secondary dark:text-gray-300 mb-1">
+                  Password
+                </label>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-secondary dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  required
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute top-9 right-3 text-gray-500 dark:text-gray-300"
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-primary hover:bg-opacity-90 text-white font-semibold py-2 rounded-md transition"
+              >
+                {loading ? "Logging in..." : "Login"}
+              </button>
+            </form>
+
+            <p className="mt-4 text-center text-sm text-secondary dark:text-gray-300">
+              Don’t have an account?{" "}
+              <Link
+                to="/register"
+                className="text-primary hover:underline font-medium"
+              >
+                Register
+              </Link>
+            </p>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
