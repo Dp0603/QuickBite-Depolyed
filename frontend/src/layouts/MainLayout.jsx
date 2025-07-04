@@ -1,11 +1,48 @@
-import React from "react";
-import Navbar from "../components/Navbar";
+import React, { useEffect } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
 
-export default function MainLayout({ children }) {
+import AdminNavbar from "../components/AdminNavbar.jsx";
+import CustomerNavbar from "../components/CustomerNavbar.jsx";
+import RestaurantNavbar from "../components/RestaurantNavbar.jsx";
+import DeliveryNavbar from "../components/DeliveryNavbar.jsx";
+import Footer from "../components/Footer";
+
+export default function MainLayout() {
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  // Redirect to login if no user
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [navigate, user]);
+
+  // Render different navbar based on user role
+  const renderNavbar = () => {
+    if (!user) return null;
+
+    switch (user.role) {
+      case "admin":
+        return <AdminNavbar />;
+      case "customer":
+        return <CustomerNavbar />;
+      case "restaurant":
+        return <RestaurantNavbar />;
+      case "delivery":
+        return <DeliveryNavbar />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Navbar />
-      <main className="px-4 py-10 sm:px-6 lg:px-12">{children}</main>
-    </div>
+    <>
+      {renderNavbar()}
+      <main className="pt-16 min-h-screen">
+        <Outlet />
+      </main>
+      <Footer />
+    </>
   );
 }
