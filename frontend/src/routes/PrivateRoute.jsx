@@ -1,9 +1,17 @@
+// src/routes/PrivateRoute.jsx
+import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { Navigate } from "react-router-dom";
 
-export default function PrivateRoute({ children, role }) {
+export default function PrivateRoute({ allowedRoles }) {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
-  if (role && user.role !== role) return <Navigate to="/login" replace />;
-  return children;
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return <Outlet />;
 }
