@@ -16,10 +16,7 @@ const userSchema = new mongoose.Schema(
       required: [true, "Email is required"],
       unique: true,
       lowercase: true,
-      validate: {
-        validator: validator.isEmail,
-        message: "Please enter a valid email address",
-      },
+      validate: [validator.isEmail, "Please enter a valid email address"],
     },
     password: {
       type: String,
@@ -36,11 +33,18 @@ const userSchema = new mongoose.Schema(
       enum: ["customer", "restaurant", "admin", "deliveryAgent"],
       default: "customer",
     },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: String,
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
   },
   { timestamps: true }
 );
 
-// 🔒 Hash password before saving
+// Hash password before saving
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
@@ -48,10 +52,9 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// ✅ Compare passwords
+// Compare passwords
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Export model
 module.exports = mongoose.model("User", userSchema);

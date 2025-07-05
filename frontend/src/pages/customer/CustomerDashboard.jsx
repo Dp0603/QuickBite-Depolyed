@@ -210,3 +210,134 @@ const CustomerDashboard = () => {
 };
 
 export default CustomerDashboard;
+
+
+// import React from "react";
+// import { motion } from "framer-motion";
+// import { FaBell, FaUserCircle, FaCrown, FaHeart, FaStar } from "react-icons/fa";
+// import { FiSearch } from "react-icons/fi";
+// import { BsClockHistory } from "react-icons/bs";
+
+// const CustomerDashboard = () => {
+//   return (
+//     <motion.div
+//       className="bg-accent dark:bg-secondary text-gray-800 dark:text-white min-h-screen"
+//       initial={{ opacity: 0, y: 50 }}
+//       animate={{ opacity: 1, y: 0 }}
+//       transition={{ duration: 0.4 }}
+//     >
+//       {/* 🌐 Header */}
+//       <header className="flex justify-between items-center px-6 py-4 bg-white dark:bg-secondary shadow sticky top-0 z-50">
+//         <h1 className="text-2xl font-bold">
+//           Quick<span className="text-primary">Bite</span> 🍔
+//         </h1>
+//         <div className="flex items-center gap-5 text-xl">
+//           <FiSearch className="hover:text-primary cursor-pointer" />
+//           <FaBell className="hover:text-primary cursor-pointer" />
+//           <FaUserCircle className="hover:text-primary cursor-pointer" />
+//         </div>
+//       </header>
+
+//       {/* 🔍 Search Bar */}
+//       <div className="max-w-6xl mx-auto px-4 pt-6">
+//         <input
+//           type="text"
+//           placeholder="Search for dishes, cuisines, or restaurants..."
+//           className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-secondary shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
+//         />
+//       </div>
+
+//       {/* 👑 Premium Banner */}
+//       <div className="max-w-6xl mx-auto px-4 mt-6">
+//         <div className="bg-gradient-to-r from-orange-100 to-orange-200 dark:from-orange-700 dark:to-orange-600 rounded-xl p-5 flex justify-between items-center shadow hover:shadow-md transition">
+//           <div className="flex items-center gap-3">
+//             <FaCrown className="text-yellow-600 text-2xl" />
+//             <div>
+//               <h2 className="font-semibold text-lg">Premium Member</h2>
+//               <p className="text-sm text-gray-700 dark:text-gray-200">Valid until March 2025</p>
+//             </div>
+//           </div>
+//           <div className="text-right">
+//             <p className="text-xs text-gray-500">This month saved</p>
+//             <h3 className="font-bold text-xl text-green-600 dark:text-green-300">₹4,150</h3>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* 🍽️ Recommended */}
+//       <section className="max-w-6xl mx-auto px-4 mt-10">
+//         <h3 className="text-xl font-semibold mb-4">🍽️ Recommended For You</h3>
+//         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+//           {["Pasta House", "Sushi Express", "Burger Palace"].map((res, i) => (
+//             <div
+//               key={i}
+//               className="bg-white dark:bg-secondary p-4 rounded-xl shadow hover:shadow-md transition"
+//             >
+//               <div className="h-24 bg-gray-100 dark:bg-gray-700 rounded mb-3 flex items-center justify-center text-sm text-gray-400">
+//                 Restaurant Image
+//               </div>
+//               <h4 className="font-semibold">{res}</h4>
+//               <p className="text-sm text-gray-500 dark:text-gray-300">
+//                 20–30 min • FREE DELIVERY
+//               </p>
+//               <div className="flex items-center text-yellow-500 mt-1 text-sm">
+//                 <FaStar className="mr-1" /> 4.{i + 6}
+//               </div>
+//             </div>
+//           ))}
+//         </div>
+//       </section>
+
+//       {/* 🕒 Recent Orders */}
+//       <section className="max-w-6xl mx-auto px-4 mt-10">
+//         <h3 className="text-xl font-semibold mb-4 flex items-center">
+//           <BsClockHistory className="mr-2" /> Recent Orders
+//         </h3>
+//         <ul className="space-y-4">
+//           {[
+//             { name: "Margherita Pizza", price: "₹299", status: "Delivered ✔️" },
+//             { name: "Teriyaki Bowl", price: "₹199", status: "Canceled ❌" },
+//             { name: "Caesar Salad", price: "₹149", status: "Ongoing 🛵" },
+//           ].map((item, i) => (
+//             <li
+//               key={i}
+//               className="bg-white dark:bg-secondary p-4 rounded-xl flex justify-between items-center shadow hover:shadow-md"
+//             >
+//               <div>
+//                 <h4 className="font-medium">{item.name}</h4>
+//                 <p className="text-xs text-gray-500">Jan {15 - i}, 2025</p>
+//               </div>
+//               <div className="text-right">
+//                 <p className="font-semibold">{item.price}</p>
+//                 <p className="text-sm text-gray-400">{item.status}</p>
+//               </div>
+//             </li>
+//           ))}
+//         </ul>
+//       </section>
+
+//       {/* ❤️ Favorites */}
+//       <section className="max-w-6xl mx-auto px-4 mt-10 pb-12">
+//         <h3 className="text-xl font-semibold mb-4 flex items-center">
+//           <FaHeart className="text-pink-500 mr-2" /> Your Favorites
+//         </h3>
+//         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+//           {["Taco Bell", "Starbucks", "Thai Garden", "Pizza Hut"].map((fav, i) => (
+//             <div
+//               key={i}
+//               className="bg-white dark:bg-secondary p-4 rounded-xl shadow hover:shadow-md text-center transition"
+//             >
+//               <div className="h-20 bg-gray-200 dark:bg-gray-700 mb-3 rounded flex items-center justify-center text-sm text-gray-400">
+//                 IMG
+//               </div>
+//               <h4 className="font-semibold">{fav}</h4>
+//               <p className="text-sm text-gray-500">Fast Food</p>
+//             </div>
+//           ))}
+//         </div>
+//       </section>
+//     </motion.div>
+//   );
+// };
+
+// export default CustomerDashboard;
