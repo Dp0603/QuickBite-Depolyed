@@ -212,6 +212,7 @@ const CustomerDashboard = () => {
 export default CustomerDashboard;
 
 
+// Figma ui
 // import React from "react";
 // import { motion } from "framer-motion";
 // import { FaBell, FaUserCircle, FaCrown, FaHeart, FaStar } from "react-icons/fa";
