@@ -10,6 +10,7 @@ import DeliveryDashboard from "../src/pages/delivery/DeliveryDashboard";
 import { adminRoutes } from "./routes/AdminRoutes";
 import { restaurantRoutes } from "./routes/RestaurantRoutes";
 import { customerRoutes } from "./routes/CustomerRoutes";
+import CustomerLayout from "./layouts/CustomerLayout";
 
 function App() {
   return (
@@ -18,12 +19,13 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/customer" element={<CustomerDashboard />} />
       <Route path="/restaurant" element={<RestaurantDashboard />} />
       <Route path="/delivery" element={<DeliveryDashboard />} />
       {adminRoutes}
       {restaurantRoutes}
-      {customerRoutes}
+      <Route path="/customer" element={<CustomerLayout />}>
+        {customerRoutes}
+      </Route>
     </Routes>
   );
 }

@@ -1,9 +1,14 @@
 import React from "react";
-export default function CustomerCheckout() {
+
+const CustomerCheckout = () => {
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4 text-primary">Checkout</h2>
-      <p className="text-gray-700">Enter your details and complete your order.</p>
+    <div>
+      <h1 className="text-2xl font-bold mb-4">💳 Checkout</h1>
+      <p className="text-gray-600 dark:text-gray-300">
+        Confirm your delivery details and payment method.
+      </p>
     </div>
   );
-}
+};
+
+export default CustomerCheckout;

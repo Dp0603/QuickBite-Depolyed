@@ -1,9 +1,17 @@
 import React from "react";
-export default function CustomerRestaurantMenu() {
+import { useParams } from "react-router-dom";
+
+const CustomerRestaurantMenu = () => {
+  const { restaurantId } = useParams();
+
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4 text-primary">Restaurant Menu</h2>
-      <p className="text-gray-700">View the menu and add dishes to your cart.</p>
+    <div>
+      <h1 className="text-2xl font-bold mb-4">📜 Menu - {restaurantId}</h1>
+      <p className="text-gray-600 dark:text-gray-300">
+        View the menu for this restaurant and add items to your cart.
+      </p>
     </div>
   );
-}
+};
+
+export default CustomerRestaurantMenu;
