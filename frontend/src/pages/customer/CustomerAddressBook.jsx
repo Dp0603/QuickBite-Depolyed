@@ -1,9 +1,14 @@
 import React from "react";
-export default function CustomerAddressBook() {
+
+const CustomerAddressBook = () => {
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4 text-primary">Address Book</h2>
-      <p className="text-gray-700">Save and manage your delivery addresses.</p>
+    <div>
+      <h1 className="text-2xl font-bold mb-4">📍 Address Book</h1>
+      <p className="text-gray-600 dark:text-gray-300">
+        Manage your saved delivery addresses here.
+      </p>
     </div>
   );
-}
+};
+
+export default CustomerAddressBook;

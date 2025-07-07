@@ -1,9 +1,14 @@
 import React from "react";
-export default function CustomerOffers() {
+
+const CustomerOffers = () => {
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4 text-primary">Offers & Discounts</h2>
-      <p className="text-gray-700">Check out the latest deals and offers for you.</p>
+    <div>
+      <h1 className="text-2xl font-bold mb-4">🎁 Offers & Deals</h1>
+      <p className="text-gray-600 dark:text-gray-300">
+        View all available discounts and apply coupons to your orders.
+      </p>
     </div>
   );
-}
+};
+
+export default CustomerOffers;

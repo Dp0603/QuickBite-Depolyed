@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 th.txt
+
+# Ignore all Lottie JSON animation files
+src/assets/lottie icons/*.json

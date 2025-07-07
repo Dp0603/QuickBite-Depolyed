@@ -1,9 +1,12 @@
 import React from "react";
-export default function CustomerOrders() {
+
+const CustomerOrders = () => {
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4 text-primary">Your Orders</h2>
-      <p className="text-gray-700">Track and view your past orders here.</p>
+    <div>
+      <h1 className="text-2xl font-bold mb-4">🛒 Your Current Orders</h1>
+      <p className="text-gray-500">You currently have no active orders.</p>
     </div>
   );
-}
+};
+
+export default CustomerOrders;
