@@ -1,0 +1,11 @@
+# Lottie Animation Colors
+
+1. Primary Color
+   - Hex: #FF5722
+   - Description: Vivid Orange
+   - Used in: Color Control layer (possibly for highlighting or background elements)
+
+2. Secondary Color
+   - Hex: #22CAFF
+   - Description: Bright Cyan / Sky Blue
+   - Used in: menu2 lines (stroke)
