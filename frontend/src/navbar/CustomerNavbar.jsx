@@ -1,17 +1,28 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FaSignOutAlt } from "react-icons/fa";
 import Lottie from "lottie-react";
+import { useNavigate } from "react-router-dom";
 
 import SearchLottie from "../assets/lottie icons/Search.json";
 import NotificationLottie from "../assets/lottie icons/Notification.json";
 import CloseLottie from "../assets/lottie icons/Hamburger menu.json";
+import CartLottie from "../assets/lottie icons/Shopping cart.json";
 
 const CustomerNavbar = ({ toggleSidebar }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showCartPreview, setShowCartPreview] = useState(false);
+
   const profileRef = useRef(null);
   const notifRef = useRef(null);
+  const navigate = useNavigate();
+
+  const dummyCartItems = [
+    { id: 1, name: "Margherita Pizza", quantity: 2 },
+    { id: 2, name: "Sushi Rolls", quantity: 1 },
+    { id: 3, name: "Tacos", quantity: 1 },
+  ];
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -102,6 +113,63 @@ const CustomerNavbar = ({ toggleSidebar }) => {
           )}
         </div>
 
+        {/* Cart with Hover */}
+        <div
+          className="relative"
+          onMouseEnter={() => setShowCartPreview(true)}
+          onMouseLeave={() => setShowCartPreview(false)}
+        >
+          <button
+            onClick={() => navigate("/customer/cart")}
+            className="hover:scale-110 transition relative"
+            aria-label="Cart"
+          >
+            <Lottie
+              animationData={CartLottie}
+              style={{ width: 30, height: 30 }}
+            />
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 flex items-center justify-center rounded-full">
+              {dummyCartItems.reduce((sum, item) => sum + item.quantity, 0)}
+            </span>
+          </button>
+
+          {showCartPreview && (
+            <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded shadow-md text-sm z-50 border dark:border-gray-700 animate-fade-in transition-all overflow-hidden">
+              <div className="px-4 py-2 border-b dark:border-gray-600 font-semibold">
+                Cart Preview
+              </div>
+
+              <ul className="max-h-60 overflow-y-auto">
+                {dummyCartItems.slice(0, 3).map((item) => (
+                  <li
+                    key={item.id}
+                    className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 flex justify-between"
+                  >
+                    <span>{item.name}</span>
+                    <span className="text-gray-500 dark:text-gray-400">
+                      × {item.quantity}
+                    </span>
+                  </li>
+                ))}
+                {dummyCartItems.length > 3 && (
+                  <li className="px-4 py-2 text-center text-xs text-gray-500 dark:text-gray-400">
+                    + {dummyCartItems.length - 3} more item(s)
+                  </li>
+                )}
+              </ul>
+
+              <div className="border-t dark:border-gray-700 p-3">
+                <button
+                  onClick={() => navigate("/customer/cart")}
+                  className="w-full bg-primary hover:bg-orange-600 transition text-white font-medium py-2 rounded-md text-sm"
+                >
+                  Proceed to Checkout
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Profile Dropdown */}
         <div className="relative" ref={profileRef}>
           <button
@@ -148,7 +216,6 @@ const CustomerNavbar = ({ toggleSidebar }) => {
       {showSearch && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div className="bg-white dark:bg-gray-900 w-full max-w-xl rounded-xl shadow-xl p-6 relative animate-fade-in">
-            {/* Header */}
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-base font-semibold text-gray-700 dark:text-white">
                 Search
@@ -165,16 +232,12 @@ const CustomerNavbar = ({ toggleSidebar }) => {
                 />
               </button>
             </div>
-
-            {/* Input */}
             <input
               type="text"
               placeholder="Search for dishes, cuisines, or restaurants..."
               className="w-full px-4 py-3 border rounded-lg dark:bg-gray-800 dark:text-white focus:outline-primary text-sm"
               autoFocus
             />
-
-            {/* Recent */}
             <div className="mt-4">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 font-medium">
                 Recent Searches
