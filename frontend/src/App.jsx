@@ -3,28 +3,39 @@ import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import AdminDashboard from "../src/pages/admin/AdminDashboard";
-import CustomerDashboard from "../src/pages/customer/CustomerDashboard";
-import RestaurantDashboard from "../src/pages/restaurant/RestaurantDashboard";
-import DeliveryDashboard from "../src/pages/delivery/DeliveryDashboard";
+
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import DeliveryDashboard from "./pages/delivery/DeliveryDashboard";
+
+import CustomerLayout from "./layouts/CustomerLayout";
+import RestaurantLayout from "./layouts/RestaurantLayout"; // ✅ New layout
 import { adminRoutes } from "./routes/AdminRoutes";
 import { restaurantRoutes } from "./routes/RestaurantRoutes";
 import { customerRoutes } from "./routes/CustomerRoutes";
-import CustomerLayout from "./layouts/CustomerLayout";
 
 function App() {
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+
+      {/* Admin Route */}
       <Route path="/admin" element={<AdminDashboard />} />
-      <Route path="/restaurant" element={<RestaurantDashboard />} />
-      <Route path="/delivery" element={<DeliveryDashboard />} />
       {adminRoutes}
-      {restaurantRoutes}
+
+      {/* Delivery Route */}
+      <Route path="/delivery" element={<DeliveryDashboard />} />
+
+      {/* Customer Routes with layout */}
       <Route path="/customer" element={<CustomerLayout />}>
         {customerRoutes}
+      </Route>
+
+      {/* ✅ Restaurant Routes with layout */}
+      <Route path="/restaurant" element={<RestaurantLayout />}>
+        {restaurantRoutes}
       </Route>
     </Routes>
   );
