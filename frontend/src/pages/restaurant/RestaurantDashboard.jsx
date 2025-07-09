@@ -1,66 +1,151 @@
-import React from 'react';
+import React from "react";
+import {
+  FaUtensils,
+  FaRupeeSign,
+  FaClock,
+  FaChartLine,
+  FaStar,
+  FaCheckCircle,
+} from "react-icons/fa";
+import { motion } from "framer-motion";
 
-function RestaurantDashboard() {
-  // Placeholder data
-  const orders = [
-    { id: 1, customer: 'Alice', item: 'Pizza', status: 'Pending', time: '12:15 PM' },
-    { id: 2, customer: 'Bob', item: 'Burger', status: 'Preparing', time: '12:30 PM' },
-    { id: 3, customer: 'Charlie', item: 'Pasta', status: 'Completed', time: '11:50 AM' },
+const RestaurantDashboard = () => {
+  const stats = [
+    {
+      label: "Today’s Orders",
+      value: 38,
+      icon: <FaUtensils className="text-orange-500 text-xl" />,
+    },
+    {
+      label: "Earnings",
+      value: "₹8,450",
+      icon: <FaRupeeSign className="text-green-500 text-xl" />,
+    },
+    {
+      label: "Avg Prep Time",
+      value: "27 mins",
+      icon: <FaClock className="text-blue-500 text-xl" />,
+    },
+  ];
+
+  const topDishes = [
+    { name: "Paneer Butter Masala", orders: 120 },
+    { name: "Cheese Burst Pizza", orders: 97 },
+    { name: "Chicken Biryani", orders: 83 },
+  ];
+
+  const recentOrders = [
+    {
+      customer: "Rahul Sharma",
+      dish: "Veg Manchurian",
+      time: "11:30 AM",
+      status: "Delivered",
+    },
+    {
+      customer: "Sneha R.",
+      dish: "Chicken Wrap",
+      time: "12:10 PM",
+      status: "Ongoing",
+    },
+    {
+      customer: "Amit Patel",
+      dish: "Paneer Tikka",
+      time: "1:00 PM",
+      status: "Cancelled",
+    },
   ];
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4 text-green-800">Restaurant Dashboard</h2>
-      <p className="mb-4 text-gray-700">Welcome! Manage your restaurant, menu, and orders here.</p>
-      <div className="mb-8">
-        <h3 className="text-xl font-semibold mb-2">Recent Orders</h3>
-        <table className="min-w-full bg-white shadow rounded-lg">
-          <thead>
-            <tr>
-              <th className="py-2 px-4 border-b">Customer</th>
-              <th className="py-2 px-4 border-b">Item</th>
-              <th className="py-2 px-4 border-b">Status</th>
-              <th className="py-2 px-4 border-b">Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.id}>
-                <td className="py-2 px-4 border-b">{o.customer}</td>
-                <td className="py-2 px-4 border-b">{o.item}</td>
-                <td className="py-2 px-4 border-b">{o.status}</td>
-                <td className="py-2 px-4 border-b">{o.time}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <motion.div
+      className="px-6 py-8 text-gray-800 dark:text-white"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* 👋 Welcome */}
+      <h2 className="text-3xl font-bold mb-2">Welcome back, Chef! 👨‍🍳</h2>
+      <p className="text-gray-600 dark:text-gray-400 mb-6">
+        Here's how your kitchen is performing today.
+      </p>
+
+      {/* 📊 Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
+        {stats.map((stat, idx) => (
+          <div
+            key={idx}
+            className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-md flex items-center gap-4"
+          >
+            <div>{stat.icon}</div>
+            <div>
+              <h4 className="text-xl font-semibold">{stat.value}</h4>
+              <p className="text-sm text-gray-500">{stat.label}</p>
+            </div>
+          </div>
+        ))}
       </div>
-      <div className="grid md:grid-cols-2 gap-8">
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-xl font-semibold mb-4 text-green-700">Menu Management</h3>
-          <ul className="list-disc ml-6 text-gray-700">
-            <li>Add, edit, or remove menu items</li>
-            <li>Update item availability</li>
-            <li>View menu analytics</li>
-          </ul>
-          <button className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-            Manage Menu
-          </button>
-        </div>
-        <div className="bg-white shadow rounded-lg p-6">
-          <h3 className="text-xl font-semibold mb-4 text-green-700">Order Management</h3>
-          <ul className="list-disc ml-6 text-gray-700">
-            <li>View and update order status</li>
-            <li>Assign orders to delivery agents</li>
-            <li>Handle customer queries</li>
-          </ul>
-          <button className="mt-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-            Manage Orders
-          </button>
+
+      {/* 🔥 Top Selling Dishes */}
+      <div className="mb-10">
+        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <FaChartLine /> Top Selling Dishes
+        </h3>
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {topDishes.map((dish, i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-secondary p-4 rounded-xl shadow hover:shadow-md"
+            >
+              <div className="h-24 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center mb-3 text-sm text-gray-400">
+                Dish Image
+              </div>
+              <h4 className="font-semibold">{dish.name}</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-300">
+                {dish.orders} orders
+              </p>
+              <div className="flex items-center mt-1 text-yellow-500 text-sm">
+                <FaStar className="mr-1" /> 4.{8 - i}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+
+      {/* 🕒 Recent Orders */}
+      <div>
+        <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <FaCheckCircle /> Recent Orders
+        </h3>
+        <div className="grid gap-4">
+          {recentOrders.map((order, i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-secondary rounded-lg shadow p-4 flex justify-between items-center hover:shadow-md"
+            >
+              <div>
+                <h4 className="font-medium">{order.dish}</h4>
+                <p className="text-xs text-gray-500">
+                  {order.customer} • {order.time}
+                </p>
+              </div>
+              <div className="text-right">
+                <span
+                  className={`text-sm font-medium ${
+                    order.status === "Delivered"
+                      ? "text-green-600"
+                      : order.status === "Ongoing"
+                      ? "text-yellow-600"
+                      : "text-red-500"
+                  }`}
+                >
+                  {order.status}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
   );
-}
+};
 
 export default RestaurantDashboard;
