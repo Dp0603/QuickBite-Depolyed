@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { FaCommentDots } from "react-icons/fa";
 
 const dummyMessages = [
   {
@@ -21,30 +22,54 @@ const RestaurantChatInbox = () => {
   const [messages] = useState(dummyMessages);
 
   return (
-    <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow max-w-3xl mx-auto my-6">
-      <h2 className="text-xl font-semibold mb-4">Customer Messages</h2>
-      <ul className="divide-y dark:divide-gray-700">
-        {messages.map((msg) => (
-          <li key={msg.id} className="py-4 flex justify-between items-start">
-            <div>
-              <p className="font-medium">{msg.customer}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                {msg.message}
-              </p>
-              <span className="text-xs text-gray-400">{msg.time}</span>
-            </div>
-            <span
-              className={`text-xs px-3 py-1 rounded-full ${
-                msg.replied
-                  ? "bg-green-100 text-green-700"
-                  : "bg-yellow-100 text-yellow-700"
-              }`}
+    <div className="px-6 py-8 min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-white">
+      <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
+        {/* Heading */}
+        <h2 className="text-3xl font-bold flex items-center gap-2">
+          <FaCommentDots className="text-primary" />
+          Customer Messages
+        </h2>
+
+        {/* Message List */}
+        <div className="bg-white dark:bg-secondary rounded-xl shadow divide-y divide-gray-100 dark:divide-gray-700">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className="p-5 flex justify-between items-start hover:bg-accent dark:hover:bg-secondary/70 transition"
             >
-              {msg.replied ? "Replied" : "Pending"}
-            </span>
-          </li>
-        ))}
-      </ul>
+              {/* Left side */}
+              <div className="space-y-1">
+                <p className="font-semibold text-base">{msg.customer}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  {msg.message}
+                </p>
+                <span className="text-xs text-gray-400">{msg.time}</span>
+              </div>
+
+              {/* Right side - badge */}
+              <div className="flex items-center gap-3">
+                <span
+                  className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                    msg.replied
+                      ? "bg-green-100 text-green-700"
+                      : "bg-yellow-100 text-yellow-700"
+                  }`}
+                >
+                  {msg.replied ? "Replied" : "Pending"}
+                </span>
+
+                {/* Optional future reply button */}
+                <button
+                  className="text-sm text-primary font-medium hover:underline hidden sm:inline"
+                  disabled={msg.replied}
+                >
+                  {msg.replied ? "" : "Reply"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
