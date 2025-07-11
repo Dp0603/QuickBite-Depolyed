@@ -1,32 +1,30 @@
-// AdminRoutes.jsx
+// routes/AdminRoutes.js
 import React from "react";
 import { Route } from "react-router-dom";
-import AdminDashboard from "../pages/admin/AdminDashboard";
-import AdminManageUsers from "../pages/admin/AdminManageUsers";
-import AdminManageRestaurants from "../pages/admin/AdminManageRestaurants";
-import AdminSiteAnalytics from "../pages/admin/AdminSiteAnalytics";
-import AdminViewReports from "../pages/admin/AdminViewReports";
 
-export const adminRoutes = [
-  <Route key="admin" path="/admin" element={<AdminDashboard />} />,
-  <Route
-    key="admin-users"
-    path="/admin/users"
-    element={<AdminManageUsers />}
-  />,
-  <Route
-    key="admin-restaurants"
-    path="/admin/restaurants"
-    element={<AdminManageRestaurants />}
-  />,
-  <Route
-    key="admin-analytics"
-    path="/admin/analytics"
-    element={<AdminSiteAnalytics />}
-  />,
-  <Route
-    key="admin-reports"
-    path="/admin/reports"
-    element={<AdminViewReports />}
-  />,
-];
+// Admin Pages
+import AdminDashboard from "../pages/admin/AdminDashboard";
+import AdminUsers from "../pages/admin/AdminUsers";
+import AdminRestaurants from "../pages/admin/AdminRestaurants";
+import AdminOrders from "../pages/admin/AdminOrders";
+import AdminPayouts from "../pages/admin/AdminPayouts";
+import AdminComplaints from "../pages/admin/AdminComplaints";
+import AdminReviews from "../pages/admin/AdminReviews";
+import AdminOffers from "../pages/admin/AdminOffers";
+import AdminReports from "../pages/admin/AdminReports";
+import AdminSettings from "../pages/admin/AdminSettings";
+
+export const adminRoutes = (
+  <>
+    <Route index element={<AdminDashboard />} />
+    <Route path="users" element={<AdminUsers />} />
+    <Route path="restaurants" element={<AdminRestaurants />} />
+    <Route path="orders" element={<AdminOrders />} />
+    <Route path="payouts" element={<AdminPayouts />} />
+    <Route path="complaints" element={<AdminComplaints />} />
+    <Route path="reviews" element={<AdminReviews />} />
+    <Route path="offers" element={<AdminOffers />} />
+    <Route path="reports" element={<AdminReports />} />
+    <Route path="settings" element={<AdminSettings />} />
+  </>
+);
