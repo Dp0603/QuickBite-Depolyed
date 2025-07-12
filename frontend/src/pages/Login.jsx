@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import {
   FaEye,
   FaEyeSlash,
@@ -11,8 +12,8 @@ import {
   FaSun,
 } from "react-icons/fa6";
 import { motion } from "framer-motion";
-import { useAuth } from "../hooks/useAuth";
 import Navbar from "../components/Navbar";
+import { AuthContext } from "../context/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -20,9 +21,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // Load theme
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
     setDarkMode(storedTheme === "dark");
@@ -33,14 +35,38 @@ export default function Login() {
     localStorage.setItem("theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
+  // 🧠 Handle Login Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setLoading(true);
-      await login(email, password);
-      navigate("/customer");
+
+      const res = await axios.post("/api/auth/login", { email, password });
+      const { token, user } = res.data;
+
+      login(token, user); // Store token + user globally
+
+      // Role-based redirection
+      switch (user.role) {
+        case "admin":
+          navigate("/admin");
+          break;
+        case "restaurant":
+          navigate("/restaurant");
+          break;
+        case "delivery":
+          navigate("/delivery");
+          break;
+        case "customer":
+        default:
+          navigate("/customer");
+          break;
+      }
     } catch (err) {
-      alert("Login failed. Check credentials.");
+      const msg =
+        err.response?.data?.message ||
+        "Login failed. Please check credentials.";
+      alert(msg);
     } finally {
       setLoading(false);
     }
@@ -52,10 +78,8 @@ export default function Login() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* Navbar */}
       <Navbar />
 
-      {/* Background */}
       <div
         className="fixed top-0 left-0 w-full h-full bg-cover bg-center z-[-2]"
         style={{
@@ -65,9 +89,7 @@ export default function Login() {
       />
       <div className="absolute inset-0 bg-black/30 z-[-1]" />
 
-      {/* Main Content */}
       <div className="pt-20 min-h-screen grid grid-cols-1 md:grid-cols-2 gap-2 bg-transparent dark:bg-transparent relative transition-colors duration-500">
-        {/* Theme Toggle */}
         <button
           className="absolute top-5 right-5 z-50 text-primary dark:text-white text-xl"
           onClick={() => setDarkMode((prev) => !prev)}
@@ -76,7 +98,7 @@ export default function Login() {
           {darkMode ? <FaSun /> : <FaMoon />}
         </button>
 
-        {/* Left Section */}
+        {/* Left Panel */}
         <motion.div
           className="hidden md:flex items-center justify-center p-10"
           initial={{ x: -100, opacity: 0 }}
@@ -106,7 +128,7 @@ export default function Login() {
           </div>
         </motion.div>
 
-        {/* Right Section */}
+        {/* Right Panel */}
         <motion.div
           className="flex items-center justify-center p-8"
           initial={{ x: 100, opacity: 0 }}
@@ -118,39 +140,31 @@ export default function Login() {
               Login to <span className="text-primary">QuickBite</span>
             </h2>
 
-            {/* Social Logins */}
+            {/* Social Logins (Optional) */}
             <div className="flex flex-wrap justify-center gap-3 mb-6">
-              <button
-                type="button"
-                onClick={() => handleSocialLogin("Google")}
-                className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-[#DB4437] hover:bg-[#c33d30] shadow-md hover:shadow-lg transition"
-              >
-                <FaGoogle /> Google
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSocialLogin("Apple")}
-                className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-black hover:bg-gray-900 shadow-md hover:shadow-lg transition"
-              >
-                <FaApple /> Apple
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSocialLogin("Twitter")}
-                className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-[#1DA1F2] hover:bg-[#0d8ddb] shadow-md hover:shadow-lg transition"
-              >
-                <FaXTwitter /> Twitter
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSocialLogin("Microsoft")}
-                className="flex items-center gap-2 px-4 py-2 rounded-md text-white bg-[#2F2F2F] hover:bg-[#1f1f1f] shadow-md hover:shadow-lg transition"
-              >
-                <FaMicrosoft /> Microsoft
-              </button>
+              {[
+                { icon: <FaGoogle />, provider: "Google", color: "#DB4437" },
+                { icon: <FaApple />, provider: "Apple", color: "#000000" },
+                { icon: <FaXTwitter />, provider: "Twitter", color: "#1DA1F2" },
+                {
+                  icon: <FaMicrosoft />,
+                  provider: "Microsoft",
+                  color: "#2F2F2F",
+                },
+              ].map(({ icon, provider, color }) => (
+                <button
+                  key={provider}
+                  type="button"
+                  onClick={() => handleSocialLogin(provider)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-white`}
+                  style={{ backgroundColor: color }}
+                >
+                  {icon} {provider}
+                </button>
+              ))}
             </div>
 
-            {/* Form */}
+            {/* Login Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-secondary dark:text-gray-300 mb-1">

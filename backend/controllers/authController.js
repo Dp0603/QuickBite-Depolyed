@@ -1,7 +1,9 @@
-const User = require("../models/UserModel");
-const jwt = require("jsonwebtoken");
+const User = require("../models/userModel");
+const generateToken = require("../utils/generateToken");
+const sendEmail = require("../utils/sendEmail");
+const bcrypt = require("bcryptjs");
 
-// Register a new user
+// Register User
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -9,35 +11,47 @@ exports.register = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "Email already registered" });
+      return res.status(400).json({ message: "User already exists" });
     }
 
-    // Create new user
-    const user = await User.create({ name, email, password, role });
+    // Create user
+    const user = await User.create({
+      name,
+      email,
+      password,
+      role: role || "customer",
+    });
 
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // ✅ Send styled HTML welcome email
+    await sendEmail({
+      to: user.email,
+      subject: "🎉 Welcome to QuickBite!",
+      name: user.name,
+      body: `
+        <p>Hi <strong>${user.name}</strong>,</p>
+        <p>Thank you for registering as a <strong>${user.role}</strong> on QuickBite.</p>
+        <p>We’re thrilled to have you with us. From delicious meals to quick deliveries, your journey begins now.</p>
+        <p>🍽️ <strong>Get started by logging into your account!</strong></p>
+      `,
+    });
 
+    // Respond
     res.status(201).json({
-      message: "Registration successful",
+      token: generateToken(user._id),
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
       },
-      token,
     });
   } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("❌ Register Error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-// Login user
+// Login User
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -45,33 +59,41 @@ exports.login = async (req, res) => {
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Check password
-    const isMatch = await user.matchPassword(password);
+    // Compare password
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
-
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
 
     res.status(200).json({
-      message: "Login successful",
+      token: generateToken(user._id),
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
       },
-      token,
     });
   } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("❌ Login Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Verify Token
+exports.verifyToken = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ user });
+  } catch (err) {
+    console.error("❌ Token Verification Error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };
