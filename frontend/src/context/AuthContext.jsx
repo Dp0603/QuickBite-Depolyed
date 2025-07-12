@@ -1,32 +1,83 @@
-import { createContext, useState, useEffect } from "react";
-import axios from "../api/axios";
+import { createContext, useEffect, useState } from "react";
+import axios from "axios";
 
 export const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() =>
-    JSON.parse(localStorage.getItem("user"))
-  );
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null); // { _id, name, role, email }
+  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    localStorage.setItem("user", JSON.stringify(user));
-  }, [user]);
+  // ✅ Register function
+  const register = async (name, email, password) => {
+    const res = await axios.post("/api/auth/register", {
+      name,
+      email,
+      password,
+    });
 
-  async function login(email, pwd) {
-    const { data } = await axios.post("/auth/login", { email, password: pwd });
-    setUser(data);
-    axios.defaults.headers.common["Authorization"] = `Bearer ${data.token}`;
-  }
+    // Auto login after successful registration
+    login(res.data.token, res.data.user);
+  };
 
-  function logout() {
+  // ✅ Login
+  const login = (token, user) => {
+    setToken(token);
+    setUser(user);
+    localStorage.setItem("token", token);
+  };
+
+  // ✅ Logout
+  const logout = () => {
+    setToken(null);
     setUser(null);
-    localStorage.removeItem("user");
-    delete axios.defaults.headers.common["Authorization"];
-  }
+    localStorage.removeItem("token");
+  };
+
+  // ⏳ Verify token on load
+  useEffect(() => {
+    const verifyToken = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await axios.post(
+          "/api/auth/verify-token",
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        setUser(res.data.user);
+      } catch (err) {
+        console.error("Invalid token:", err.response?.data?.message);
+        logout();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyToken();
+  }, [token]);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        login,
+        logout,
+        register, // ✅ Added here
+        loading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
-}
+};
+
+export default AuthProvider;

@@ -1,17 +1,15 @@
-// src/routes/PrivateRoute.jsx
 import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext";
 
-export default function PrivateRoute({ allowedRoles }) {
-  const { user } = useAuth();
+const PrivateRoute = ({ allowedRoles }) => {
+  const { user, loading } = useContext(AuthContext);
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <Navigate to="/login" />;
+  if (!allowedRoles.includes(user.role)) return <Navigate to="/unauthorized" />;
 
   return <Outlet />;
-}
+};
+
+export default PrivateRoute;

@@ -1,7 +1,9 @@
-const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
-const generateToken = () => {
-  return crypto.randomBytes(20).toString("hex");
+const generateToken = (userId) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
 };
 
 module.exports = generateToken;
