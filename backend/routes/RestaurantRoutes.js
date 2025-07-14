@@ -8,18 +8,19 @@ const {
   getRestaurantOrders,
   updateOrderStatus,
   getReviews,
-} = require("../controllers/RestuarantController");
+  toggleAvailability, // ✅ added toggle route
+  getAvailabilitySettings,
+  updateAvailabilitySettings,
+} = require("../controllers/RestuarantController"); // ✅ fixed spelling
 
 const { protect, authorize } = require("../middlewares/authMiddleware");
 
-// 🔐 All routes require auth & restaurant role
+// 🔐 Protect all routes with auth and restaurant role
 router.use(protect);
 router.use(authorize("restaurant"));
 
-// 🆕 Create restaurant profile
+// 👤 Profile
 router.post("/profile", createRestaurantProfile);
-
-// 🧑‍🍳 Get and update profile
 router.get("/profile", getRestaurantProfile);
 router.put("/profile", updateRestaurantProfile);
 
@@ -29,5 +30,10 @@ router.put("/orders/:orderId", updateOrderStatus);
 
 // 💬 Reviews
 router.get("/reviews", getReviews);
+
+// 🔄 Availability
+router.put("/toggle-availability", toggleAvailability); // ✅ toggle online/offline
+router.get("/availability", getAvailabilitySettings);
+router.put("/availability", updateAvailabilitySettings);
 
 module.exports = router;

@@ -1,3 +1,4 @@
+// models/RestaurantModel.js
 const mongoose = require("mongoose");
 
 const restaurantSchema = new mongoose.Schema(
@@ -6,14 +7,12 @@ const restaurantSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true, // One restaurant per user
+      unique: true,
     },
     restaurantName: {
       type: String,
       required: [true, "Restaurant name is required"],
       trim: true,
-      minlength: 3,
-      maxlength: 100,
     },
     description: {
       type: String,
@@ -28,18 +27,12 @@ const restaurantSchema = new mongoose.Schema(
     phone: {
       type: String,
       validate: {
-        validator: function (value) {
-          return /^\d{10}$/.test(value); // basic 10-digit validation
-        },
+        validator: (value) => /^\d{10}$/.test(value),
         message: "Please enter a valid 10-digit phone number",
       },
     },
-    logoUrl: {
-      type: String,
-    },
-    bannerUrl: {
-      type: String,
-    },
+    logoUrl: String,
+    bannerUrl: String,
     cuisine: {
       type: String,
       enum: [
@@ -64,6 +57,22 @@ const restaurantSchema = new mongoose.Schema(
     verified: {
       type: Boolean,
       default: false,
+    },
+
+    // ✅ Availability Settings
+    availability: {
+      isOnline: { type: Boolean, default: true },
+      autoAvailabilityEnabled: { type: Boolean, default: false },
+      openTime: { type: String, default: "09:00" },
+      closeTime: { type: String, default: "22:00" },
+      breaks: [
+        {
+          start: String,
+          end: String,
+        },
+      ],
+      holidays: [String], // e.g. ["2025-07-14"]
+      autoAcceptOrders: { type: Boolean, default: true },
     },
   },
   { timestamps: true }

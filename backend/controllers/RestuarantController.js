@@ -1,6 +1,6 @@
-const UserModel = require("../models/UserModel");
-const OrderModel = require("../models/OrderModel");
 const RestaurantModel = require("../models/RestaurantModel");
+const OrderModel = require("../models/OrderModel");
+const UserModel = require("../models/UserModel");
 
 // 🆕 Create Restaurant Profile
 const createRestaurantProfile = async (req, res) => {
@@ -16,58 +16,98 @@ const createRestaurantProfile = async (req, res) => {
       userId: req.user.id,
       restaurantName: req.body.restaurantName,
       description: req.body.description,
-      address: req.body.address,
       phone: req.body.phone,
       cuisine: req.body.cuisine,
+      logoUrl: req.body.logoUrl,
+      bannerUrl: req.body.bannerUrl,
+      address: {
+        street: req.body.address?.street || "",
+        city: req.body.address?.city || "",
+        state: req.body.address?.state || "",
+        zip: req.body.address?.zip || "",
+      },
     });
+
+    // Store email separately in User model if provided
+    if (req.body.email) {
+      await UserModel.findByIdAndUpdate(req.user.id, { email: req.body.email });
+    }
 
     res.status(201).json({
       message: "Restaurant profile created",
       data: restaurant,
     });
   } catch (err) {
+    console.error("❌ Error creating profile:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// 📄 Get Restaurant Profile
+// 📄 Get Restaurant Profile (with email)
 const getRestaurantProfile = async (req, res) => {
   try {
-    const user = await UserModel.findById(req.user.id).select("-password");
+    const restaurant = await RestaurantModel.findOne({
+      userId: req.user.id,
+    }).lean();
+    const user = await UserModel.findById(req.user.id).select("email");
 
-    if (!user || user.role !== "restaurant") {
-      return res.status(404).json({ message: "Restaurant not found" });
+    if (!restaurant || !user) {
+      return res.status(404).json({ message: "Restaurant profile not found" });
     }
 
     res.status(200).json({
-      message: "Restaurant profile fetched successfully",
-      data: user,
+      message: "Restaurant profile fetched",
+      data: {
+        ...restaurant,
+        email: user.email,
+      },
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// ✏️ Update Profile
+// ✏️ Update Restaurant Profile (with email)
 const updateRestaurantProfile = async (req, res) => {
   try {
-    const updates = {
-      name: req.body.name,
-      email: req.body.email,
-    };
+    const restaurant = await RestaurantModel.findOne({ userId: req.user.id });
+    if (!restaurant) {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
 
-    const updatedUser = await UserModel.findByIdAndUpdate(
-      req.user.id,
-      updates,
-      { new: true, runValidators: true }
-    ).select("-password");
+    const {
+      restaurantName,
+      cuisine,
+      phone,
+      address,
+      logoUrl,
+      bannerUrl,
+      description,
+      email,
+    } = req.body;
+
+    restaurant.restaurantName = restaurantName || restaurant.restaurantName;
+    restaurant.cuisine = cuisine || restaurant.cuisine;
+    restaurant.phone = phone || restaurant.phone;
+    restaurant.address = address || restaurant.address;
+    restaurant.logoUrl = logoUrl || restaurant.logoUrl;
+    restaurant.bannerUrl = bannerUrl || restaurant.bannerUrl;
+    restaurant.description = description || restaurant.description;
+
+    await restaurant.save();
+
+    // Update email in User model
+    if (email) {
+      await UserModel.findByIdAndUpdate(req.user.id, { email });
+    }
 
     res.status(200).json({
       message: "Restaurant profile updated",
-      data: updatedUser,
+      data: restaurant,
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    console.error("🔥 Error in updateRestaurantProfile:", err);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -112,7 +152,66 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
-// 💬 View Reviews (Mocked for now)
+// ✅ Toggle Restaurant Availability
+const toggleAvailability = async (req, res) => {
+  try {
+    const restaurant = await RestaurantModel.findOne({ userId: req.user.id });
+
+    if (!restaurant) {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+
+    restaurant.isOpen = !restaurant.isOpen;
+    await restaurant.save();
+
+    res.status(200).json({
+      message: `Restaurant is now ${restaurant.isOpen ? "Online" : "Offline"}`,
+      isOpen: restaurant.isOpen,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ⚙️ Get Availability Settings
+const getAvailabilitySettings = async (req, res) => {
+  try {
+    const restaurant = await RestaurantModel.findOne({ userId: req.user.id });
+    if (!restaurant) return res.status(404).json({ message: "Not found" });
+
+    res.status(200).json({
+      message: "Availability settings fetched",
+      data: restaurant.availability || {},
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ⚙️ Update Availability Settings
+const updateAvailabilitySettings = async (req, res) => {
+  try {
+    const updates = req.body;
+    const restaurant = await RestaurantModel.findOne({ userId: req.user.id });
+    if (!restaurant) return res.status(404).json({ message: "Not found" });
+
+    restaurant.availability = {
+      ...restaurant.availability,
+      ...updates,
+    };
+
+    await restaurant.save();
+
+    res.status(200).json({
+      message: "Availability settings updated",
+      data: restaurant.availability,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 💬 View Reviews (Mocked)
 const getReviews = async (req, res) => {
   try {
     const reviews = [
@@ -145,5 +244,8 @@ module.exports = {
   updateRestaurantProfile,
   getRestaurantOrders,
   updateOrderStatus,
+  toggleAvailability,
+  getAvailabilitySettings,
+  updateAvailabilitySettings,
   getReviews,
 };
