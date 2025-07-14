@@ -1,8 +1,34 @@
 const UserModel = require("../models/UserModel");
+const OrderModel = require("../models/OrderModel");
+const RestaurantModel = require("../models/RestaurantModel");
 
-// 🍽️ Mock Data
-let menus = {}; // restaurantId -> array of menu items
-let restaurantOrders = {}; // restaurantId -> orders
+// 🆕 Create Restaurant Profile
+const createRestaurantProfile = async (req, res) => {
+  try {
+    const existing = await RestaurantModel.findOne({ userId: req.user.id });
+    if (existing) {
+      return res
+        .status(400)
+        .json({ message: "Restaurant profile already exists" });
+    }
+
+    const restaurant = await RestaurantModel.create({
+      userId: req.user.id,
+      restaurantName: req.body.restaurantName,
+      description: req.body.description,
+      address: req.body.address,
+      phone: req.body.phone,
+      cuisine: req.body.cuisine,
+    });
+
+    res.status(201).json({
+      message: "Restaurant profile created",
+      data: restaurant,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // 📄 Get Restaurant Profile
 const getRestaurantProfile = async (req, res) => {
@@ -45,71 +71,13 @@ const updateRestaurantProfile = async (req, res) => {
   }
 };
 
-// 📋 View Menu
-const getMenu = async (req, res) => {
-  try {
-    const menu = menus[req.user.id] || [];
-    res.status(200).json({
-      message: "Menu retrieved successfully",
-      data: menu,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// ➕ Add Menu Item
-const addMenuItem = async (req, res) => {
-  try {
-    const { name, description, price, image } = req.body;
-
-    if (!name || !price) {
-      return res
-        .status(400)
-        .json({ message: "Name and price are required" });
-    }
-
-    const newItem = {
-      id: Date.now().toString(),
-      name,
-      description,
-      price,
-      image,
-    };
-
-    menus[req.user.id] = menus[req.user.id] || [];
-    menus[req.user.id].push(newItem);
-
-    res.status(201).json({
-      message: "Menu item added",
-      data: newItem,
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// ❌ Delete Menu Item
-const deleteMenuItem = async (req, res) => {
-  try {
-    const itemId = req.params.itemId;
-    menus[req.user.id] = (menus[req.user.id] || []).filter(
-      (item) => item.id !== itemId
-    );
-
-    res.status(200).json({
-      message: "Menu item deleted",
-      data: menus[req.user.id],
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
 // 📦 View Orders
 const getRestaurantOrders = async (req, res) => {
   try {
-    const orders = restaurantOrders[req.user.id] || [];
+    const orders = await OrderModel.find({ restaurantId: req.user.id })
+      .populate("customerId", "name")
+      .populate("items.menuItemId", "name price");
+
     res.status(200).json({
       message: "Orders retrieved",
       data: orders,
@@ -125,22 +93,26 @@ const updateOrderStatus = async (req, res) => {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    const orders = restaurantOrders[req.user.id] || [];
-    const order = orders.find((o) => o.orderId === orderId);
-    if (!order) return res.status(404).json({ message: "Order not found" });
+    const updatedOrder = await OrderModel.findOneAndUpdate(
+      { _id: orderId, restaurantId: req.user.id },
+      { status },
+      { new: true }
+    );
 
-    order.status = status || order.status;
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
 
     res.status(200).json({
       message: "Order status updated",
-      data: order,
+      data: updatedOrder,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// 💬 View Reviews (Mocked)
+// 💬 View Reviews (Mocked for now)
 const getReviews = async (req, res) => {
   try {
     const reviews = [
@@ -168,11 +140,9 @@ const getReviews = async (req, res) => {
 };
 
 module.exports = {
+  createRestaurantProfile,
   getRestaurantProfile,
   updateRestaurantProfile,
-  getMenu,
-  addMenuItem,
-  deleteMenuItem,
   getRestaurantOrders,
   updateOrderStatus,
   getReviews,

@@ -1,5 +1,5 @@
 import { createContext, useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api/axios"; // ✅ Make sure the path is correct
 
 export const AuthContext = createContext();
 
@@ -10,7 +10,7 @@ const AuthProvider = ({ children }) => {
 
   // ✅ Register function
   const register = async (name, email, password) => {
-    const res = await axios.post("/api/auth/register", {
+    const res = await API.post("/auth/register", {
       name,
       email,
       password,
@@ -25,6 +25,7 @@ const AuthProvider = ({ children }) => {
     setToken(token);
     setUser(user);
     localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
   };
 
   // ✅ Logout
@@ -32,9 +33,10 @@ const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
   };
 
-  // ⏳ Verify token on load
+  // ✅ Verify token on load
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) {
@@ -43,8 +45,8 @@ const AuthProvider = ({ children }) => {
       }
 
       try {
-        const res = await axios.post(
-          "/api/auth/verify-token",
+        const res = await API.post(
+          "/auth/verify-token",
           {},
           {
             headers: {
@@ -52,10 +54,11 @@ const AuthProvider = ({ children }) => {
             },
           }
         );
+
         setUser(res.data.user);
       } catch (err) {
         console.error("Invalid token:", err.response?.data?.message);
-        logout();
+        logout(); // ⛔ Clear user if token fails
       } finally {
         setLoading(false);
       }
@@ -71,7 +74,7 @@ const AuthProvider = ({ children }) => {
         token,
         login,
         logout,
-        register, // ✅ Added here
+        register,
         loading,
       }}
     >

@@ -1,15 +1,29 @@
+// axios.js
 import axios from "axios";
 
-const API_URL = "http://localhost:5000/api/auth";
+// ✅ Create global axios instance
+const API = axios.create({
+  baseURL: "http://localhost:5000/api", // Adjust if needed
+});
 
+// ✅ Attach token to every request
+API.interceptors.request.use((req) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    req.headers.Authorization = `Bearer ${token}`;
+  }
+  return req;
+});
+
+// ✅ Auth API functions
 export const registerUser = async (userData) => {
-  const res = await axios.post(`${API_URL}/register`, userData);
+  const res = await API.post("/auth/register", userData);
   return res.data;
 };
 
 export const loginUser = async (userData) => {
-  const res = await axios.post(`${API_URL}/login`, userData);
+  const res = await API.post("/auth/login", userData);
   return res.data;
 };
 
-export default axios;
+export default API;

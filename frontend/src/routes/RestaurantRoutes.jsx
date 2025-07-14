@@ -5,6 +5,8 @@ import { Route } from "react-router-dom";
 import RestaurantDashboard from "../pages/restaurant/RestaurantDashboard";
 import RestaurantOrders from "../pages/restaurant/RestaurantOrders";
 import RestaurantMenuManager from "../pages/restaurant/RestaurantMenuManager";
+import RestaurantAddDish from "../pages/restaurant/RestaurantAddDish";
+import RestaurantEditDish from "../pages/restaurant/RestaurantEditDish";
 import RestaurantMenuScheduler from "../pages/restaurant/RestaurantMenuScheduler";
 import RestaurantAvailabilityToggle from "../pages/restaurant/RestaurantAvailabilityToggle";
 import RestaurantOffersManager from "../pages/restaurant/RestaurantOffersManager";
@@ -19,17 +21,76 @@ import RestaurantHelp from "../pages/restaurant/RestaurantHelp";
 
 export const restaurantRoutes = [
   <Route key="restaurant-dashboard" index element={<RestaurantDashboard />} />,
-  <Route key="restaurant-orders" path="orders" element={<RestaurantOrders />} />,
-  <Route key="restaurant-menu-manager" path="menu-manager" element={<RestaurantMenuManager />} />,
-  <Route key="restaurant-menu-scheduler" path="menu-scheduler" element={<RestaurantMenuScheduler />} />,
-  <Route key="restaurant-availability" path="availability-toggle" element={<RestaurantAvailabilityToggle />} />,
-  <Route key="restaurant-offers" path="offers-manager" element={<RestaurantOffersManager />} />,
-  <Route key="restaurant-delivery-status" path="delivery-status" element={<RestaurantDeliveryStatus />} />,
-  <Route key="restaurant-reviews" path="reviews" element={<RestaurantReviews />} />,
-  <Route key="restaurant-analytics" path="analytics" element={<RestaurantAnalytics />} />,
-  <Route key="restaurant-payouts" path="payouts" element={<RestaurantPayouts />} />,
-  <Route key="restaurant-chat-inbox" path="chat-inbox" element={<RestaurantChatInbox />} />,
-  <Route key="restaurant-profile" path="profile" element={<RestaurantProfile />} />,
-  <Route key="restaurant-settings" path="settings" element={<RestaurantSettings />} />,
+  <Route
+    key="restaurant-orders"
+    path="orders"
+    element={<RestaurantOrders />}
+  />,
+  <Route
+    key="restaurant-menu-manager"
+    path="menu-manager"
+    element={<RestaurantMenuManager />}
+  />,
+  <Route
+    key="restaurant-add-dish"
+    path="menu/add"
+    element={<RestaurantAddDish />}
+  />,
+  <Route
+    key="restaurant-edit-dish"
+    path="menu/edit/:id"
+    element={<RestaurantEditDish />}
+  />,
+
+  <Route
+    key="restaurant-menu-scheduler"
+    path="menu-scheduler"
+    element={<RestaurantMenuScheduler />}
+  />,
+  <Route
+    key="restaurant-availability"
+    path="availability-toggle"
+    element={<RestaurantAvailabilityToggle />}
+  />,
+  <Route
+    key="restaurant-offers"
+    path="offers-manager"
+    element={<RestaurantOffersManager />}
+  />,
+  <Route
+    key="restaurant-delivery-status"
+    path="delivery-status"
+    element={<RestaurantDeliveryStatus />}
+  />,
+  <Route
+    key="restaurant-reviews"
+    path="reviews"
+    element={<RestaurantReviews />}
+  />,
+  <Route
+    key="restaurant-analytics"
+    path="analytics"
+    element={<RestaurantAnalytics />}
+  />,
+  <Route
+    key="restaurant-payouts"
+    path="payouts"
+    element={<RestaurantPayouts />}
+  />,
+  <Route
+    key="restaurant-chat-inbox"
+    path="chat-inbox"
+    element={<RestaurantChatInbox />}
+  />,
+  <Route
+    key="restaurant-profile"
+    path="profile"
+    element={<RestaurantProfile />}
+  />,
+  <Route
+    key="restaurant-settings"
+    path="settings"
+    element={<RestaurantSettings />}
+  />,
   <Route key="restaurant-help" path="help" element={<RestaurantHelp />} />,
 ];

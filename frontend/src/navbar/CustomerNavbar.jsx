@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { FaSignOutAlt } from "react-icons/fa";
 import Lottie from "lottie-react";
 import { useNavigate } from "react-router-dom";
@@ -7,6 +7,7 @@ import SearchLottie from "../assets/lottie icons/Search.json";
 import NotificationLottie from "../assets/lottie icons/Notification.json";
 import CloseLottie from "../assets/lottie icons/Hamburger menu.json";
 import CartLottie from "../assets/lottie icons/Shopping cart.json";
+import { AuthContext } from "../context/AuthContext"; // ✅ Add this
 
 const CustomerNavbar = ({ toggleSidebar }) => {
   const [showSearch, setShowSearch] = useState(false);
@@ -17,6 +18,7 @@ const CustomerNavbar = ({ toggleSidebar }) => {
   const profileRef = useRef(null);
   const notifRef = useRef(null);
   const navigate = useNavigate();
+  const { logout } = useContext(AuthContext); // ✅ Access logout from context
 
   const dummyCartItems = [
     { id: 1, name: "Margherita Pizza", quantity: 2 },
@@ -44,6 +46,11 @@ const CustomerNavbar = ({ toggleSidebar }) => {
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <header className="flex items-center justify-between bg-white dark:bg-gray-900 border-b dark:border-gray-700 shadow px-4 py-3 sticky top-0 z-40 w-full">
@@ -202,14 +209,14 @@ const CustomerNavbar = ({ toggleSidebar }) => {
         </div>
 
         {/* Logout */}
-        <a
-          href="/logout"
+        <button
+          onClick={handleLogout}
           className="hover:text-red-500 transition"
           title="Logout"
           aria-label="Logout"
         >
           <FaSignOutAlt />
-        </a>
+        </button>
       </div>
 
       {/* Search Modal */}
