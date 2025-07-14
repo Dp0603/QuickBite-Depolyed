@@ -9,7 +9,7 @@ const RestaurantRoutes = require("./routes/RestaurantRoutes");
 const MenuRoutes = require("./routes/MenuRoutes");
 const CartRoutes = require("./routes/CartRoutes");
 const OrderRoutes = require("./routes/OrderRoutes"); // ✅ Add this
-
+const OfferRoutes = require("./routes/OfferRoutes");
 
 // 📦 Load environment variables
 dotenv.config();
@@ -31,6 +31,7 @@ app.use("/api/restaurant", RestaurantRoutes);
 app.use("/api/menu", MenuRoutes); // ✅ NEW ROUTE ADDED
 app.use("/api/cart", CartRoutes); // 👈 Mount /api/cart routes
 app.use("/api/orders", OrderRoutes); // ✅ Mount it
+app.use("/api/offers", OfferRoutes);
 
 // 🏠 Root route
 app.get("/", (req, res) => {

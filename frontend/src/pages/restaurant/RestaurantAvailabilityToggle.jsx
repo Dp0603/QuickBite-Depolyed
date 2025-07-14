@@ -1,50 +1,196 @@
-import React, { useState } from "react";
-import { FaPowerOff, FaCheckCircle, FaTimesCircle } from "react-icons/fa";
+import React, { useEffect, useState, useContext } from "react";
+import {
+  FaClock,
+  FaToggleOn,
+  FaToggleOff,
+  FaCalendarAlt,
+  FaSave,
+} from "react-icons/fa";
+import API from "../../api/axios";
+import { AuthContext } from "../../context/AuthContext";
 
 const RestaurantAvailabilityToggle = () => {
-  const [isOnline, setIsOnline] = useState(true);
+  const { user } = useContext(AuthContext);
+  const [availability, setAvailability] = useState({
+    isOnline: true,
+    autoAvailabilityEnabled: false,
+    openTime: "09:00",
+    closeTime: "22:00",
+    breaks: [],
+    holidays: [],
+    autoAcceptOrders: true,
+  });
 
-  const handleToggle = () => setIsOnline((prev) => !prev);
+  const [loading, setLoading] = useState(true);
+  const [newHoliday, setNewHoliday] = useState("");
+
+  const fetchAvailability = async () => {
+    try {
+      const res = await API.get("/restaurant/availability");
+      setAvailability(res.data.data);
+    } catch (err) {
+      console.error("Error fetching availability:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateAvailability = async () => {
+    try {
+      await API.put("/restaurant/availability", availability);
+      alert("Availability updated!");
+    } catch (err) {
+      console.error("Error updating availability:", err);
+    }
+  };
+
+  const toggleOnline = () => {
+    setAvailability((prev) => ({ ...prev, isOnline: !prev.isOnline }));
+  };
+
+  useEffect(() => {
+    fetchAvailability();
+  }, []);
+
+  if (loading) return <div className="text-center py-10">Loading...</div>;
 
   return (
-    <div className="bg-white dark:bg-gray-900 shadow-lg rounded-xl p-6 w-full max-w-md mx-auto text-gray-800 dark:text-white">
+    <div className="max-w-2xl mx-auto bg-white dark:bg-gray-900 p-6 rounded-xl shadow text-gray-800 dark:text-white">
       <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-        <FaPowerOff className="text-orange-500" />
-        Restaurant Availability
+        <FaClock className="text-orange-500" />
+        Restaurant Availability Settings
       </h2>
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="text-sm">
-          <p className="text-gray-600 dark:text-gray-400">Current Status:</p>
-          <div className="flex items-center gap-2 mt-1">
-            {isOnline ? (
-              <FaCheckCircle className="text-green-500 text-lg" />
-            ) : (
-              <FaTimesCircle className="text-red-500 text-lg" />
-            )}
-            <span
-              className={`font-semibold px-3 py-1 rounded-full text-sm ${
-                isOnline
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-600"
-              }`}
-            >
-              {isOnline ? "Online - Accepting Orders" : "Offline"}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="text-center">
+      {/* Online Toggle */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="font-medium">Restaurant is Currently:</span>
         <button
-          onClick={handleToggle}
-          className={`px-6 py-2 text-sm font-semibold rounded-lg shadow-sm transition duration-200 ${
-            isOnline
-              ? "bg-red-500 hover:bg-red-600 text-white"
-              : "bg-green-500 hover:bg-green-600 text-white"
+          onClick={toggleOnline}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-white ${
+            availability.isOnline ? "bg-green-500" : "bg-red-500"
           }`}
         >
-          {isOnline ? "Switch to Offline Mode" : "Switch to Online Mode"}
+          {availability.isOnline ? <FaToggleOn /> : <FaToggleOff />}
+          {availability.isOnline ? "Online" : "Offline"}
+        </button>
+      </div>
+
+      {/* Timings */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <label className="flex flex-col">
+          Open Time
+          <input
+            type="time"
+            value={availability.openTime}
+            onChange={(e) =>
+              setAvailability({ ...availability, openTime: e.target.value })
+            }
+            className="input-style mt-1"
+          />
+        </label>
+        <label className="flex flex-col">
+          Close Time
+          <input
+            type="time"
+            value={availability.closeTime}
+            onChange={(e) =>
+              setAvailability({ ...availability, closeTime: e.target.value })
+            }
+            className="input-style mt-1"
+          />
+        </label>
+      </div>
+
+      {/* Auto Toggle */}
+      <div className="flex items-center gap-3 mb-4">
+        <input
+          type="checkbox"
+          checked={availability.autoAvailabilityEnabled}
+          onChange={(e) =>
+            setAvailability({
+              ...availability,
+              autoAvailabilityEnabled: e.target.checked,
+            })
+          }
+          id="auto-toggle"
+        />
+        <label htmlFor="auto-toggle">Auto open/close at defined time</label>
+      </div>
+
+      {/* Auto Accept Orders */}
+      <div className="flex items-center gap-3 mb-4">
+        <input
+          type="checkbox"
+          checked={availability.autoAcceptOrders}
+          onChange={(e) =>
+            setAvailability({
+              ...availability,
+              autoAcceptOrders: e.target.checked,
+            })
+          }
+          id="auto-accept"
+        />
+        <label htmlFor="auto-accept">Auto accept orders</label>
+      </div>
+
+      {/* Holidays */}
+      <div className="mb-4">
+        <label className="block font-medium mb-2">Holiday Dates</label>
+        <div className="flex items-center gap-3 mb-2">
+          <input
+            type="date"
+            value={newHoliday}
+            onChange={(e) => setNewHoliday(e.target.value)}
+            className="input-style"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (newHoliday && !availability.holidays.includes(newHoliday)) {
+                setAvailability((prev) => ({
+                  ...prev,
+                  holidays: [...prev.holidays, newHoliday],
+                }));
+                setNewHoliday("");
+              }
+            }}
+            className="px-3 py-1 bg-primary text-white rounded hover:bg-orange-600"
+          >
+            Add
+          </button>
+        </div>
+
+        <ul className="text-sm space-y-1">
+          {availability.holidays.map((date, index) => (
+            <li key={index} className="flex justify-between items-center">
+              <span>
+                <FaCalendarAlt className="inline mr-1" />
+                {new Date(date).toLocaleDateString()}
+              </span>
+              <button
+                onClick={() =>
+                  setAvailability((prev) => ({
+                    ...prev,
+                    holidays: prev.holidays.filter((d) => d !== date),
+                  }))
+                }
+                className="text-red-500 hover:underline text-xs"
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Save Button */}
+      <div className="text-center">
+        <button
+          onClick={updateAvailability}
+          className="bg-primary text-white px-5 py-2 rounded hover:bg-orange-600 transition inline-flex items-center gap-2"
+        >
+          <FaSave />
+          Save Settings
         </button>
       </div>
     </div>
