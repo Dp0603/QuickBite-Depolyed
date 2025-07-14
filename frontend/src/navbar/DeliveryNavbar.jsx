@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import { FaSignOutAlt } from "react-icons/fa";
 import Lottie from "lottie-react";
 import { useNavigate } from "react-router-dom";
 
 import NotificationLottie from "../assets/lottie icons/Notification.json";
 import CloseLottie from "../assets/lottie icons/Hamburger menu.json";
+import { AuthContext } from "../context/AuthContext"; // ✅ Add this
 
 const DeliveryNavbar = ({ toggleSidebar }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -13,6 +14,7 @@ const DeliveryNavbar = ({ toggleSidebar }) => {
   const profileRef = useRef(null);
   const notifRef = useRef(null);
   const navigate = useNavigate();
+  const { logout } = useContext(AuthContext); // ✅ Access logout from context
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -26,6 +28,11 @@ const DeliveryNavbar = ({ toggleSidebar }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <header className="flex items-center justify-between bg-white dark:bg-gray-900 border-b dark:border-gray-700 shadow px-4 py-3 sticky top-0 z-40 w-full">
@@ -112,14 +119,14 @@ const DeliveryNavbar = ({ toggleSidebar }) => {
         </div>
 
         {/* Logout */}
-        <a
-          href="/logout"
+        <button
+          onClick={handleLogout}
           className="hover:text-red-500 transition"
           title="Logout"
           aria-label="Logout"
         >
           <FaSignOutAlt />
-        </a>
+        </button>
       </div>
     </header>
   );

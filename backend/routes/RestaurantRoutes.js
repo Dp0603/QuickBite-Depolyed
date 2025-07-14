@@ -1,36 +1,33 @@
 const express = require("express");
 const router = express.Router();
+
 const {
+  createRestaurantProfile,
   getRestaurantProfile,
   updateRestaurantProfile,
-  getMenu,
-  addMenuItem,
-  deleteMenuItem,
   getRestaurantOrders,
   updateOrderStatus,
   getReviews,
-} = require("../controllers/RestaurantController");
+} = require("../controllers/RestuarantController");
 
-const { protect, authorize } = require("../middleware/authMiddleware");
+const { protect, authorize } = require("../middlewares/authMiddleware");
 
-// All routes are protected and restricted to restaurant role
+// 🔐 All routes require auth & restaurant role
 router.use(protect);
 router.use(authorize("restaurant"));
 
-// 🧑‍🍳 Get and Update Profile
+// 🆕 Create restaurant profile
+router.post("/profile", createRestaurantProfile);
+
+// 🧑‍🍳 Get and update profile
 router.get("/profile", getRestaurantProfile);
 router.put("/profile", updateRestaurantProfile);
 
-// 📋 Menu Routes
-router.get("/menu", getMenu); // View menu
-router.post("/menu", addMenuItem); // Add menu item
-router.delete("/menu/:itemId", deleteMenuItem); // Delete menu item
-
 // 📦 Orders
-router.get("/orders", getRestaurantOrders); // View orders
-router.put("/orders/:orderId", updateOrderStatus); // Update order status
+router.get("/orders", getRestaurantOrders);
+router.put("/orders/:orderId", updateOrderStatus);
 
 // 💬 Reviews
-router.get("/reviews", getReviews); // Get reviews
+router.get("/reviews", getReviews);
 
 module.exports = router;
