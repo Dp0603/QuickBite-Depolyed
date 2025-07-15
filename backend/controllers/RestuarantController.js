@@ -237,6 +237,37 @@ const getReviews = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+const getMenuSchedule = async (req, res) => {
+  try {
+    const restaurant = await RestaurantModel.findOne({ userId: req.user.id });
+    if (!restaurant) return res.status(404).json({ message: "Not found" });
+
+    res.status(200).json({
+      message: "Menu schedule fetched",
+      data: restaurant.menuSchedule || [],
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+const updateMenuSchedule = async (req, res) => {
+  try {
+    const { schedule } = req.body;
+    const restaurant = await RestaurantModel.findOne({ userId: req.user.id });
+
+    if (!restaurant) return res.status(404).json({ message: "Not found" });
+
+    restaurant.menuSchedule = schedule;
+    await restaurant.save();
+
+    res.status(200).json({
+      message: "Menu schedule updated",
+      data: restaurant.menuSchedule,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 module.exports = {
   createRestaurantProfile,
@@ -248,4 +279,6 @@ module.exports = {
   getAvailabilitySettings,
   updateAvailabilitySettings,
   getReviews,
+  getMenuSchedule,
+  updateMenuSchedule,
 };

@@ -136,3 +136,88 @@ const DeliveryDashboard = () => {
 };
 
 export default DeliveryDashboard;
+
+
+// import React, { useEffect, useState, useContext } from "react";
+// import axios from "axios";
+// import { AuthContext } from "../../context/AuthContext";
+
+// const DeliveryDashboard = () => {
+//   const { user, token } = useContext(AuthContext);
+//   const [orders, setOrders] = useState([]);
+
+//   useEffect(() => {
+//     const fetchAssignedOrders = async () => {
+//       try {
+//         const res = await axios.get(`/api/orders/delivery-agent/${user._id}`, {
+//           headers: { Authorization: `Bearer ${token}` },
+//         });
+//         setOrders(res.data.data);
+//       } catch (err) {
+//         console.error("Failed to fetch assigned orders:", err);
+//       }
+//     };
+
+//     if (user?._id) {
+//       fetchAssignedOrders();
+//     }
+//   }, [user, token]);
+
+//   const handleStatusUpdate = async (orderId, newStatus) => {
+//     try {
+//       await axios.put(
+//         `/api/orders/${orderId}/status`,
+//         { status: newStatus },
+//         { headers: { Authorization: `Bearer ${token}` } }
+//       );
+//       setOrders((prev) =>
+//         prev.map((order) =>
+//           order._id === orderId ? { ...order, status: newStatus } : order
+//         )
+//       );
+//     } catch (err) {
+//       console.error("Failed to update status:", err);
+//     }
+//   };
+
+//   return (
+//     <div className="p-6">
+//       <h2 className="text-2xl font-bold mb-4">Assigned Deliveries</h2>
+//       <div className="space-y-4">
+//         {orders.map((order) => (
+//           <div key={order._id} className="bg-white p-4 rounded shadow">
+//             <p>
+//               <strong>Restaurant:</strong> {order.restaurantId.name}
+//             </p>
+//             <p>
+//               <strong>Address:</strong> {order.deliveryAddress}
+//             </p>
+//             <p>
+//               <strong>Status:</strong> {order.status}
+//             </p>
+//             <div className="space-x-2 mt-2">
+//               {order.status === "Ready for Pickup" && (
+//                 <button
+//                   onClick={() => handleStatusUpdate(order._id, "Out for Delivery")}
+//                   className="bg-blue-500 text-white px-3 py-1 rounded"
+//                 >
+//                   Picked Up
+//                 </button>
+//               )}
+//               {order.status === "Out for Delivery" && (
+//                 <button
+//                   onClick={() => handleStatusUpdate(order._id, "Delivered")}
+//                   className="bg-green-500 text-white px-3 py-1 rounded"
+//                 >
+//                   Mark as Delivered
+//                 </button>
+//               )}
+//             </div>
+//           </div>
+//         ))}
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default DeliveryDashboard;

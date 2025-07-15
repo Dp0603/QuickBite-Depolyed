@@ -6,6 +6,8 @@ const {
   getCustomerOrders,
   getRestaurantOrders,
   updateOrderStatus,
+  getOrdersByDeliveryAgent,
+  assignDeliveryAgent,
 } = require("../controllers/OrderController");
 
 // ➕ Create a new order
@@ -22,5 +24,11 @@ router.get("/restaurant/:restaurantId", getRestaurantOrders);
 
 // ✏️ Update order status
 router.put("/:id/status", updateOrderStatus);
+
+// 🚚 Get orders assigned to delivery agent
+router.get("/delivery-agent/:riderId", getOrdersByDeliveryAgent);
+
+// ✏️ Assign rider to order (by restaurant/admin)
+router.put("/:id/assign-rider", assignDeliveryAgent);
 
 module.exports = router;

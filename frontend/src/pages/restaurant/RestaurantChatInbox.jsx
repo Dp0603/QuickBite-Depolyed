@@ -1,74 +1,69 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
+import axios from "axios";
 import { FaCommentDots } from "react-icons/fa";
-
-const dummyMessages = [
-  {
-    id: 1,
-    customer: "Anjali Sharma",
-    message: "Is Jain food available?",
-    time: "2 mins ago",
-    replied: false,
-  },
-  {
-    id: 2,
-    customer: "Ravi Kumar",
-    message: "Order taking too long...",
-    time: "10 mins ago",
-    replied: true,
-  },
-];
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { AuthContext } from "../../context/AuthContext"; // ✅ Make sure path is correct
 
 const RestaurantChatInbox = () => {
-  const [messages] = useState(dummyMessages);
+  const [msgs, setMsgs] = useState([]);
+  const navigate = useNavigate();
+  const { token } = useContext(AuthContext); // ✅ Access token from context
+
+  const fetchInbox = async () => {
+    try {
+      const res = await axios.get("/api/chat/restaurant/inbox", {
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ Set auth header
+        },
+      });
+      setMsgs(res.data.data);
+    } catch (err) {
+      console.error("Error fetching chat inbox:", err);
+      toast.error("Failed to load inbox");
+    }
+  };
+
+  useEffect(() => {
+    fetchInbox();
+    const interval = setInterval(fetchInbox, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className="px-6 py-8 min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-white">
-      <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
-        {/* Heading */}
-        <h2 className="text-3xl font-bold flex items-center gap-2">
-          <FaCommentDots className="text-primary" />
-          Customer Messages
-        </h2>
+    <div className="p-6 bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-white">
+      <h2 className="text-3xl font-bold flex items-center gap-2 mb-4">
+        <FaCommentDots className="text-primary" />
+        Customer Chat Inbox
+      </h2>
 
-        {/* Message List */}
-        <div className="bg-white dark:bg-secondary rounded-xl shadow divide-y divide-gray-100 dark:divide-gray-700">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className="p-5 flex justify-between items-start hover:bg-accent dark:hover:bg-secondary/70 transition"
-            >
-              {/* Left side */}
-              <div className="space-y-1">
-                <p className="font-semibold text-base">{msg.customer}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  {msg.message}
-                </p>
-                <span className="text-xs text-gray-400">{msg.time}</span>
-              </div>
-
-              {/* Right side - badge */}
-              <div className="flex items-center gap-3">
-                <span
-                  className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                    msg.replied
-                      ? "bg-green-100 text-green-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}
-                >
-                  {msg.replied ? "Replied" : "Pending"}
-                </span>
-
-                {/* Optional future reply button */}
-                <button
-                  className="text-sm text-primary font-medium hover:underline hidden sm:inline"
-                  disabled={msg.replied}
-                >
-                  {msg.replied ? "" : "Reply"}
-                </button>
-              </div>
+      <div className="bg-white dark:bg-secondary rounded-xl shadow divide-y">
+        {msgs.map((m) => (
+          <div
+            key={m._id}
+            className="p-5 flex justify-between items-start hover:bg-gray-100 dark:hover:bg-secondary/70 cursor-pointer"
+            onClick={() => navigate(`/restaurant/chat/${m._id}`)}
+          >
+            <div>
+              <p className="font-semibold">{m.customer}</p>
+              <p className="text-sm">{m.message}</p>
+              <span className="text-xs text-gray-400">{m.time}</span>
             </div>
-          ))}
-        </div>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                m.replied
+                  ? "bg-green-100 text-green-700"
+                  : "bg-yellow-100 text-yellow-700"
+              }`}
+            >
+              {m.replied ? "Replied" : "Pending"}
+            </span>
+          </div>
+        ))}
+
+        {msgs.length === 0 && (
+          <div className="p-6 text-center text-gray-400">No messages yet.</div>
+        )}
       </div>
     </div>
   );

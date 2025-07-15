@@ -1,15 +1,40 @@
-import React, { useState } from "react";
-import { FaUtensils, FaClock } from "react-icons/fa";
-
-const initial = [
-  { name: "Breakfast", start: "08:00", end: "11:00", enabled: true },
-  { name: "Lunch", start: "12:00", end: "15:00", enabled: true },
-  { name: "Dinner", start: "18:00", end: "22:00", enabled: true },
-];
+import React, { useState, useEffect } from "react";
+import { FaClock } from "react-icons/fa";
+import API from "../../api/axios";
 
 const RestaurantMenuScheduler = () => {
-  const [schedule, setSchedule] = useState(initial);
+  const [schedule, setSchedule] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
+  // 🔃 Load schedule from backend
+  const fetchSchedule = async () => {
+    try {
+      const res = await API.get("/restaurant/menu-schedule");
+      const data = res.data.data;
+
+      if (Array.isArray(data) && data.length > 0) {
+        setSchedule(data);
+      } else {
+        // fallback to default schedule
+        setSchedule([
+          { name: "Breakfast", start: "08:00", end: "11:00", enabled: true },
+          { name: "Lunch", start: "12:00", end: "15:00", enabled: true },
+          { name: "Dinner", start: "18:00", end: "22:00", enabled: true },
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to load schedule:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSchedule();
+  }, []);
+
+  // ✅ Update values
   const toggle = (i) =>
     setSchedule((prev) =>
       prev.map((slot, idx) =>
@@ -17,11 +42,25 @@ const RestaurantMenuScheduler = () => {
       )
     );
 
-  const updateTime = (i, field, value) => {
+  const updateTime = (i, field, value) =>
     setSchedule((prev) =>
       prev.map((slot, idx) => (idx === i ? { ...slot, [field]: value } : slot))
     );
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await API.put("/restaurant/menu-schedule", { schedule });
+      alert("✅ Schedule saved successfully!");
+    } catch (err) {
+      console.error("Save failed:", err);
+      alert("❌ Failed to save schedule.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) return <p className="p-6">Loading schedule...</p>;
 
   return (
     <div className="p-6 max-w-2xl mx-auto bg-white dark:bg-gray-900 shadow-lg rounded-xl text-gray-800 dark:text-white">
@@ -73,9 +112,10 @@ const RestaurantMenuScheduler = () => {
 
       <button
         className="mt-8 w-full py-3 rounded bg-primary text-white text-center text-sm font-semibold hover:bg-orange-600 transition"
-        onClick={() => alert("Schedule saved (dummy handler)")}
+        onClick={handleSave}
+        disabled={saving}
       >
-        Save Schedule
+        {saving ? "Saving..." : "Save Schedule"}
       </button>
     </div>
   );

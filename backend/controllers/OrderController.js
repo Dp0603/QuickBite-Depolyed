@@ -41,7 +41,9 @@ const getCustomerOrders = async (req, res) => {
 // 🍽️ Get restaurant-specific orders
 const getRestaurantOrders = async (req, res) => {
   try {
-    const orders = await OrderModel.find({ restaurantId: req.params.restaurantId })
+    const orders = await OrderModel.find({
+      restaurantId: req.params.restaurantId,
+    })
       .populate("customerId", "name")
       .populate("items.menuItemId", "name price");
     res.status(200).json({ message: "Restaurant orders", data: orders });
@@ -63,6 +65,30 @@ const updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// 🚚 Get orders for a delivery agent
+const getOrdersByDeliveryAgent = async (req, res) => {
+  try {
+    const orders = await OrderModel.find({ riderId: req.params.riderId })
+      .populate("customerId", "name")
+      .populate("restaurantId", "name")
+      .populate("items.menuItemId", "name price");
+    res.status(200).json({ message: "Assigned orders", data: orders });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+const assignDeliveryAgent = async (req, res) => {
+  try {
+    const updated = await OrderModel.findByIdAndUpdate(
+      req.params.id,
+      { riderId: req.body.riderId },
+      { new: true }
+    );
+    res.status(200).json({ message: "Delivery agent assigned", data: updated });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 module.exports = {
   createOrder,
@@ -70,4 +96,6 @@ module.exports = {
   getCustomerOrders,
   getRestaurantOrders,
   updateOrderStatus,
+  getOrdersByDeliveryAgent,
+  assignDeliveryAgent,
 };
