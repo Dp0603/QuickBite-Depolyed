@@ -10,6 +10,10 @@ const MenuRoutes = require("./routes/MenuRoutes");
 const CartRoutes = require("./routes/CartRoutes");
 const OrderRoutes = require("./routes/OrderRoutes"); // ✅ Add this
 const OfferRoutes = require("./routes/OfferRoutes");
+const payoutRoutes = require("./routes/PayoutRoutes");
+const chatRoutes = require("./routes/ChatRoutes");
+const restaurantSettingsRoutes = require("./routes/RestaurantSettingsRoutes");
+const reviewRoutes = require("./routes/ReviewRoutes"); // ✅ NEW ROUTE ADDED
 
 // 📦 Load environment variables
 dotenv.config();
@@ -32,6 +36,10 @@ app.use("/api/menu", MenuRoutes); // ✅ NEW ROUTE ADDED
 app.use("/api/cart", CartRoutes); // 👈 Mount /api/cart routes
 app.use("/api/orders", OrderRoutes); // ✅ Mount it
 app.use("/api/offers", OfferRoutes);
+app.use("/api/payouts", payoutRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/restaurant/settings", restaurantSettingsRoutes);
+app.use("/api", reviewRoutes); // ✅ NEW ROUTE ADDED"));
 
 // 🏠 Root route
 app.get("/", (req, res) => {

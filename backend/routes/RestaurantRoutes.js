@@ -11,6 +11,8 @@ const {
   toggleAvailability, // ✅ added toggle route
   getAvailabilitySettings,
   updateAvailabilitySettings,
+  getMenuSchedule,
+  updateMenuSchedule,
 } = require("../controllers/RestuarantController"); // ✅ fixed spelling
 
 const { protect, authorize } = require("../middlewares/authMiddleware");
@@ -28,6 +30,11 @@ router.put("/profile", updateRestaurantProfile);
 router.get("/orders", getRestaurantOrders);
 router.put("/orders/:orderId", updateOrderStatus);
 
+// 📊 Analytics
+router.get("/analytics/sales", require("../controllers/analyticsController").getSalesStats);
+router.get("/analytics/top-dishes", require("../controllers/analyticsController").getTopDishes);
+
+
 // 💬 Reviews
 router.get("/reviews", getReviews);
 
@@ -35,5 +42,9 @@ router.get("/reviews", getReviews);
 router.put("/toggle-availability", toggleAvailability); // ✅ toggle online/offline
 router.get("/availability", getAvailabilitySettings);
 router.put("/availability", updateAvailabilitySettings);
+
+// 🕒 Menu Scheduler
+router.get("/menu-schedule", getMenuSchedule);
+router.put("/menu-schedule", updateMenuSchedule);
 
 module.exports = router;

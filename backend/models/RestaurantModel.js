@@ -74,6 +74,14 @@ const restaurantSchema = new mongoose.Schema(
       holidays: [String], // e.g. ["2025-07-14"]
       autoAcceptOrders: { type: Boolean, default: true },
     },
+    menuSchedule: [
+      {
+        name: String,
+        start: String, // e.g., "08:00"
+        end: String, // e.g., "11:00"
+        enabled: { type: Boolean, default: true },
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -1,31 +1,8 @@
-import React from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { FaStar, FaRegStar } from "react-icons/fa";
+import API from "../../api/axios";
+import { AuthContext } from "../../context/AuthContext";
 
-const reviews = [
-  {
-    id: 1,
-    customer: "Ravi Kumar",
-    rating: 5,
-    comment: "Delicious food and fast delivery!",
-    date: "July 8, 2025",
-  },
-  {
-    id: 2,
-    customer: "Ananya Singh",
-    rating: 4,
-    comment: "Loved the biryani. Packaging could improve.",
-    date: "July 6, 2025",
-  },
-  {
-    id: 3,
-    customer: "Amit Das",
-    rating: 3,
-    comment: "Average taste. Quantity was low for the price.",
-    date: "July 2, 2025",
-  },
-];
-
-// Reusable Review Card
 const ReviewCard = ({ review }) => {
   const totalStars = 5;
 
@@ -33,10 +10,10 @@ const ReviewCard = ({ review }) => {
     <div className="bg-white dark:bg-secondary p-4 rounded-lg shadow hover:shadow-md transition">
       <div className="flex justify-between items-center mb-2">
         <h4 className="font-semibold text-gray-800 dark:text-white">
-          {review.customer}
+          {review.user?.name || "Anonymous"}
         </h4>
         <span className="text-sm text-gray-500 dark:text-gray-400">
-          {review.date}
+          {new Date(review.createdAt).toLocaleDateString()}
         </span>
       </div>
 
@@ -51,24 +28,49 @@ const ReviewCard = ({ review }) => {
       </div>
 
       <p className="text-gray-700 dark:text-gray-300 text-sm">
-        {review.comment}
+        {review.feedback || "No comment provided."}
       </p>
     </div>
   );
 };
 
 const RestaurantReviews = () => {
+  const { user } = useContext(AuthContext);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchReviews = async () => {
+    try {
+      const res = await API.get(`/ratings/restaurant/${user._id}`);
+      setReviews(res.data.data || []);
+    } catch (err) {
+      console.error("Failed to fetch reviews", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, []);
+
   return (
     <div className="p-6 text-gray-800 dark:text-white">
       <h2 className="text-2xl font-bold mb-5 flex items-center gap-2">
         <FaStar className="text-yellow-500" /> Customer Reviews
       </h2>
 
-      <div className="grid gap-5">
-        {reviews.map((review) => (
-          <ReviewCard key={review.id} review={review} />
-        ))}
-      </div>
+      {loading ? (
+        <p>Loading reviews...</p>
+      ) : reviews.length === 0 ? (
+        <p className="text-gray-500">No reviews yet.</p>
+      ) : (
+        <div className="grid gap-5">
+          {reviews.map((review) => (
+            <ReviewCard key={review._id} review={review} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

@@ -40,7 +40,7 @@ const RestaurantDashboard = () => {
     const map = {};
     todayOrders.forEach((order) =>
       order.items.forEach(({ menuItemId, quantity }) => {
-        const name = menuItemId.name || "Unknown Dish"; // assuming populated item
+        const name = menuItemId?.name || "Unknown Dish";
         map[name] = (map[name] || 0) + quantity;
       })
     );
