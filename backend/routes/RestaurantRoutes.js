@@ -1,6 +1,27 @@
 const express = require("express");
 const router = express.Router();
 
+// 🌐 Public route for customers to browse restaurants
+const RestaurantModel = require("../models/RestaurantModel");
+
+router.get("/public/restaurants", async (req, res) => {
+  try {
+    const restaurants = await RestaurantModel.find({
+      verified: true,
+      isOpen: true,
+    }).select(
+      "restaurantName cuisine address logoUrl ratings isOpen availability"
+    );
+
+    res.status(200).json({
+      message: "Restaurants fetched successfully",
+      data: restaurants,
+    });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 const {
   createRestaurantProfile,
   getRestaurantProfile,
@@ -31,9 +52,14 @@ router.get("/orders", getRestaurantOrders);
 router.put("/orders/:orderId", updateOrderStatus);
 
 // 📊 Analytics
-router.get("/analytics/sales", require("../controllers/analyticsController").getSalesStats);
-router.get("/analytics/top-dishes", require("../controllers/analyticsController").getTopDishes);
-
+router.get(
+  "/analytics/sales",
+  require("../controllers/analyticsController").getSalesStats
+);
+router.get(
+  "/analytics/top-dishes",
+  require("../controllers/analyticsController").getTopDishes
+);
 
 // 💬 Reviews
 router.get("/reviews", getReviews);

@@ -1,36 +1,39 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { FaStar, FaEdit, FaTrashAlt, FaUtensils } from "react-icons/fa";
-
-const initialReviews = [
-  {
-    id: 1,
-    restaurant: "Pizza Palace",
-    date: "2025-06-25",
-    rating: 5,
-    comment: "Delicious pizza and quick delivery!",
-  },
-  {
-    id: 2,
-    restaurant: "Sushi World",
-    date: "2025-06-20",
-    rating: 4,
-    comment: "Fresh sushi and good service.",
-  },
-  {
-    id: 3,
-    restaurant: "Burger Barn",
-    date: "2025-06-15",
-    rating: 3,
-    comment: "Burger was okay, but delivery was late.",
-  },
-];
+import API from "../../api/axios";
+import { AuthContext } from "../../context/AuthContext";
 
 const CustomerReviews = () => {
-  const [reviews, setReviews] = useState(initialReviews);
+  const [reviews, setReviews] = useState([]);
+  const { user } = useContext(AuthContext);
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this review?")) {
-      setReviews(reviews.filter((r) => r.id !== id));
+  // ✅ Fetch reviews on mount
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const res = await API.get("/reviews/me"); // Protected route
+        setReviews(res.data.data);
+      } catch (err) {
+        console.error("❌ Error fetching reviews:", err);
+      }
+    };
+
+    fetchReviews();
+  }, []);
+
+  // ✅ Handle delete review
+  const handleDelete = async (reviewId) => {
+    const confirm = window.confirm(
+      "Are you sure you want to delete this review?"
+    );
+    if (!confirm) return;
+
+    try {
+      await API.delete(`/reviews/${reviewId}`);
+      setReviews((prev) => prev.filter((r) => r._id !== reviewId));
+    } catch (err) {
+      console.error("❌ Error deleting review:", err);
+      alert("Failed to delete review. Please try again.");
     }
   };
 
@@ -48,15 +51,19 @@ const CustomerReviews = () => {
         <div className="grid md:grid-cols-2 gap-6">
           {reviews.map((review) => (
             <div
-              key={review.id}
+              key={review._id}
               className="p-5 bg-white dark:bg-secondary border dark:border-gray-700 shadow rounded-xl animate-fade-in"
             >
               <div className="flex justify-between items-start mb-2">
-                <h3 className="text-lg font-semibold">{review.restaurant}</h3>
-                <span className="text-xs text-gray-500">{review.date}</span>
+                <h3 className="text-lg font-semibold">
+                  {review.restaurantId?.restaurantName || "Unknown Restaurant"}
+                </h3>
+                <span className="text-xs text-gray-500">
+                  {new Date(review.createdAt).toLocaleDateString("en-IN")}
+                </span>
               </div>
 
-              {/* Star rating */}
+              {/* ⭐ Star rating */}
               <div className="flex items-center gap-1 mb-2">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <FaStar
@@ -70,12 +77,12 @@ const CustomerReviews = () => {
                 ))}
               </div>
 
-              {/* Comment */}
+              {/* 💬 Comment */}
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
                 {review.comment}
               </p>
 
-              {/* Actions */}
+              {/* ✏️ Actions */}
               <div className="flex gap-3">
                 <button
                   onClick={() => alert("Edit functionality coming soon!")}
@@ -84,7 +91,7 @@ const CustomerReviews = () => {
                   <FaEdit /> Edit
                 </button>
                 <button
-                  onClick={() => handleDelete(review.id)}
+                  onClick={() => handleDelete(review._id)}
                   className="flex items-center gap-2 text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md transition"
                 >
                   <FaTrashAlt /> Delete

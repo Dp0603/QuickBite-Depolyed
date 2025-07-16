@@ -1,6 +1,6 @@
 const UserModel = require("../models/UserModel");
+const RestaurantModel = require("../models/RestaurantModel");
 
-// 🛒 Mock Data (replace with DB in future)
 let carts = {}; // userId -> cart items
 let orders = {}; // userId -> orders array
 
@@ -144,20 +144,23 @@ const getOrders = async (req, res) => {
   }
 };
 
-// 🍽 Browse Restaurants (Mocked for now)
+// 🍽 Browse Restaurants (from DB)
 const browseRestaurants = async (req, res) => {
   try {
-    const restaurants = [
-      { id: "r1", name: "Pizza Palace", cuisine: "Italian" },
-      { id: "r2", name: "Burger Haven", cuisine: "American" },
-      { id: "r3", name: "Curry Kingdom", cuisine: "Indian" },
-    ];
+    // ✅ Fetch only verified + open restaurants
+    const restaurants = await RestaurantModel.find({
+      isOpen: true,
+      verified: true,
+    }).select(
+      "restaurantName cuisine address.city ratings isOpen logoUrl bannerUrl"
+    );
 
     res.status(200).json({
       message: "Restaurants retrieved successfully",
       data: restaurants,
     });
   } catch (err) {
+    console.error("❌ Error fetching restaurants:", err);
     res.status(500).json({ message: err.message });
   }
 };

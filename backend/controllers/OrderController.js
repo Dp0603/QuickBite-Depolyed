@@ -25,6 +25,21 @@ const getAllOrders = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// 🔍 Get order by ID
+const getOrderById = async (req, res) => {
+  try {
+    const order = await OrderModel.findById(req.params.id)
+      .populate("restaurantId", "name")
+      .populate("items.menuItemId", "name price")
+      .populate("riderId", "name phone"); // optional
+
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    res.status(200).json({ message: "Order retrieved", data: order });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // 🙋‍♂️ Get customer-specific orders
 const getCustomerOrders = async (req, res) => {
@@ -93,6 +108,7 @@ const assignDeliveryAgent = async (req, res) => {
 module.exports = {
   createOrder,
   getAllOrders,
+  getOrderById,
   getCustomerOrders,
   getRestaurantOrders,
   updateOrderStatus,

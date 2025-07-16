@@ -1,52 +1,78 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import Lottie from "lottie-react";
 import EmptyCartLottie from "../../assets/lottie icons/Shopping cart.json";
-import CartItem from "../customer/CustomerCartItems"; // Adjust path if needed
-
-const dummyCart = [
-  {
-    id: 1,
-    name: "Cheesy Margherita Pizza",
-    price: 299,
-    quantity: 2,
-    image: "/QuickBite.png",
-  },
-  {
-    id: 2,
-    name: "Spicy Ramen Bowl",
-    price: 349,
-    quantity: 1,
-    image: "/QuickBite.png",
-  },
-];
+import CartItem from "./CustomerCartItems";
+import { AuthContext } from "../../context/AuthContext";
+import API from "../../api/axios";
 
 const CustomerCart = () => {
-  const [cartItems, setCartItems] = useState(dummyCart);
+  const { user } = useContext(AuthContext);
+  const [cartItems, setCartItems] = useState([]);
   const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoError, setPromoError] = useState("");
 
-  const increment = (id) =>
+  // 🔄 Fetch cart from backend
+  useEffect(() => {
+    if (user?._id) {
+      API.get(`/cart/${user._id}`)
+        .then((res) => {
+          const items = res.data.data?.items || [];
+          setCartItems(items);
+        })
+        .catch((err) => {
+          if (err.response?.status === 404) {
+            console.log("🛒 Cart not found. Likely new user.");
+            setCartItems([]);
+          } else {
+            console.error("❌ Error fetching cart:", err);
+          }
+        });
+    }
+  }, [user]);
+
+  // ➕ Increment
+  const increment = async (id) => {
+    const item = cartItems.find((i) => i.foodId._id === id);
+    await API.put("/cart/update", {
+      userId: user._id,
+      foodId: id,
+      quantity: item.quantity + 1,
+    });
     setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+      prev.map((i) =>
+        i.foodId._id === id ? { ...i, quantity: i.quantity + 1 } : i
       )
     );
+  };
 
-  const decrement = (id) =>
+  // ➖ Decrement
+  const decrement = async (id) => {
+    const item = cartItems.find((i) => i.foodId._id === id);
+    if (item.quantity === 1) return;
+
+    await API.put("/cart/update", {
+      userId: user._id,
+      foodId: id,
+      quantity: item.quantity - 1,
+    });
     setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id && item.quantity > 1
-          ? { ...item, quantity: item.quantity - 1 }
-          : item
+      prev.map((i) =>
+        i.foodId._id === id ? { ...i, quantity: i.quantity - 1 } : i
       )
     );
+  };
 
-  const removeItem = (id) =>
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
+  // ❌ Remove
+  const removeItem = async (id) => {
+    await API.delete("/cart/remove", {
+      data: { userId: user._id, foodId: id },
+    });
+    setCartItems((prev) => prev.filter((i) => i.foodId._id !== id));
+  };
 
   const subtotal = cartItems.reduce(
-    (acc, item) => acc + item.price * item.quantity,
+    (acc, item) => acc + item.foodId.price * item.quantity,
     0
   );
   const tax = Math.round(subtotal * 0.08);
@@ -54,22 +80,15 @@ const CustomerCart = () => {
   const totalBeforeDiscount = subtotal + tax + deliveryFee;
   const totalPayable = totalBeforeDiscount - appliedDiscount;
 
-  const validCoupons = {
-    SAVE5: 0.05,
-    WELCOME10: 0.1,
-  };
+  const validCoupons = { SAVE5: 0.05, WELCOME10: 0.1 };
 
   const applyPromo = () => {
     const discountPercent = validCoupons[promoCode.toUpperCase()];
-    if (!promoCode.trim()) {
-      setPromoError("Please enter a promo code.");
-      return;
-    }
+    if (!promoCode.trim()) return setPromoError("Please enter a promo code.");
+
     if (discountPercent) {
-      const discountAmount = Math.floor(subtotal * discountPercent);
-      setAppliedDiscount(discountAmount);
+      setAppliedDiscount(Math.floor(subtotal * discountPercent));
       setPromoError("");
-      setPromoCode(promoCode.toUpperCase());
     } else {
       setAppliedDiscount(0);
       setPromoError("Invalid promo code");
@@ -98,12 +117,17 @@ const CustomerCart = () => {
         </div>
       ) : (
         <div className="grid md:grid-cols-3 gap-10">
-          {/* 🛍️ Cart Items */}
           <div className="md:col-span-2 space-y-6">
             {cartItems.map((item) => (
               <CartItem
-                key={item.id}
-                item={item}
+                key={item.foodId._id}
+                item={{
+                  id: item.foodId._id,
+                  name: item.foodId.name,
+                  price: item.foodId.price,
+                  quantity: item.quantity,
+                  image: item.foodId.image,
+                }}
                 increment={increment}
                 decrement={decrement}
                 removeItem={removeItem}
@@ -111,7 +135,7 @@ const CustomerCart = () => {
             ))}
           </div>
 
-          {/* 📦 Order Summary */}
+          {/* Order Summary */}
           <div className="bg-white dark:bg-secondary p-6 rounded-2xl shadow sticky top-24 h-fit space-y-5">
             <h3 className="text-xl font-bold mb-4 border-b pb-2 border-gray-200 dark:border-gray-600">
               🧾 Order Summary
@@ -132,11 +156,7 @@ const CustomerCart = () => {
                 Apply
               </button>
             </div>
-            {promoError && (
-              <p className="text-red-500 text-sm" role="alert">
-                {promoError}
-              </p>
-            )}
+            {promoError && <p className="text-red-500 text-sm">{promoError}</p>}
             {appliedDiscount > 0 && (
               <p className="text-green-600 text-sm">
                 Discount applied: ₹{appliedDiscount}
@@ -145,33 +165,25 @@ const CustomerCart = () => {
 
             <div className="space-y-2 text-sm pt-2">
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-300">
-                  Subtotal
-                </span>
+                <span>Subtotal</span>
                 <span>₹{subtotal}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-300">
-                  Tax (8%)
-                </span>
+                <span>Tax (8%)</span>
                 <span>₹{tax}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-300">
-                  Delivery Fee
+                <span>
+                  Delivery Fee{" "}
                   {subtotal >= 500 && (
-                    <span className="ml-1 text-green-600 text-xs font-medium">
-                      (Free)
-                    </span>
+                    <span className="text-green-600">(Free)</span>
                   )}
                 </span>
                 <span>₹{deliveryFee}</span>
               </div>
               {appliedDiscount > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600 dark:text-gray-300">
-                    Discount
-                  </span>
+                  <span>Discount</span>
                   <span className="text-green-600">–₹{appliedDiscount}</span>
                 </div>
               )}

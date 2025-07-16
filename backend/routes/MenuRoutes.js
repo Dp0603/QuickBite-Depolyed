@@ -1,5 +1,7 @@
 const express = require("express");
 const router = express.Router();
+const { getMenuByRestaurantId } = require("../controllers/MenuController");
+router.get("/restaurant/:restaurantId", getMenuByRestaurantId);
 const {
   createMenuItem,
   getRestaurantMenu,
@@ -7,7 +9,6 @@ const {
   updateMenuItem,
   deleteMenuItem,
 } = require("../controllers/MenuController");
-const { getMenuByRestaurantId } = require("../controllers/MenuController");
 
 const { protect, authorize } = require("../middlewares/authMiddleware");
 
@@ -29,6 +30,5 @@ router.put("/:id", updateMenuItem);
 
 // ❌ Delete menu item
 router.delete("/:id", deleteMenuItem);
-router.get("/restaurant/:restaurantId", getMenuByRestaurantId);
 
 module.exports = router;

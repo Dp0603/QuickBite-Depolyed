@@ -12,7 +12,7 @@ const {
   submitReview,
 } = require("../controllers/CustomerController");
 
-const { protect, authorize } = require("../middleware/authMiddleware");
+const { protect, authorize } = require("../middlewares/authMiddleware");
 
 // All routes below are protected and only for "customer" role
 router.use(protect);
