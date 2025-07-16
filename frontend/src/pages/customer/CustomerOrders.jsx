@@ -1,33 +1,8 @@
-import React from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext"; // ✅ Adjust path as needed
+import API from "../../api/axios"; // ✅ Axios instance with base URL and token
 import { FaRedoAlt, FaFileInvoice, FaMapMarkedAlt } from "react-icons/fa";
-
-const dummyOrders = [
-  {
-    id: "ORD12345",
-    restaurant: "Pizza Palace",
-    date: "2025-07-07",
-    status: "Preparing",
-    items: ["Margherita Pizza", "Garlic Bread"],
-    total: 499,
-  },
-  {
-    id: "ORD12344",
-    restaurant: "Sushi World",
-    date: "2025-06-30",
-    status: "Delivered",
-    items: ["Sushi Rolls", "Miso Soup"],
-    total: 649,
-  },
-  {
-    id: "ORD12343",
-    restaurant: "Burger Barn",
-    date: "2025-06-25",
-    status: "Cancelled",
-    items: ["Cheese Burger", "Fries"],
-    total: 299,
-  },
-];
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -45,12 +20,25 @@ const getStatusColor = (status) => {
 };
 
 const CustomerOrders = () => {
+  const { user } = useContext(AuthContext);
+  const [orders, setOrders] = useState([]);
   const navigate = useNavigate();
 
-  const activeOrders = dummyOrders.filter(
+  useEffect(() => {
+    if (user?._id) {
+      API.get(`/orders/customer/${user._id}`)
+        .then((res) => setOrders(res.data.data))
+        .catch((err) =>
+          console.error("❌ Error fetching customer orders:", err)
+        );
+    }
+  }, [user]);
+
+  const activeOrders = orders.filter(
     (order) => order.status !== "Delivered" && order.status !== "Cancelled"
   );
-  const pastOrders = dummyOrders.filter(
+
+  const pastOrders = orders.filter(
     (order) => order.status === "Delivered" || order.status === "Cancelled"
   );
 
@@ -61,7 +49,6 @@ const CustomerOrders = () => {
       {/* Active Orders */}
       <section className="mb-12">
         <h2 className="text-2xl font-semibold mb-4">🟢 Active Orders</h2>
-
         {activeOrders.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400">
             You currently have no active orders.
@@ -70,12 +57,16 @@ const CustomerOrders = () => {
           <div className="grid gap-6 md:grid-cols-2">
             {activeOrders.map((order) => (
               <div
-                key={order.id}
+                key={order._id}
                 className="rounded-xl border dark:border-gray-700 shadow-sm hover:shadow-md transition p-5 bg-white dark:bg-secondary"
               >
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-lg font-semibold">{order.restaurant}</h3>
-                  <span className="text-sm text-gray-500">{order.date}</span>
+                  <h3 className="text-lg font-semibold">
+                    {order.restaurantId?.name || "Restaurant"}
+                  </h3>
+                  <span className="text-sm text-gray-500">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2 mb-1">
@@ -89,14 +80,19 @@ const CustomerOrders = () => {
                 </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
-                  <strong>Items:</strong> {order.items.join(", ")}
+                  <strong>Items:</strong>{" "}
+                  {order.items
+                    .map(
+                      (i) => `${i.menuItemId?.name || "Item"} × ${i.quantity}`
+                    )
+                    .join(", ")}
                 </p>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-4">
-                  Total: ₹{order.total}
+                  Total: ₹{order.totalAmount}
                 </p>
 
                 <button
-                  onClick={() => navigate(`/customer/track-order/${order.id}`)}
+                  onClick={() => navigate(`/customer/track-order/${order._id}`)}
                   className="flex items-center gap-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
                 >
                   <FaMapMarkedAlt />
@@ -111,7 +107,6 @@ const CustomerOrders = () => {
       {/* Past Orders */}
       <section>
         <h2 className="text-2xl font-semibold mb-4">📦 Past Orders</h2>
-
         {pastOrders.length === 0 ? (
           <p className="text-gray-500 dark:text-gray-400">
             No past orders found.
@@ -120,12 +115,16 @@ const CustomerOrders = () => {
           <div className="grid gap-6 md:grid-cols-2">
             {pastOrders.map((order) => (
               <div
-                key={order.id}
+                key={order._id}
                 className="rounded-xl border dark:border-gray-700 shadow-sm hover:shadow-md transition p-5 bg-white dark:bg-secondary"
               >
                 <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-lg font-semibold">{order.restaurant}</h3>
-                  <span className="text-sm text-gray-500">{order.date}</span>
+                  <h3 className="text-lg font-semibold">
+                    {order.restaurantId?.name || "Restaurant"}
+                  </h3>
+                  <span className="text-sm text-gray-500">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2 mb-1">
@@ -139,10 +138,15 @@ const CustomerOrders = () => {
                 </div>
 
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
-                  <strong>Items:</strong> {order.items.join(", ")}
+                  <strong>Items:</strong>{" "}
+                  {order.items
+                    .map(
+                      (i) => `${i.menuItemId?.name || "Item"} × ${i.quantity}`
+                    )
+                    .join(", ")}
                 </p>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-4">
-                  Total: ₹{order.total}
+                  Total: ₹{order.totalAmount}
                 </p>
 
                 <div className="flex flex-wrap gap-3">

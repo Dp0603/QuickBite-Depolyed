@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   createOrder,
   getAllOrders,
+  getOrderById,
   getCustomerOrders,
   getRestaurantOrders,
   updateOrderStatus,
@@ -15,6 +16,8 @@ router.post("/", createOrder);
 
 // 📋 Get all orders
 router.get("/", getAllOrders);
+
+router.get("/:id", getOrderById);
 
 // 👤 Get orders by customer ID
 router.get("/customer/:customerId", getCustomerOrders);

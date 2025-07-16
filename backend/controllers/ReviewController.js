@@ -63,13 +63,71 @@ exports.getRestaurantRatingStats = async (req, res) => {
       },
     ]);
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        data: stats[0] || { avgRating: 0, totalReviews: 0 },
-      });
+    res.status(200).json({
+      success: true,
+      data: stats[0] || { avgRating: 0, totalReviews: 0 },
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: "Failed to get stats" });
+  }
+};
+exports.getMyReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({ userId: req.user._id })
+      .populate("restaurantId", "restaurantName")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: reviews,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch your reviews",
+    });
+  }
+};
+
+exports.deleteMyReview = async (req, res) => {
+  try {
+    const review = await Review.findOneAndDelete({
+      _id: req.params.reviewId,
+      userId: req.user._id,
+    });
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found or not authorized",
+      });
+    }
+
+    res.status(200).json({ success: true, message: "Review deleted" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to delete review" });
+  }
+};
+exports.deleteMyReview = async (req, res) => {
+  try {
+    const review = await Review.findOneAndDelete({
+      _id: req.params.reviewId,
+      userId: req.user._id,
+    });
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found or not authorized",
+      });
+    }
+
+    res.status(200).json({ success: true, message: "Review deleted" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to delete review" });
   }
 };

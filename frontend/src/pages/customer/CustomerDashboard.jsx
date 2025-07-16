@@ -1,35 +1,68 @@
-import React from "react";
-import {
-  FaCrown,
-  FaStar,
-  FaHeart,
-  FaShoppingCart,
-  FaClock,
-} from "react-icons/fa";
+import React, { useEffect, useState, useContext } from "react";
+import { FaCrown, FaStar, FaShoppingCart, FaClock } from "react-icons/fa";
 import { motion } from "framer-motion";
+import { AuthContext } from "../../context/AuthContext";
+import API from "../../api/axios";
 
 const CustomerDashboard = () => {
-  const recommended = ["Sushi Express", "Pizza Hut", "Thai Garden"];
-  const recentOrders = [
-    {
-      name: "Cheesy Margherita",
-      date: "Jul 5, 2025",
-      price: "₹299",
-      status: "Delivered",
-    },
-    {
-      name: "Spicy Ramen Bowl",
-      date: "Jul 3, 2025",
-      price: "₹349",
-      status: "Ongoing",
-    },
-    {
-      name: "Tandoori Platter",
-      date: "Jul 1, 2025",
-      price: "₹499",
-      status: "Cancelled",
-    },
-  ];
+  const { user, token } = useContext(AuthContext);
+  const [orders, setOrders] = useState([]);
+  const [recommended, setRecommended] = useState([]);
+  const [averageRating, setAverageRating] = useState(0);
+
+  // 🔄 Fetch Orders
+  useEffect(() => {
+    if (user?._id) {
+      API.get(`/orders/customer/${user._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => setOrders(res.data.data.slice(0, 3))) // last 3 orders
+        .catch((err) =>
+          console.error(
+            "❌ Failed to fetch orders:",
+            err.response?.data?.message
+          )
+        );
+    }
+  }, [user]);
+
+  // 🔄 Fetch Reviews
+  useEffect(() => {
+    API.get("/reviews/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        const reviews = res.data.data;
+        if (reviews.length) {
+          const avg =
+            reviews.reduce((a, b) => a + b.rating, 0) / reviews.length;
+          setAverageRating(avg.toFixed(1));
+        }
+      })
+      .catch((err) =>
+        console.error(
+          "❌ Failed to fetch reviews:",
+          err.response?.data?.message
+        )
+      );
+  }, []);
+
+  // 🔄 Fetch Restaurants for Recommendation
+  useEffect(() => {
+    API.get("/restaurant/public/restaurants")
+      .then((res) => {
+        const top = res.data.data
+          .sort((a, b) => b.ratings - a.ratings)
+          .slice(0, 3);
+        setRecommended(top);
+      })
+      .catch((err) =>
+        console.error(
+          "❌ Failed to fetch restaurants:",
+          err.response?.data?.message
+        )
+      );
+  }, []);
 
   return (
     <motion.div
@@ -39,7 +72,9 @@ const CustomerDashboard = () => {
       transition={{ duration: 0.4 }}
     >
       {/* 👋 Welcome */}
-      <h2 className="text-3xl font-bold mb-2">Welcome back, Foodie! 👋</h2>
+      <h2 className="text-3xl font-bold mb-2">
+        Welcome back, {user?.name?.split(" ")[0] || "Foodie"} 👋
+      </h2>
       <p className="text-gray-600 dark:text-gray-300 mb-6">
         Here’s what’s cooking in your QuickBite world.
       </p>
@@ -48,8 +83,8 @@ const CustomerDashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-md">
           <FaShoppingCart className="text-2xl text-primary mb-2" />
-          <h4 className="text-xl font-semibold">12 Orders</h4>
-          <p className="text-sm text-gray-500">Last 30 days</p>
+          <h4 className="text-xl font-semibold">{orders.length} Orders</h4>
+          <p className="text-sm text-gray-500">Last 3 Orders</p>
         </div>
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-md">
           <FaCrown className="text-2xl text-yellow-500 mb-2" />
@@ -58,7 +93,9 @@ const CustomerDashboard = () => {
         </div>
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-md">
           <FaStar className="text-2xl text-yellow-400 mb-2" />
-          <h4 className="text-xl font-semibold">4.8 Rating</h4>
+          <h4 className="text-xl font-semibold">
+            {averageRating || "0.0"} Rating
+          </h4>
           <p className="text-sm text-gray-500">From your reviews</p>
         </div>
       </div>
@@ -82,20 +119,22 @@ const CustomerDashboard = () => {
       {/* 🍽️ Recommended */}
       <h3 className="text-xl font-semibold mb-4">🍽️ Recommended Restaurants</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-12">
-        {recommended.map((name, idx) => (
+        {recommended.map((res, idx) => (
           <div
-            key={idx}
+            key={res._id}
             className="bg-white dark:bg-secondary p-4 rounded-xl shadow hover:shadow-md transition"
           >
-            <div className="h-24 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center mb-3 text-sm text-gray-400">
-              Restaurant Image
-            </div>
-            <h4 className="font-semibold">{name}</h4>
+            <img
+              src={res.logoUrl || "/QuickBite.png"}
+              alt={res.restaurantName}
+              className="h-24 w-full object-cover rounded mb-3"
+            />
+            <h4 className="font-semibold">{res.restaurantName}</h4>
             <p className="text-sm text-gray-500 dark:text-gray-300">
-              30–40 min • ₹20 Delivery
+              {res.address?.city || "Unknown"} • ₹20 Delivery
             </p>
             <div className="flex items-center mt-1 text-yellow-500 text-sm">
-              <FaStar className="mr-1" /> 4.{8 - idx}
+              <FaStar className="mr-1" /> {res.ratings.toFixed(1)}
             </div>
           </div>
         ))}
@@ -106,24 +145,30 @@ const CustomerDashboard = () => {
         <FaClock /> Recent Orders
       </h3>
       <div className="grid gap-4">
-        {recentOrders.map((order, i) => (
+        {orders.map((order, i) => (
           <div
             key={i}
             className="bg-white dark:bg-secondary rounded-lg shadow p-4 flex justify-between items-center hover:shadow-md"
           >
             <div>
-              <h4 className="font-medium">{order.name}</h4>
-              <p className="text-xs text-gray-500">{order.date}</p>
+              <h4 className="font-medium">
+                {order.items.map((i) => i.menuItemId?.name).join(", ")}
+              </h4>
+              <p className="text-xs text-gray-500">
+                {new Date(order.createdAt).toLocaleDateString()}
+              </p>
             </div>
             <div className="text-right">
-              <p className="font-semibold">{order.price}</p>
+              <p className="font-semibold">₹{order.totalAmount}</p>
               <span
                 className={`text-sm font-medium ${
                   order.status === "Delivered"
                     ? "text-green-600"
-                    : order.status === "Ongoing"
+                    : order.status === "Pending"
                     ? "text-yellow-600"
-                    : "text-red-500"
+                    : order.status === "Cancelled"
+                    ? "text-red-500"
+                    : "text-blue-500"
                 }`}
               >
                 {order.status}
