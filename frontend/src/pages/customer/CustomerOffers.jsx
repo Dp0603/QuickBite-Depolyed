@@ -1,38 +1,42 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaTicketAlt, FaClipboard, FaCalendarTimes } from "react-icons/fa";
-
-const dummyOffers = [
-  {
-    id: 1,
-    title: "20% off on all orders",
-    code: "SAVE20",
-    description: "Valid on orders above ₹300",
-    expiry: "2025-12-31",
-    active: true,
-  },
-  {
-    id: 2,
-    title: "Free Delivery",
-    code: "FREEDEL",
-    description: "Unlimited free delivery",
-    expiry: "2025-07-31",
-    active: true,
-  },
-  {
-    id: 3,
-    title: "15% off (Expired)",
-    code: "OLD15",
-    description: "Expired offer",
-    expiry: "2025-01-31",
-    active: false,
-  },
-];
+import API from "../../api/axios"; // ✅ using axios instance
 
 const CustomerOffers = () => {
+  const [offers, setOffers] = useState([]);
   const [filter, setFilter] = useState("all");
 
-  const filteredOffers = dummyOffers.filter((o) =>
-    filter === "all" ? true : filter === "active" ? o.active : !o.active
+  // 🔁 Fetch offers on mount
+  useEffect(() => {
+    const fetchOffers = async () => {
+      try {
+        const res = await API.get("/offers/public");
+        setOffers(res.data.data);
+      } catch (err) {
+        console.error("❌ Failed to fetch offers:", err.message);
+        // fallback dummy data (optional)
+        setOffers([
+          {
+            id: 1,
+            title: "Dummy 20% Off",
+            discount: "20%",
+            minOrder: 300,
+            validity: "2025-12-31",
+            status: true,
+          },
+        ]);
+      }
+    };
+    fetchOffers();
+  }, []);
+
+  // 🔍 Filter by active/expired
+  const filteredOffers = offers.filter((o) =>
+    filter === "all"
+      ? true
+      : filter === "active"
+      ? o.status && new Date(o.validity) >= new Date()
+      : !o.status || new Date(o.validity) < new Date()
   );
 
   return (
@@ -41,7 +45,7 @@ const CustomerOffers = () => {
         <FaTicketAlt className="text-primary" /> Offers & Discounts
       </h1>
 
-      {/* Filters */}
+      {/* 🔘 Filters */}
       <div className="flex gap-3 mb-6">
         {["all", "active", "expired"].map((f) => (
           <button
@@ -58,6 +62,7 @@ const CustomerOffers = () => {
         ))}
       </div>
 
+      {/* 📦 Offers */}
       {filteredOffers.length === 0 ? (
         <p className="text-gray-500 dark:text-gray-400">
           No {filter === "all" ? "" : filter + " "} offers available.
@@ -65,7 +70,7 @@ const CustomerOffers = () => {
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredOffers.map((offer) => (
-            <OfferCard key={offer.id} offer={offer} />
+            <OfferCard key={offer._id || offer.id} offer={offer} />
           ))}
         </div>
       )}
@@ -73,11 +78,13 @@ const CustomerOffers = () => {
   );
 };
 
+// 📦 Single Offer Card
 const OfferCard = ({ offer }) => {
-  const isExpired = !offer.active;
+  const isExpired = !offer.status || new Date(offer.validity) < new Date();
+
   const handleCopy = () => {
-    navigator.clipboard.writeText(offer.code);
-    alert(`Copied code: ${offer.code}`);
+    navigator.clipboard.writeText(offer.discount);
+    alert(`Copied: ${offer.discount}`);
   };
 
   return (
@@ -93,7 +100,7 @@ const OfferCard = ({ offer }) => {
       )}
       <h3 className="text-xl font-semibold mb-2">{offer.title}</h3>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        {offer.description}
+        Min order ₹{offer.minOrder}
       </p>
       <div className="flex items-center justify-between">
         {isExpired ? (
@@ -107,7 +114,9 @@ const OfferCard = ({ offer }) => {
             Copy Code
           </button>
         )}
-        <span className="text-sm text-gray-500">Expires: {offer.expiry}</span>
+        <span className="text-sm text-gray-500">
+          Expires: {new Date(offer.validity).toLocaleDateString()}
+        </span>
       </div>
     </div>
   );

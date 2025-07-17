@@ -110,24 +110,3 @@ exports.deleteMyReview = async (req, res) => {
       .json({ success: false, message: "Failed to delete review" });
   }
 };
-exports.deleteMyReview = async (req, res) => {
-  try {
-    const review = await Review.findOneAndDelete({
-      _id: req.params.reviewId,
-      userId: req.user._id,
-    });
-
-    if (!review) {
-      return res.status(404).json({
-        success: false,
-        message: "Review not found or not authorized",
-      });
-    }
-
-    res.status(200).json({ success: true, message: "Review deleted" });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to delete review" });
-  }
-};
