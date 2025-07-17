@@ -1,4 +1,3 @@
-// models/FavoriteModel.js
 const mongoose = require("mongoose");
 
 const favoriteSchema = new mongoose.Schema(
@@ -8,11 +7,12 @@ const favoriteSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    restaurantId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Restaurant",
-      required: true,
-    },
+    restaurantIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Restaurant",
+      },
+    ],
   },
   { timestamps: true }
 );

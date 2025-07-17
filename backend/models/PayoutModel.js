@@ -2,53 +2,33 @@ const mongoose = require("mongoose");
 
 const payoutSchema = new mongoose.Schema(
   {
-    userId: {
+    payeeId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
       required: true,
     },
-    role: {
+    payeeType: {
       type: String,
       enum: ["restaurant", "delivery"],
       required: true,
     },
-    orders: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Order",
-      },
-    ],
-    totalAmount: {
-      type: Number,
-      required: true,
-    },
-    commission: {
-      type: Number,
-      default: 0,
-    },
-    payoutAmount: {
+    amount: {
       type: Number,
       required: true,
     },
     status: {
       type: String,
-      enum: ["Pending", "Paid"],
+      enum: ["Pending", "Processed", "Failed"],
       default: "Pending",
     },
-    paidAt: Date,
     method: {
       type: String,
-      enum: ["UPI", "Bank Transfer", "Cash", "Wallet"],
-      default: "UPI",
+      enum: ["Bank", "UPI"],
+      required: true,
     },
-    notes: String,
-    currency: {
-      type: String,
-      default: "INR",
+    referenceId: {
+      type: String, // Razorpay/Stripe txn ID
     },
-    invoiceUrl: {
-      type: String,
-    },
+    note: String,
   },
   { timestamps: true }
 );

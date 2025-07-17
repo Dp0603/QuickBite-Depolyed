@@ -9,13 +9,8 @@ const orderSchema = new mongoose.Schema(
     },
     restaurantId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: "Restaurant",
       required: true,
-    },
-    riderId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // delivery agent is a user with role: "deliveryAgent"
-      default: null,
     },
     items: [
       {
@@ -26,7 +21,8 @@ const orderSchema = new mongoose.Schema(
         },
         quantity: {
           type: Number,
-          default: 1,
+          required: true,
+          min: 1,
         },
       },
     ],
@@ -34,28 +30,50 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    deliveryAddress: {
+    paymentStatus: {
       type: String,
+      enum: ["Pending", "Paid", "Failed"],
+      default: "Pending",
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["COD", "Razorpay", "Stripe"],
       required: true,
     },
-    status: {
+    orderStatus: {
       type: String,
       enum: [
         "Pending",
         "Preparing",
-        "Ready for Pickup",
+        "Ready",
         "Out for Delivery",
         "Delivered",
         "Cancelled",
       ],
       default: "Pending",
     },
-    paymentStatus: {
-      type: String,
-      enum: ["Pending", "Paid", "Failed"],
-      default: "Pending",
+    deliveryDetails: {
+      deliveryAgentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null,
+      },
+      deliveryTime: {
+        type: Date,
+      },
+      deliveryStatus: {
+        type: String,
+        enum: ["Pending", "Assigned", "Picked", "Delivered", "Failed"],
+        default: "Pending",
+      },
     },
-    deliveryTime: Date, // Optional actual delivery timestamp
+    isRated: {
+      type: Boolean,
+      default: false,
+    },
+    notes: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

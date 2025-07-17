@@ -1,17 +1,24 @@
 const mongoose = require("mongoose");
 
-const cartItemSchema = new mongoose.Schema({
-  foodId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Menu",
-    required: true,
+const cartItemSchema = new mongoose.Schema(
+  {
+    menuItem: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Menu",
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+    },
+    note: {
+      type: String,
+      maxlength: 200,
+    },
   },
-  quantity: {
-    type: Number,
-    required: true,
-    min: [1, "Quantity must be at least 1"],
-  },
-});
+  { _id: false }
+);
 
 const cartSchema = new mongoose.Schema(
   {
@@ -19,7 +26,11 @@ const cartSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true,
+    },
+    restaurantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Restaurant",
+      required: true,
     },
     items: [cartItemSchema],
   },
