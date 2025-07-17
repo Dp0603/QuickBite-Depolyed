@@ -1,87 +1,54 @@
-// models/RestaurantModel.js
 const mongoose = require("mongoose");
 
 const restaurantSchema = new mongoose.Schema(
   {
-    userId: {
+    ownerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
-      unique: true,
+      required: true, // user with role = restaurant
     },
-    restaurantName: {
+    name: {
       type: String,
-      required: [true, "Restaurant name is required"],
+      required: true,
       trim: true,
+    },
+    logo: {
+      type: String, // Cloudinary URL
+      default: "",
+    },
+    cuisineType: {
+      type: [String], // e.g., ["Indian", "Chinese"]
+      required: true,
     },
     description: {
       type: String,
-      maxlength: 500,
+      maxlength: 1000,
     },
-    address: {
-      street: { type: String },
-      city: { type: String },
-      state: { type: String },
-      zip: { type: String },
+    addressId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Address",
+      required: true,
     },
-    phone: {
-      type: String,
-      validate: {
-        validator: (value) => /^\d{10}$/.test(value),
-        message: "Please enter a valid 10-digit phone number",
-      },
+    averageRating: {
+      type: Number,
+      default: 0,
     },
-    logoUrl: String,
-    bannerUrl: String,
-    cuisine: {
-      type: String,
-      enum: [
-        "Indian",
-        "Chinese",
-        "Italian",
-        "Mexican",
-        "American",
-        "Thai",
-        "Other",
-      ],
-      default: "Other",
+    totalReviews: {
+      type: Number,
+      default: 0,
     },
     isOpen: {
       type: Boolean,
       default: true,
     },
-    ratings: {
-      type: Number,
-      default: 0,
-    },
-    verified: {
+    isVerified: {
       type: Boolean,
       default: false,
     },
-
-    // ✅ Availability Settings
-    availability: {
-      isOnline: { type: Boolean, default: true },
-      autoAvailabilityEnabled: { type: Boolean, default: false },
-      openTime: { type: String, default: "09:00" },
-      closeTime: { type: String, default: "22:00" },
-      breaks: [
-        {
-          start: String,
-          end: String,
-        },
-      ],
-      holidays: [String], // e.g. ["2025-07-14"]
-      autoAcceptOrders: { type: Boolean, default: true },
+    deliveryTimeEstimate: {
+      type: String, // e.g., "30-40 mins"
+      default: "30-45 mins",
     },
-    menuSchedule: [
-      {
-        name: String,
-        start: String, // e.g., "08:00"
-        end: String, // e.g., "11:00"
-        enabled: { type: Boolean, default: true },
-      },
-    ],
   },
   { timestamps: true }
 );

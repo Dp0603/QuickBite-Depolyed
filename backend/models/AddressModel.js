@@ -2,18 +2,43 @@ const mongoose = require("mongoose");
 
 const addressSchema = new mongoose.Schema(
   {
-    userId: {
+    entityId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
       required: true,
+      refPath: "entityType", // Dynamic reference
     },
-    label: {
+    entityType: {
+      type: String,
+      required: true,
+      enum: ["User", "Restaurant"], // Can link to either
+    },
+    addressLine: {
       type: String,
       required: true,
     },
-    details: {
+    landmark: {
+      type: String,
+    },
+    city: {
       type: String,
       required: true,
+    },
+    state: {
+      type: String,
+      required: true,
+    },
+    pincode: {
+      type: String,
+      required: true,
+    },
+    coordinates: {
+      lat: { type: Number },
+      lng: { type: Number },
+    },
+    type: {
+      type: String,
+      enum: ["home", "work", "restaurant", "other"],
+      default: "home",
     },
     isDefault: {
       type: Boolean,
