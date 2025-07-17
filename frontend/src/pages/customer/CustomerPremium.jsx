@@ -1,16 +1,63 @@
-import React, { useState } from "react";
-import { FaStar, FaTruck, FaTags, FaHeadset, FaCrown } from "react-icons/fa";
+import React, { useState, useEffect, useContext } from "react";
+import {
+  FaStar,
+  FaTruck,
+  FaTags,
+  FaHeadset,
+  FaCrown,
+  FaCheckCircle,
+} from "react-icons/fa";
+import API from "../../api/axios";
+import { AuthContext } from "../../context/AuthContext";
+import moment from "moment";
 
 const CustomerPremium = () => {
   const [selectedPlan, setSelectedPlan] = useState("monthly");
+  const [planInfo, setPlanInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const { token } = useContext(AuthContext);
 
-  const handleSubscribe = () => {
-    alert(`🎉 Subscribed to the ${selectedPlan} plan!`);
+  const fetchPlan = async () => {
+    try {
+      const res = await API.get("/premium/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setPlanInfo(res.data.data);
+    } catch (err) {
+      console.log("Not subscribed to premium.");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleSubscribe = async () => {
+    try {
+      const res = await API.post(
+        "/premium/subscribe",
+        { planType: selectedPlan },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      alert(`🎉 ${res.data.message}`);
+      fetchPlan(); // Refresh info
+    } catch (err) {
+      console.error("❌ Subscription failed:", err);
+      alert("Subscription failed. Please try again.");
+    }
+  };
+
+  useEffect(() => {
+    fetchPlan();
+  }, []);
 
   return (
     <div className="p-6 text-gray-800 dark:text-white">
-      {/* Header Section */}
+      {/* Header */}
       <div className="text-center mb-10 animate-fade-in">
         <img
           src="/QuickBite.png"
@@ -26,6 +73,21 @@ const CustomerPremium = () => {
         </p>
       </div>
 
+      {/* Already Subscribed? */}
+      {loading ? (
+        <div className="text-center">Checking subscription...</div>
+      ) : planInfo ? (
+        <div className="max-w-xl mx-auto bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 p-4 mb-8 rounded-lg flex items-center justify-between shadow">
+          <div className="flex items-center gap-3">
+            <FaCheckCircle className="text-xl text-green-500" />
+            <span className="font-semibold">
+              You're a <b>{planInfo.planType}</b> Premium Member <br />
+              Valid till: {moment(planInfo.validTill).format("MMMM Do, YYYY")}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       {/* Benefits */}
       <section className="grid md:grid-cols-2 gap-6 mb-12 max-w-5xl mx-auto animate-fade-in">
         <Benefit icon={<FaTruck />} label="Unlimited Free Deliveries" />
@@ -34,50 +96,52 @@ const CustomerPremium = () => {
         <Benefit icon={<FaCrown />} label="Premium Badge on Your Profile" />
       </section>
 
-      {/* Plan Section */}
-      <div className="max-w-4xl mx-auto animate-fade-in">
-        <h2 className="text-2xl font-semibold text-center mb-6 text-primary">
-          Choose Your Premium Plan
-        </h2>
-        <div className="grid sm:grid-cols-2 gap-6">
-          <PlanCard
-            title="Monthly Plan"
-            price="₹199"
-            selected={selectedPlan === "monthly"}
-            onSelect={() => setSelectedPlan("monthly")}
-          />
-          <PlanCard
-            title="Yearly Plan"
-            price="₹1999"
-            highlight="Save 20%"
-            selected={selectedPlan === "yearly"}
-            onSelect={() => setSelectedPlan("yearly")}
-          />
-        </div>
+      {/* Subscription Plans */}
+      {!planInfo && (
+        <div className="max-w-4xl mx-auto animate-fade-in">
+          <h2 className="text-2xl font-semibold text-center mb-6 text-primary">
+            Choose Your Premium Plan
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            <PlanCard
+              title="Monthly Plan"
+              price="₹199"
+              selected={selectedPlan === "monthly"}
+              onSelect={() => setSelectedPlan("monthly")}
+            />
+            <PlanCard
+              title="Yearly Plan"
+              price="₹1999"
+              highlight="Save 20%"
+              selected={selectedPlan === "yearly"}
+              onSelect={() => setSelectedPlan("yearly")}
+            />
+          </div>
 
-        <ul className="mt-8 text-sm text-gray-600 dark:text-gray-400 list-disc pl-6 max-w-xl mx-auto space-y-1">
-          <li>No delivery charges, ever.</li>
-          <li>Save up to ₹500/month with offers.</li>
-          <li>Priority access to new features.</li>
-        </ul>
+          <ul className="mt-8 text-sm text-gray-600 dark:text-gray-400 list-disc pl-6 max-w-xl mx-auto space-y-1">
+            <li>No delivery charges, ever.</li>
+            <li>Save up to ₹500/month with offers.</li>
+            <li>Priority access to new features.</li>
+          </ul>
 
-        <div className="text-center mt-10">
-          <button
-            onClick={handleSubscribe}
-            className="bg-gradient-to-r from-primary to-orange-500 hover:brightness-110 text-white font-semibold px-8 py-3 rounded-2xl shadow-md transition-all text-lg"
-          >
-            Subscribe Now
-          </button>
-          <p className="text-xs text-gray-500 mt-2 dark:text-gray-400">
-            Secure payment powered by Razorpay
-          </p>
+          <div className="text-center mt-10">
+            <button
+              onClick={handleSubscribe}
+              className="bg-gradient-to-r from-primary to-orange-500 hover:brightness-110 text-white font-semibold px-8 py-3 rounded-2xl shadow-md transition-all text-lg"
+            >
+              Subscribe Now
+            </button>
+            <p className="text-xs text-gray-500 mt-2 dark:text-gray-400">
+              Secure payment powered by Razorpay
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
-// Benefit box with icon + label
+// ✅ Reusable Benefit box
 const Benefit = ({ icon, label }) => (
   <div className="flex items-center gap-4 bg-white dark:bg-secondary p-5 rounded-xl shadow-md border dark:border-gray-700 transition hover:scale-[1.02]">
     <div className="text-primary text-3xl">{icon}</div>
@@ -85,7 +149,7 @@ const Benefit = ({ icon, label }) => (
   </div>
 );
 
-// Premium plan card
+// ✅ Premium plan card
 const PlanCard = ({ title, price, highlight, selected, onSelect }) => (
   <div
     className={`relative p-6 border rounded-2xl cursor-pointer transition-all shadow-md bg-white dark:bg-secondary hover:scale-[1.02] ${

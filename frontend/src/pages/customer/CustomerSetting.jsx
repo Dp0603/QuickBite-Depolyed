@@ -1,9 +1,38 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { FaMoon, FaBell, FaTrash } from "react-icons/fa";
+import API from "../../api/axios";
+import { AuthContext } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const CustomerSettings = () => {
   const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
+
+  const { token, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  // 🔥 Delete Account Handler
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account?"
+    );
+    if (!confirmed) return;
+
+    try {
+      await API.delete("/users/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      alert("Your account has been deleted.");
+      logout(); // Clear user data and token
+      navigate("/"); // Redirect to homepage
+    } catch (err) {
+      console.error("❌ Failed to delete account:", err);
+      alert("Failed to delete account. Please try again.");
+    }
+  };
 
   return (
     <div className="p-6 text-gray-800 dark:text-white max-w-2xl mx-auto">
@@ -62,7 +91,7 @@ const CustomerSettings = () => {
               <span>Delete Account</span>
             </div>
             <button
-              onClick={() => alert("Account deletion process initiated.")}
+              onClick={handleDeleteAccount}
               className="text-sm bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition"
             >
               Delete

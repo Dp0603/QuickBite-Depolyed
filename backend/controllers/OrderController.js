@@ -1,14 +1,51 @@
 const OrderModel = require("../models/OrderModel");
+const CartModel = require("../models/CartModel");
+const MenuModel = require("../models/MenuModel");
 
 // ➕ Create order
 const createOrder = async (req, res) => {
   try {
-    const newOrder = await OrderModel.create(req.body);
+    const customerId = req.user._id;
+
+    // Get the user's cart
+    const cart = await CartModel.findOne({ userId: customerId }).populate(
+      "items.foodId"
+    );
+
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
+    const items = cart.items.map((item) => ({
+      menuItemId: item.foodId._id,
+      quantity: item.quantity,
+    }));
+
+    const totalAmount = cart.items.reduce(
+      (sum, item) => sum + item.foodId.price * item.quantity,
+      0
+    );
+
+    const deliveryAddress = "123 MG Road, Bengaluru"; // You can replace with req.body.address if needed
+
+    const newOrder = await OrderModel.create({
+      customerId,
+      restaurantId: cart.restaurantId, // assuming your cart schema includes this
+      items,
+      totalAmount,
+      deliveryAddress,
+      paymentStatus: "Paid", // Or "Pending" if integrating Razorpay
+    });
+
+    // Clear cart after placing order
+    await CartModel.findOneAndDelete({ userId: customerId });
+
     res.status(201).json({
       message: "Order placed successfully",
       data: newOrder,
     });
   } catch (err) {
+    console.error("❌ Error placing order:", err);
     res.status(500).json({ message: err.message });
   }
 };

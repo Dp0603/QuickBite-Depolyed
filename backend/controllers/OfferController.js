@@ -1,4 +1,17 @@
 const Offer = require("../models/OfferModel");
+// 🌐 Public: Get all active & non-expired offers
+const getPublicOffers = async (req, res) => {
+  try {
+    const offers = await Offer.find({
+      status: true,
+      validity: { $gte: new Date() },
+    }).select("title discount minOrder validity status");
+
+    res.status(200).json({ message: "Public offers", data: offers });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // 🔃 GET offers for the logged-in restaurant
 const getOffers = async (req, res) => {
@@ -51,4 +64,10 @@ const deleteOffer = async (req, res) => {
   }
 };
 
-module.exports = { getOffers, createOffer, updateOffer, deleteOffer };
+module.exports = {
+  getOffers,
+  createOffer,
+  updateOffer,
+  deleteOffer,
+  getPublicOffers,
+};

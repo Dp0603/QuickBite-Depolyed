@@ -15,6 +15,10 @@ const chatRoutes = require("./routes/ChatRoutes");
 const restaurantSettingsRoutes = require("./routes/RestaurantSettingsRoutes");
 const reviewRoutes = require("./routes/ReviewRoutes"); // ✅ NEW ROUTE ADDED
 const customerRoutes = require("./routes/CustomerRoutes");
+const promoRoutes = require("./routes/PromoRoutes");
+const AddressRoutes = require("./routes/AddressRoutes"); // ✅ NEW ROUTE ADDED
+const favoriteRoutes = require("./routes/FavoriteRoutes");
+const premiumRoutes = require("./routes/PremiumSubscriptionRoutes");
 
 // 📦 Load environment variables
 dotenv.config();
@@ -43,6 +47,10 @@ app.use("/api/restaurant/settings", restaurantSettingsRoutes);
 app.use("/api", reviewRoutes); // ✅ NEW ROUTE ADDED"));
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/customer", customerRoutes);
+app.use("/api/promo", promoRoutes);
+app.use("/api", AddressRoutes);
+app.use("/api/favorites", favoriteRoutes);
+app.use("/api/premium", premiumRoutes);
 
 // 🏠 Root route
 app.get("/", (req, res) => {
