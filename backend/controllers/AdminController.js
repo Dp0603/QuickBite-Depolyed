@@ -1,125 +1,161 @@
-const UserModel = require("../models/UserModel");
-const RestaurantModel = require("../models/RestaurantModel");
-const DeliveryAgentModel = require("../models/DeliveryAgentModel");
-const OrderModel = require("../models/OrderModel"); // ✅ Make sure this exists
+const User = require("../models/UserModel");
+const Restaurant = require("../models/RestaurantModel");
+const Order = require("../models/OrderModel");
+const Analytics = require("../models/AnalyticsModel");
 
-// ✅ Get all users (except admin)
+// 👥 Get all users (admin only)
 const getAllUsers = async (req, res) => {
   try {
-    const users = await UserModel.find({ role: { $ne: "admin" } }).select(
-      "-password"
-    );
-    res
-      .status(200)
-      .json({ message: "Users fetched successfully", data: users });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    res.status(200).json({ message: "All users fetched", data: users });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ Delete a user
-const deleteUser = async (req, res) => {
-  try {
-    await UserModel.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "User deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// ✅ Get all restaurants
+// 🏬 Get all restaurants
 const getAllRestaurants = async (req, res) => {
   try {
-    const restaurants = await RestaurantModel.find();
+    const restaurants = await Restaurant.find().sort({ createdAt: -1 });
     res
       .status(200)
-      .json({ message: "Restaurants fetched successfully", data: restaurants });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+      .json({ message: "All restaurants fetched", data: restaurants });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ Delete a restaurant
-const deleteRestaurant = async (req, res) => {
+// 📦 Get all orders
+const getAllOrders = async (req, res) => {
   try {
-    await RestaurantModel.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Restaurant deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const orders = await Order.find()
+      .populate("customerId", "name email")
+      .populate("restaurantId", "name")
+      .sort({ createdAt: -1 });
+    res.status(200).json({ message: "All orders fetched", data: orders });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ Get all delivery agents
-const getAllDeliveryAgents = async (req, res) => {
-  try {
-    const agents = await DeliveryAgentModel.find();
-    res
-      .status(200)
-      .json({ message: "Delivery agents fetched successfully", data: agents });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// ✅ Delete a delivery agent
-const deleteDeliveryAgent = async (req, res) => {
-  try {
-    await DeliveryAgentModel.findByIdAndDelete(req.params.id);
-    res.status(200).json({ message: "Delivery agent deleted successfully" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// ✅ Admin Dashboard Stats
+// 📊 Admin Dashboard Stats
 const getDashboardStats = async (req, res) => {
   try {
-    const customerCount = await UserModel.countDocuments({ role: "customer" });
-    const restaurantUserCount = await UserModel.countDocuments({
-      role: "restaurant",
-    });
-    const deliveryAgentCount = await UserModel.countDocuments({
-      role: "deliveryAgent",
-    });
-
-    const restaurantCount = await RestaurantModel.countDocuments();
-    const totalOrders = await OrderModel.countDocuments();
-
-    const totalRevenueData = await OrderModel.aggregate([
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$totalPrice" }, // 🔁 Make sure your OrderModel has a field named `totalPrice`
-        },
-      },
+    const totalUsers = await User.countDocuments();
+    const totalRestaurants = await Restaurant.countDocuments();
+    const totalOrders = await Order.countDocuments();
+    const totalSales = await Order.aggregate([
+      { $match: { paymentStatus: "Paid" } },
+      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]);
 
-    const totalRevenue = totalRevenueData[0]?.total || 0;
-
     res.status(200).json({
-      message: "Dashboard metrics fetched successfully",
+      message: "Dashboard stats fetched",
       data: {
-        users: {
-          customers: customerCount,
-          restaurants: restaurantUserCount,
-          deliveryAgents: deliveryAgentCount,
-        },
-        restaurants: restaurantCount,
+        totalUsers,
+        totalRestaurants,
         totalOrders,
-        totalRevenue,
+        totalSales: totalSales[0]?.total || 0,
       },
     });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 🔄 Update user role
+const updateUserRole = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { role },
+      { new: true }
+    ).select("-password");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ message: "User role updated", data: user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 🚫 Block or Unblock user
+const toggleUserStatus = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.isBlocked = !user.isBlocked;
+    await user.save();
+
+    res
+      .status(200)
+      .json({
+        message: `User ${user.isBlocked ? "blocked" : "unblocked"}`,
+        data: user,
+      });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ❌ Delete user/restaurant/order
+const deleteEntity = async (req, res) => {
+  try {
+    const { type, id } = req.params;
+
+    let model;
+    switch (type) {
+      case "user":
+        model = User;
+        break;
+      case "restaurant":
+        model = Restaurant;
+        break;
+      case "order":
+        model = Order;
+        break;
+      default:
+        return res.status(400).json({ message: "Invalid delete type" });
+    }
+
+    const deleted = await model.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ message: `${type} not found` });
+
+    res.status(200).json({ message: `${type} deleted`, data: deleted });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 📈 Analytics Summary (optional)
+const getAnalyticsSummary = async (req, res) => {
+  try {
+    const summary = await Analytics.aggregate([
+      { $group: { _id: "$eventType", count: { $sum: 1 } } },
+    ]);
+
+    res
+      .status(200)
+      .json({ message: "Analytics summary fetched", data: summary });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
 module.exports = {
   getAllUsers,
-  deleteUser,
   getAllRestaurants,
-  deleteRestaurant,
-  getAllDeliveryAgents,
-  deleteDeliveryAgent,
-  getDashboardStats, // ✅ Don't forget this in your routes
+  getAllOrders,
+  getDashboardStats,
+  updateUserRole,
+  toggleUserStatus,
+  deleteEntity,
+  getAnalyticsSummary,
 };

@@ -1,52 +1,58 @@
 const Payout = require("../models/PayoutModel");
 
-// ➕ Create a payout
+// 💸 Create a new payout (Admin side)
 const createPayout = async (req, res) => {
   try {
     const payout = await Payout.create(req.body);
-    res.status(201).json({ message: "Payout created", data: payout });
+    res.status(201).json({ message: "Payout created", payout });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// 📦 Get all payouts (admin)
-const getAllPayouts = async (req, res) => {
+// 🔁 Update payout status (Pending -> Processed/Failed)
+const updatePayoutStatus = async (req, res) => {
   try {
-    const payouts = await Payout.find()
-      .populate("userId", "name email")
-      .populate("orders", "totalAmount status createdAt");
-    res.status(200).json({ message: "All payouts", data: payouts });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
+    const { payoutId } = req.params;
+    const { status, referenceId, note } = req.body;
 
-// 🧍 Get payouts by user (restaurant or delivery)
-const getUserPayouts = async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const payouts = await Payout.find({ userId })
-      .sort({ createdAt: -1 })
-      .populate("orders", "totalAmount createdAt status");
-    res.status(200).json({ message: "User payouts", data: payouts });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// ✏️ Mark payout as paid
-const markPayoutPaid = async (req, res) => {
-  try {
-    const payout = await Payout.findByIdAndUpdate(
-      req.params.id,
-      {
-        status: "Paid",
-        paidAt: new Date(),
-      },
+    const updatedPayout = await Payout.findByIdAndUpdate(
+      payoutId,
+      { status, referenceId, note },
       { new: true }
     );
-    res.status(200).json({ message: "Payout marked as paid", data: payout });
+
+    if (!updatedPayout) {
+      return res.status(404).json({ message: "Payout not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Payout status updated", payout: updatedPayout });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 👤 Get payouts for a specific payee (restaurant/delivery agent)
+const getPayoutsByPayee = async (req, res) => {
+  try {
+    const { payeeId } = req.params;
+
+    const payouts = await Payout.find({ payeeId }).sort({ createdAt: -1 });
+
+    res.status(200).json({ message: "Payouts fetched", payouts });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🧾 Get all payouts (Admin dashboard)
+const getAllPayouts = async (req, res) => {
+  try {
+    const payouts = await Payout.find().sort({ createdAt: -1 });
+
+    res.status(200).json({ message: "All payouts fetched", payouts });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -54,7 +60,7 @@ const markPayoutPaid = async (req, res) => {
 
 module.exports = {
   createPayout,
+  updatePayoutStatus,
+  getPayoutsByPayee,
   getAllPayouts,
-  getUserPayouts,
-  markPayoutPaid,
 };

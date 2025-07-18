@@ -1,34 +1,31 @@
 const express = require("express");
-const router = express.Router();
-const { getMenuByRestaurantId } = require("../controllers/MenuController");
-router.get("/restaurant/:restaurantId", getMenuByRestaurantId);
 const {
   createMenuItem,
-  getRestaurantMenu,
+  getMenuByRestaurant,
   getMenuItemById,
   updateMenuItem,
   deleteMenuItem,
+  toggleAvailability,
 } = require("../controllers/MenuController");
 
-const { protect, authorize } = require("../middlewares/authMiddleware");
+const router = express.Router();
 
-// 🛡️ All routes below are protected for restaurant role
-router.use(protect);
-router.use(authorize("restaurant"));
+// 🍽️ Create a new menu item
+router.post("/menu", createMenuItem);
 
-// ➕ Create new menu item (uses req.user.id internally)
-router.post("/", createMenuItem);
+// 📋 Get all menu items for a restaurant
+router.get("/menu/restaurant/:restaurantId", getMenuByRestaurant);
 
-// 📋 Get all menu items for the current logged-in restaurant
-router.get("/", getRestaurantMenu);
+// 📄 Get a specific menu item by ID
+router.get("/menu/:id", getMenuItemById);
 
-// 🔍 Get single menu item by ID
-router.get("/:id", getMenuItemById);
+// 🔁 Update a menu item
+router.put("/menu/:id", updateMenuItem);
 
-// ✏️ Update menu item
-router.put("/:id", updateMenuItem);
+// ❌ Delete a menu item
+router.delete("/menu/:id", deleteMenuItem);
 
-// ❌ Delete menu item
-router.delete("/:id", deleteMenuItem);
+// 🚦 Toggle availability
+router.patch("/menu/toggle/:id", toggleAvailability);
 
 module.exports = router;

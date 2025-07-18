@@ -1,23 +1,34 @@
 const express = require("express");
 const router = express.Router();
-
 const {
   register,
+  verifyEmail,
+  resendEmailVerification,
   login,
   verifyToken,
-  verifyEmail,
+  sendOTP,
+  verifyOTP,
+  forgotPassword,
+  resetPassword,
+  changePassword,
 } = require("../controllers/AuthController");
 
-// @route   POST /api/auth/register
+// Public Routes
 router.post("/register", register);
-
-// @route   POST /api/auth/login
-router.post("/login", login);
-
-// ✅ REMOVE `protect` middleware here
-router.post("/verify-token", verifyToken);
-
-// @route   GET /api/auth/verify-email/:token
 router.get("/verify-email/:token", verifyEmail);
+router.post("/resend-verification", resendEmailVerification);
+router.post("/login", login);
+router.get("/verify-token", verifyToken); // usually used in frontend auth context
+
+// OTP-based login
+router.post("/send-otp", sendOTP);
+router.post("/verify-otp", verifyOTP);
+
+// Password reset
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password/:token", resetPassword);
+
+// Authenticated user route (e.g., middleware to attach user ID required)
+router.post("/change-password", changePassword);
 
 module.exports = router;

@@ -3,22 +3,23 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 
-// 🌐 Route imports
-const AuthRoutes = require("./routes/authRoutes");
+// 🌐 Route Imports (PascalCase)
+const AuthRoutes = require("./routes/AuthRoutes");
+const AdminRoutes = require("./routes/AdminRoutes");
+const UserRoutes = require("./routes/UserRoutes");
+const AddressRoutes = require("./routes/AddressRoutes");
 const RestaurantRoutes = require("./routes/RestaurantRoutes");
 const MenuRoutes = require("./routes/MenuRoutes");
 const CartRoutes = require("./routes/CartRoutes");
-const OrderRoutes = require("./routes/OrderRoutes"); // ✅ Add this
+const FavoriteRoutes = require("./routes/FavoriteRoutes");
+const OrderRoutes = require("./routes/OrderRoutes");
 const OfferRoutes = require("./routes/OfferRoutes");
-const payoutRoutes = require("./routes/PayoutRoutes");
-const chatRoutes = require("./routes/ChatRoutes");
-const restaurantSettingsRoutes = require("./routes/RestaurantSettingsRoutes");
-const reviewRoutes = require("./routes/ReviewRoutes"); // ✅ NEW ROUTE ADDED
-const customerRoutes = require("./routes/CustomerRoutes");
-const promoRoutes = require("./routes/PromoRoutes");
-const AddressRoutes = require("./routes/AddressRoutes"); // ✅ NEW ROUTE ADDED
-const favoriteRoutes = require("./routes/FavoriteRoutes");
-const premiumRoutes = require("./routes/PremiumSubscriptionRoutes");
+const NotificationRoutes = require("./routes/NotificationRoutes");
+const PayoutRoutes = require("./routes/PayoutRoutes");
+const PremiumSubscriptionRoutes = require("./routes/PremiumSubscriptionRoutes");
+const MessageRoutes = require("./routes/MessageRoutes");
+const AnalyticsRoutes = require("./routes/AnalyticsRoutes");
+const FeedbackRoutes = require("./routes/FeedbackRoutes");
 
 // 📦 Load environment variables
 dotenv.config();
@@ -34,23 +35,23 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// 🔗 Mount Routes
+// 🔗 Mount Routes (clean + organized)
 app.use("/api/auth", AuthRoutes);
-app.use("/api/restaurant", RestaurantRoutes);
-app.use("/api/menu", MenuRoutes); // ✅ NEW ROUTE ADDED
-app.use("/api/cart", CartRoutes); // 👈 Mount /api/cart routes
-app.use("/api/orders", OrderRoutes); // ✅ Mount it
+app.use("/api/admin", AdminRoutes);
+app.use("/api/users", UserRoutes);
+app.use("/api/addresses", AddressRoutes);
+app.use("/api/restaurants", RestaurantRoutes);
+app.use("/api/menu", MenuRoutes);
+app.use("/api/cart", CartRoutes);
+app.use("/api/favorites", FavoriteRoutes);
+app.use("/api/orders", OrderRoutes);
 app.use("/api/offers", OfferRoutes);
-app.use("/api/payouts", payoutRoutes);
-app.use("/api/chat", chatRoutes);
-app.use("/api/restaurant/settings", restaurantSettingsRoutes);
-app.use("/api", reviewRoutes); // ✅ NEW ROUTE ADDED"));
-app.use("/api/reviews", reviewRoutes);
-app.use("/api/customer", customerRoutes);
-app.use("/api/promo", promoRoutes);
-app.use("/api", AddressRoutes);
-app.use("/api/favorites", favoriteRoutes);
-app.use("/api/premium", premiumRoutes);
+app.use("/api/notifications", NotificationRoutes);
+app.use("/api/payouts", PayoutRoutes);
+app.use("/api/premium", PremiumSubscriptionRoutes);
+app.use("/api/messages", MessageRoutes);
+app.use("/api/analytics", AnalyticsRoutes);
+app.use("/api/feedback", FeedbackRoutes);
 
 // 🏠 Root route
 app.get("/", (req, res) => {

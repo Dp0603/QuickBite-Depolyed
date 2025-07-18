@@ -1,55 +1,112 @@
 const Address = require("../models/AddressModel");
 
-// ➕ Add new address
-exports.addAddress = async (req, res) => {
+// ➕ Add a new address (User or Restaurant)
+const addAddress = async (req, res) => {
   try {
-    const { label, details } = req.body;
+    const newAddress = await Address.create(req.body);
 
-    const newAddress = new Address({
-      userId: req.user._id,
-      label,
-      details,
+    res.status(201).json({
+      message: "Address added successfully",
+      address: newAddress,
     });
-
-    const saved = await newAddress.save();
-    res.status(201).json({ success: true, data: saved });
   } catch (err) {
-    res.status(400).json({ success: false, message: "Failed to add address" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// 📥 Get all addresses for current user
-exports.getMyAddresses = async (req, res) => {
+// 📦 Get all addresses for a specific entity (User or Restaurant)
+const getAddressesByEntity = async (req, res) => {
   try {
-    const addresses = await Address.find({ userId: req.user._id }).sort({
-      createdAt: -1,
+    const { entityId, entityType } = req.params;
+
+    const addresses = await Address.find({ entityId, entityType });
+
+    res.status(200).json({
+      message: `${entityType} addresses fetched successfully`,
+      addresses,
     });
-    res.status(200).json({ success: true, data: addresses });
   } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to fetch addresses" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ❌ Delete address by ID
-exports.deleteAddress = async (req, res) => {
+// 📄 Get single address by ID
+const getAddressById = async (req, res) => {
   try {
-    const address = await Address.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user._id,
+    const address = await Address.findById(req.params.id);
+    if (!address) return res.status(404).json({ message: "Address not found" });
+
+    res.status(200).json({
+      message: "Address fetched successfully",
+      address,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ✏️ Update address
+const updateAddress = async (req, res) => {
+  try {
+    const updated = await Address.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
     });
 
-    if (!address) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Address not found" });
-    }
+    if (!updated) return res.status(404).json({ message: "Address not found" });
 
-    res.status(200).json({ success: true, message: "Address deleted" });
+    res.status(200).json({
+      message: "Address updated successfully",
+      address: updated,
+    });
   } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to delete address" });
+    res.status(500).json({ message: err.message });
   }
+};
+
+// 🗑️ Delete address
+const deleteAddress = async (req, res) => {
+  try {
+    const deleted = await Address.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Address not found" });
+
+    res.status(200).json({ message: "Address deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🌟 Set address as default
+const setDefaultAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const address = await Address.findById(id);
+    if (!address) return res.status(404).json({ message: "Address not found" });
+
+    // Reset existing defaults
+    await Address.updateMany(
+      { entityId: address.entityId, entityType: address.entityType },
+      { $set: { isDefault: false } }
+    );
+
+    // Set current one as default
+    address.isDefault = true;
+    await address.save();
+
+    res.status(200).json({
+      message: "Default address set successfully",
+      address,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = {
+  addAddress,
+  getAddressesByEntity,
+  getAddressById,
+  updateAddress,
+  deleteAddress,
+  setDefaultAddress,
 };

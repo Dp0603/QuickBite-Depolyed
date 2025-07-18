@@ -1,22 +1,23 @@
 const express = require("express");
-const router = express.Router();
 const {
   createPayout,
+  updatePayoutStatus,
+  getPayoutsByPayee,
   getAllPayouts,
-  getUserPayouts,
-  markPayoutPaid,
 } = require("../controllers/PayoutController");
 
-// ➕ Create a payout (admin)
-router.post("/", createPayout);
+const router = express.Router();
 
-// 📦 Get all payouts (admin)
-router.get("/", getAllPayouts);
+// 💸 Create a new payout (Admin)
+router.post("/payouts", createPayout);
 
-// 👤 Get payouts for a specific user (restaurant or delivery)
-router.get("/user/:userId", getUserPayouts);
+// 🔁 Update payout status (Pending -> Processed/Failed)
+router.put("/payouts/:payoutId", updatePayoutStatus);
 
-// ✅ Mark payout as paid
-router.put("/:id/mark-paid", markPayoutPaid);
+// 👤 Get payouts for a specific payee (restaurant or delivery agent)
+router.get("/payouts/payee/:payeeId", getPayoutsByPayee);
+
+// 🧾 Get all payouts (Admin dashboard)
+router.get("/payouts", getAllPayouts);
 
 module.exports = router;

@@ -1,25 +1,35 @@
 const express = require("express");
-const router = express.Router();
 const {
-  getOffers,
   createOffer,
+  getOffersByRestaurant,
+  getOfferById,
   updateOffer,
   deleteOffer,
-  getPublicOffers,
+  getValidOffersForCustomer,
+  toggleOfferStatus,
 } = require("../controllers/OfferController");
 
-const { protect, authorize } = require("../middlewares/authMiddleware");
+const router = express.Router();
 
-// ✅ Public offers route for customers
-router.get("/public", getPublicOffers);
+// 🎁 Create new offer
+router.post("/offers", createOffer);
 
-// 🔐 Protected routes for restaurant
-router.use(protect);
-router.use(authorize("restaurant"));
+// 📦 Get all offers for a restaurant
+router.get("/offers/restaurant/:restaurantId", getOffersByRestaurant);
 
-router.get("/", getOffers);
-router.post("/", createOffer);
-router.put("/:id", updateOffer);
-router.delete("/:id", deleteOffer);
+// 🔍 Get single offer by ID
+router.get("/offers/:id", getOfferById);
+
+// 🔁 Update offer
+router.put("/offers/:id", updateOffer);
+
+// ❌ Delete offer
+router.delete("/offers/:id", deleteOffer);
+
+// 📅 Get active & valid offers for customer
+router.get("/offers/valid/:restaurantId", getValidOffersForCustomer);
+
+// 🔄 Toggle offer active status
+router.patch("/offers/toggle/:id", toggleOfferStatus);
 
 module.exports = router;
