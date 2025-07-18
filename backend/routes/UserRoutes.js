@@ -1,33 +1,31 @@
 const express = require("express");
-const router = express.Router();
-
 const {
   registerUser,
   loginUser,
-  forgotPassword,
-  resetPassword,
-  verifyEmail,
-  deleteMyAccount, // ✅ Add this import
+  getUserById,
+  updateUser,
+  deleteUser,
+  getAllUsers,
 } = require("../controllers/UserController");
 
-const { protect } = require("../middlewares/authMiddleware"); // ✅ Add this for protected route
+const router = express.Router();
 
-// 👤 Register new user
-router.post("/register", registerUser);
+// 🔐 Register a new user
+router.post("/users/register", registerUser);
 
 // 🔑 Login user
-router.post("/login", loginUser);
+router.post("/users/login", loginUser);
 
-// 🔐 Forgot Password (send reset link/token)
-router.post("/forgot-password", forgotPassword);
+// 👤 Get user by ID
+router.get("/users/:id", getUserById);
 
-// 🔁 Reset Password (with token)
-router.post("/reset-password/:token", resetPassword);
+// ✏️ Update user
+router.put("/users/:id", updateUser);
 
-// ✅ Verify Email (using token)
-router.get("/verify-email/:token", verifyEmail);
+// 🗑️ Delete user
+router.delete("/users/:id", deleteUser);
 
-// 🗑️ Delete my account (requires token)
-router.delete("/me", protect, deleteMyAccount); // ✅ Add this line
+// 📋 Get all users (admin only)
+router.get("/users", getAllUsers);
 
 module.exports = router;

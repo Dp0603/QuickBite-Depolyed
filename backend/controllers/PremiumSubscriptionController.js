@@ -1,53 +1,107 @@
-const Premium = require("../models/PremiumSubscriptionModel");
-const dayjs = require("dayjs");
+const PremiumSubscription = require("../models/PremiumSubscriptionModel");
 
-exports.subscribeToPremium = async (req, res) => {
+// ➕ Create new premium subscription
+const createSubscription = async (req, res) => {
   try {
-    const { plan } = req.body;
-    const userId = req.user.id;
+    const newSubscription = await PremiumSubscription.create(req.body);
 
-    const endDate =
-      plan === "monthly"
-        ? dayjs().add(30, "day").toDate()
-        : dayjs().add(1, "year").toDate();
-
-    const existing = await Premium.findOne({ userId });
-
-    if (existing) {
-      existing.plan = plan;
-      existing.startDate = new Date();
-      existing.endDate = endDate;
-      await existing.save();
-      return res
-        .status(200)
-        .json({ message: "Subscription updated", data: existing });
-    }
-
-    const subscription = await Premium.create({
-      userId,
-      plan,
-      endDate,
+    res.status(201).json({
+      message: "Subscription created successfully",
+      subscription: newSubscription,
     });
-
-    res
-      .status(201)
-      .json({ message: "Subscribed to Premium", data: subscription });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-exports.getMyPremiumStatus = async (req, res) => {
+// 📦 Get all subscriptions for a specific user or restaurant
+const getSubscriptionsBySubscriber = async (req, res) => {
   try {
-    const userId = req.user.id;
-    const subscription = await Premium.findOne({ userId });
+    const { subscriberId, subscriberType } = req.params;
 
-    if (!subscription || new Date(subscription.endDate) < new Date()) {
-      return res.status(200).json({ isPremium: false });
-    }
+    const subscriptions = await PremiumSubscription.find({
+      subscriberId,
+      subscriberType,
+    });
 
-    res.status(200).json({ isPremium: true, data: subscription });
+    res.status(200).json({
+      message: "Subscriptions fetched successfully",
+      subscriptions,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+};
+
+// 📄 Get single subscription by ID
+const getSubscriptionById = async (req, res) => {
+  try {
+    const subscription = await PremiumSubscription.findById(req.params.id);
+    if (!subscription)
+      return res.status(404).json({ message: "Subscription not found" });
+
+    res.status(200).json({
+      message: "Subscription fetched successfully",
+      subscription,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ✏️ Update subscription (e.g. payment status)
+const updateSubscription = async (req, res) => {
+  try {
+    const updated = await PremiumSubscription.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!updated)
+      return res.status(404).json({ message: "Subscription not found" });
+
+    res.status(200).json({
+      message: "Subscription updated successfully",
+      subscription: updated,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🗑️ Delete subscription
+const deleteSubscription = async (req, res) => {
+  try {
+    const deleted = await PremiumSubscription.findByIdAndDelete(req.params.id);
+    if (!deleted)
+      return res.status(404).json({ message: "Subscription not found" });
+
+    res.status(200).json({ message: "Subscription deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 📊 Get all active subscriptions (Admin/report use)
+const getAllActiveSubscriptions = async (req, res) => {
+  try {
+    const activeSubs = await PremiumSubscription.find({ isActive: true });
+
+    res.status(200).json({
+      message: "Active subscriptions fetched successfully",
+      subscriptions: activeSubs,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = {
+  createSubscription,
+  getSubscriptionsBySubscriber,
+  getSubscriptionById,
+  updateSubscription,
+  deleteSubscription,
+  getAllActiveSubscriptions,
 };

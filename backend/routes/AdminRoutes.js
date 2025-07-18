@@ -1,30 +1,39 @@
-// routes/AdminRoutes.js
-
 const express = require("express");
-const {
-  getAllUsers,
-  deleteUser,
-  getAllRestaurants,
-  deleteRestaurant,
-  getAllDeliveryAgents,
-  deleteDeliveryAgent,
-  getDashboardStats,
-} = require("../controllers/AdminController");
-
 const router = express.Router();
 
-// Users
+const {
+  getAllUsers,
+  getAllRestaurants,
+  getAllOrders,
+  getDashboardStats,
+  updateUserRole,
+  toggleUserStatus,
+  deleteEntity,
+  getAnalyticsSummary,
+} = require("../controllers/AdminController");
+
+// 👥 Get all users
 router.get("/users", getAllUsers);
-router.delete("/users/:id", deleteUser);
 
-// Restaurants
+// 🏬 Get all restaurants
 router.get("/restaurants", getAllRestaurants);
-router.delete("/restaurants/:id", deleteRestaurant);
 
-// Delivery Agents
-router.get("/delivery-agents", getAllDeliveryAgents);
-router.delete("/delivery-agents/:id", deleteDeliveryAgent);
+// 📦 Get all orders
+router.get("/orders", getAllOrders);
 
+// 📊 Dashboard stats
 router.get("/dashboard-stats", getDashboardStats);
+
+// 🔄 Update user role
+router.put("/users/role/:userId", updateUserRole);
+
+// 🚫 Block/unblock user
+router.patch("/users/status/:userId", toggleUserStatus);
+
+// ❌ Delete user/restaurant/order
+router.delete("/delete/:type/:id", deleteEntity);
+
+// 📈 Analytics summary (optional)
+router.get("/analytics-summary", getAnalyticsSummary);
 
 module.exports = router;

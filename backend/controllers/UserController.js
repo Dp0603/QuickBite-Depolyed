@@ -1,194 +1,139 @@
-const crypto = require("crypto");
-const jwt = require("jsonwebtoken");
 const User = require("../models/UserModel");
-const sendEmail = require("../utils/mailUtils");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
-// 🔐 Generate JWT Token
-const generateToken = (user) => {
-  return jwt.sign(
-    { id: user._id, email: user.email, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
-};
-
-// 📧 Send Email Verification Token
-const sendVerificationToken = async (user) => {
-  const token = crypto.randomBytes(20).toString("hex");
-  user.emailVerificationToken = token;
-  await user.save();
-
-  const verifyUrl = `${process.env.CLIENT_URL}/verify-email/${token}`;
-  await sendEmail({
-    to: user.email,
-    subject: "Verify Your QuickBite Account",
-    html: `<p>Click <a href="${verifyUrl}">here</a> to verify your email address.</p>`,
-  });
-};
-
-// ✅ Register User
+// 🔐 Register a new user
 const registerUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, phone, role } = req.body;
 
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already registered" });
     }
 
-    const user = await User.create({ name, email, password, role });
-    await sendVerificationToken(user);
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      phone,
+      role,
+    });
 
     res.status(201).json({
-      message: "User registered. Please verify your email.",
+      message: "User registered successfully",
       user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isVerified: user.isVerified,
+        _id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
       },
     });
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ Verify Email
-const verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.params;
-    const user = await User.findOne({ emailVerificationToken: token });
-
-    if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token" });
-    }
-
-    user.isVerified = true;
-    user.emailVerificationToken = undefined;
-    await user.save();
-
-    res.status(200).json({ message: "✅ Email verified successfully" });
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// ✅ Login User
+// 🔑 Login user
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
       return res.status(401).json({ message: "Invalid credentials" });
-    }
 
-    // Optional: Uncomment to block unverified users
-    // if (!user.isVerified) {
-    //   return res.status(403).json({ message: "Please verify your email first." });
-    // }
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
 
     res.status(200).json({
       message: "Login successful",
+      token,
       user: {
-        id: user._id,
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
-        isVerified: user.isVerified,
       },
-      token: generateToken(user),
     });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ Forgot Password
-const forgotPassword = async (req, res) => {
+// 👤 Get single user by ID
+const getUserById = async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const token = crypto.randomBytes(20).toString("hex");
-    user.resetPasswordToken = token;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
-    await user.save();
-
-    const resetUrl = `${process.env.CLIENT_URL}/reset-password/${token}`;
-
-    await sendEmail({
-      to: user.email,
-      subject: "Reset Your QuickBite Password",
-      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. This link will expire in 1 hour.</p>`,
-    });
+    const user = await User.findById(req.params.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     res.status(200).json({
-      message: "Reset link sent to your email.",
-      resetUrl,
+      message: "User fetched successfully",
+      user,
     });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ✅ Reset Password
-const resetPassword = async (req, res) => {
+// ✏️ Update user profile
+const updateUser = async (req, res) => {
   try {
-    const { token } = req.params;
-    const { newPassword } = req.body;
+    const updates = { ...req.body };
 
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpires: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token" });
+    if (updates.password) {
+      updates.password = await bcrypt.hash(updates.password, 10);
     }
 
-    user.password = newPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
-    await user.save();
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, updates, {
+      new: true,
+    }).select("-password");
 
-    res.status(200).json({ message: "✅ Password reset successfully" });
+    res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: err.message });
   }
 };
-// 🗑️ Delete My Account
-const deleteMyAccount = async (req, res) => {
+
+// 🗑️ Delete user
+const deleteUser = async (req, res) => {
   try {
-    const userId = req.user._id;
-
-    const user = await User.findByIdAndDelete(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json({ message: "Account deleted successfully" });
+    await User.findByIdAndDelete(req.params.id);
+    res.status(200).json({ message: "User deleted successfully" });
   } catch (err) {
-    res.status(500).json({ message: "Server error during account deletion" });
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 📋 Get all users (admin only)
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find().select("-password");
+    res.status(200).json({
+      message: "All users fetched successfully",
+      users,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
 module.exports = {
   registerUser,
   loginUser,
-  forgotPassword,
-  resetPassword,
-  deleteMyAccount,
-  verifyEmail,
+  getUserById,
+  updateUser,
+  deleteUser,
+  getAllUsers,
 };

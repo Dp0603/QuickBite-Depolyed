@@ -1,23 +1,19 @@
-// routes/FavoriteRoutes.js
 const express = require("express");
-const router = express.Router();
 const {
-  addFavorite,
-  removeFavorite,
-  getMyFavorites,
+  addToFavorites,
+  removeFromFavorites,
+  getUserFavorites,
 } = require("../controllers/FavoriteController");
-const { protect } = require("../middlewares/authMiddleware");
 
-// 🔐 Protect all routes
-router.use(protect);
+const router = express.Router();
 
-// 📦 Get all
-router.get("/", getMyFavorites);
+// ❤️ Add restaurant to favorites
+router.post("/favorites", addToFavorites);
 
-// ➕ Add
-router.post("/:restaurantId", addFavorite);
+// ❌ Remove restaurant from favorites
+router.delete("/favorites", removeFromFavorites);
 
-// ❌ Remove
-router.delete("/:restaurantId", removeFavorite);
+// 📜 Get all favorite restaurants for a user
+router.get("/favorites/:userId", getUserFavorites);
 
 module.exports = router;

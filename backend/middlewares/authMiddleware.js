@@ -1,34 +1,38 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/UserModel");
 
-// 🔐 Protect middleware
+// 🔐 Protect middleware: verifies JWT and attaches user to req
 const protect = async (req, res, next) => {
-  const token = req.headers.authorization;
+  const authHeader = req.headers.authorization;
 
-  if (!token || !token.startsWith("Bearer ")) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Unauthorized: No token provided" });
   }
 
-  try {
-    const decoded = jwt.verify(token.split(" ")[1], process.env.JWT_SECRET);
+  const token = authHeader.split(" ")[1];
 
-    // ✅ Fetch full user from DB and attach
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Fetch full user by ID from token payload, excluding password
     const user = await User.findById(decoded.userId).select("-password");
     if (!user) {
       return res.status(401).json({ message: "Unauthorized: User not found" });
     }
 
-    req.user = user; // ✅ Full user with role, etc.
+    req.user = user; // Attach user to request object
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Unauthorized: Invalid token" });
+    return res
+      .status(401)
+      .json({ message: "Unauthorized: Invalid or expired token" });
   }
 };
 
-// 👮 Role-based access
-const authorize = (role) => {
+// 👮 Role-based access control middleware: allows multiple roles
+const authorize = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user || req.user.role !== role) {
+    if (!req.user || !allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ message: "Forbidden: Insufficient role" });
     }
     next();

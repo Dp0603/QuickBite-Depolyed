@@ -1,61 +1,91 @@
-// controllers/FavoriteController.js
 const Favorite = require("../models/FavoriteModel");
 const Restaurant = require("../models/RestaurantModel");
 
-// ⭐ Add to favorites
-exports.addFavorite = async (req, res) => {
+// ❤️ Add restaurant to user's favorites
+const addToFavorites = async (req, res) => {
   try {
-    const { restaurantId } = req.params;
-    const userId = req.user._id;
+    const { userId, restaurantId } = req.body;
 
-    const alreadyExists = await Favorite.findOne({ userId, restaurantId });
-    if (alreadyExists) {
-      return res.status(400).json({ message: "Already in favorites" });
+    let favorite = await Favorite.findOne({ userId });
+
+    if (!favorite) {
+      favorite = new Favorite({
+        userId,
+        restaurantIds: [restaurantId],
+      });
+    } else {
+      if (favorite.restaurantIds.includes(restaurantId)) {
+        return res
+          .status(400)
+          .json({ message: "Restaurant already in favorites" });
+      }
+      favorite.restaurantIds.push(restaurantId);
     }
 
-    const newFav = await Favorite.create({ userId, restaurantId });
-    res.status(201).json({ success: true, data: newFav });
+    await favorite.save();
+
+    res.status(200).json({
+      message: "Restaurant added to favorites",
+      favorites: favorite,
+    });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to add favorite" });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// ❌ Remove from favorites
-exports.removeFavorite = async (req, res) => {
+// ❌ Remove restaurant from user's favorites
+const removeFromFavorites = async (req, res) => {
   try {
-    const { restaurantId } = req.params;
-    const userId = req.user._id;
+    const { userId, restaurantId } = req.body;
 
-    const fav = await Favorite.findOneAndDelete({ userId, restaurantId });
+    const favorite = await Favorite.findOne({ userId });
 
-    if (!fav) {
-      return res.status(404).json({ message: "Favorite not found" });
+    if (!favorite) {
+      return res.status(404).json({ message: "Favorite list not found" });
     }
 
-    res.status(200).json({ success: true, message: "Removed from favorites" });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to remove favorite" });
-  }
-};
-
-// 📦 Get all favorites
-exports.getMyFavorites = async (req, res) => {
-  try {
-    const favorites = await Favorite.find({ userId: req.user._id }).populate(
-      "restaurantId"
+    favorite.restaurantIds = favorite.restaurantIds.filter(
+      (id) => id.toString() !== restaurantId
     );
 
-    const formatted = favorites.map((fav) => ({
-      id: fav._id,
-      restaurant: fav.restaurantId,
-    }));
+    await favorite.save();
 
-    res.status(200).json({ success: true, data: formatted });
+    res.status(200).json({
+      message: "Restaurant removed from favorites",
+      favorites: favorite,
+    });
   } catch (err) {
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to get favorites" });
+    res.status(500).json({ message: err.message });
   }
+};
+
+// 📜 Get all favorite restaurants of a user
+const getUserFavorites = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    const favorite = await Favorite.findOne({ userId }).populate(
+      "restaurantIds",
+      "name logo cuisineType"
+    );
+
+    if (!favorite) {
+      return res
+        .status(200)
+        .json({ message: "No favorites found", favorites: [] });
+    }
+
+    res.status(200).json({
+      message: "Favorite restaurants fetched successfully",
+      favorites: favorite.restaurantIds,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+module.exports = {
+  addToFavorites,
+  removeFromFavorites,
+  getUserFavorites,
 };

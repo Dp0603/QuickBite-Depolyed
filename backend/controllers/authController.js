@@ -4,9 +4,10 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/UserModel");
 const generateToken = require("../utils/generateToken");
 const sendEmail = require("../utils/sendEmail");
+const generateOTP = require("../utils/generateOTP");
 
-// ✅ Register User
-exports.register = async (req, res) => {
+// ✅ Register a new user
+const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -22,80 +23,83 @@ exports.register = async (req, res) => {
       email,
       password,
       role: role || "customer",
-      isVerified: false,
       emailToken,
     });
 
-    const verifyLink = `http://localhost:5173/verify-email/${emailToken}`; // update in prod
+    const verifyLink = `http://localhost:5173/verify-email/${emailToken}`;
 
     await sendEmail({
       to: user.email,
       subject: "Verify your QuickBite email",
       name: user.name,
-      body: `
-        <p>Hi <strong>${user.name}</strong>,</p>
-        <p>Thanks for signing up for <strong>QuickBite</strong>!</p>
-        <p>Please verify your email address to activate your account:</p>
-        <p>
-          <a href="${verifyLink}" target="_blank" style="padding: 10px 20px; background-color: #FF5722; color: white; text-decoration: none; border-radius: 5px;">
-            Verify Email
-          </a>
-        </p>
-        <p>If you did not request this, please ignore this email.</p>
-      `,
+      body: `<p>Click below to verify:</p><a href="${verifyLink}">Verify Email</a>`,
     });
 
     res.status(201).json({
-      message:
-        "Registered successfully. Check your email to verify your account.",
+      message: "Registered successfully. Check your email to verify account.",
     });
-  } catch (err) {
-    console.error("❌ Register Error:", err);
-    res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ Verify Email
-exports.verifyEmail = async (req, res) => {
+// ✅ Email verification
+const verifyEmail = async (req, res) => {
   try {
-    const token = req.params.token;
+    const user = await User.findOne({ emailToken: req.params.token });
 
-    const user = await User.findOne({ emailToken: token });
-    if (!user) {
-      return res.status(400).json({ message: "Invalid or expired token" });
-    }
+    if (!user) return res.status(400).json({ message: "Invalid token" });
 
     user.emailToken = null;
     user.isVerified = true;
     await user.save();
 
     res.status(200).json({ message: "Email verified successfully!" });
-  } catch (err) {
-    console.error("❌ Email Verification Error:", err);
-    res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ Login User
-exports.login = async (req, res) => {
+// 🔁 Resend email verification
+const resendEmailVerification = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.isVerified)
+      return res.status(400).json({ message: "Email already verified" });
+
+    user.emailToken = crypto.randomBytes(32).toString("hex");
+    await user.save();
+
+    const verifyLink = `http://localhost:5173/verify-email/${user.emailToken}`;
+    await sendEmail({
+      to: user.email,
+      subject: "Verify your QuickBite email",
+      name: user.name,
+      body: `<p>Click below to verify:</p><a href="${verifyLink}">Verify Email</a>`,
+    });
+
+    res.status(200).json({ message: "Verification email resent" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Login with email & password
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
-    if (!user.isVerified) {
-      return res
-        .status(401)
-        .json({ message: "Please verify your email before logging in." });
-    }
+    if (!user.isVerified)
+      return res.status(401).json({ message: "Verify your email first" });
 
     res.status(200).json({
       token: generateToken(user._id),
@@ -106,31 +110,170 @@ exports.login = async (req, res) => {
         role: user.role,
       },
     });
-  } catch (err) {
-    console.error("❌ Login Error:", err);
-    res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ Token Verification (used by frontend AuthContext)
-exports.verifyToken = async (req, res) => {
+// 🔐 Token verification (AuthContext)
+const verifyToken = async (req, res) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
-
-    if (!token) {
-      return res.status(401).json({ message: "No token provided" });
-    }
+    if (!token) return res.status(401).json({ message: "No token provided" });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId).select("-password");
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     res.status(200).json({ user });
-  } catch (err) {
-    console.error("❌ Token Verification Error:", err);
+  } catch (error) {
     res.status(401).json({ message: "Invalid token" });
   }
+};
+
+// 📲 Send OTP (Login via mobile/email)
+const sendOTP = async (req, res) => {
+  try {
+    const { contact } = req.body; // can be email or phone
+    const user = await User.findOne({
+      $or: [{ email: contact }, { phone: contact }],
+    });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const otp = generateOTP();
+    user.otp = otp;
+    user.otpExpires = Date.now() + 5 * 60 * 1000; // 5 mins
+    await user.save();
+
+    await sendEmail({
+      to: user.email,
+      subject: "Your QuickBite OTP",
+      name: user.name,
+      body: `<p>Your OTP is: <strong>${otp}</strong></p>`,
+    });
+
+    res.status(200).json({ message: "OTP sent successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 🔑 Verify OTP login
+const verifyOTP = async (req, res) => {
+  try {
+    const { contact, otp } = req.body;
+
+    const user = await User.findOne({
+      $or: [{ email: contact }, { phone: contact }],
+      otp,
+      otpExpires: { $gt: Date.now() },
+    });
+
+    if (!user)
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+
+    user.otp = null;
+    user.otpExpires = null;
+
+    if (!user.isVerified) user.isVerified = true;
+    await user.save();
+
+    res.status(200).json({
+      token: generateToken(user._id),
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ❓ Forgot password
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    user.resetToken = resetToken;
+    user.resetTokenExpires = Date.now() + 30 * 60 * 1000;
+    await user.save();
+
+    const resetLink = `http://localhost:5173/reset-password/${resetToken}`;
+
+    await sendEmail({
+      to: user.email,
+      subject: "Reset your QuickBite password",
+      name: user.name,
+      body: `<p>Click to reset your password: <a href="${resetLink}">Reset Password</a></p>`,
+    });
+
+    res.status(200).json({ message: "Reset link sent to email" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 🔄 Reset password
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { newPassword } = req.body;
+
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpires: { $gt: Date.now() },
+    });
+
+    if (!user)
+      return res.status(400).json({ message: "Invalid or expired token" });
+
+    user.password = newPassword;
+    user.resetToken = null;
+    user.resetTokenExpires = null;
+    await user.save();
+
+    res.status(200).json({ message: "Password reset successful" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 🔁 Change password (authenticated user)
+const changePassword = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(userId);
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match)
+      return res.status(401).json({ message: "Incorrect current password" });
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = {
+  register,
+  verifyEmail,
+  resendEmailVerification,
+  login,
+  verifyToken,
+  sendOTP,
+  verifyOTP,
+  forgotPassword,
+  resetPassword,
+  changePassword,
 };

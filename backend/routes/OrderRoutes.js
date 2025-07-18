@@ -1,37 +1,31 @@
 const express = require("express");
-const router = express.Router();
 const {
   createOrder,
-  getAllOrders,
-  getOrderById,
+  updateOrderStatus,
+  updateDeliveryStatus,
   getCustomerOrders,
   getRestaurantOrders,
-  updateOrderStatus,
-  getOrdersByDeliveryAgent,
-  assignDeliveryAgent,
+  getOrderById,
 } = require("../controllers/OrderController");
 
-// ➕ Create a new order
-router.post("/", createOrder);
+const router = express.Router();
 
-// 📋 Get all orders
-router.get("/", getAllOrders);
+// 🧾 Create a new order
+router.post("/orders", createOrder);
 
-router.get("/:id", getOrderById);
+// 🔁 Update order status (Preparing, Ready, etc.)
+router.put("/orders/status/:orderId", updateOrderStatus);
 
-// 👤 Get orders by customer ID
-router.get("/customer/:customerId", getCustomerOrders);
+// 🚚 Update delivery details (agent assigned, picked, etc.)
+router.put("/orders/delivery/:orderId", updateDeliveryStatus);
 
-// 🍽️ Get orders by restaurant ID
-router.get("/restaurant/:restaurantId", getRestaurantOrders);
+// 👤 Get all orders of a customer
+router.get("/orders/customer/:customerId", getCustomerOrders);
 
-// ✏️ Update order status
-router.put("/:id/status", updateOrderStatus);
+// 🍽️ Get all orders of a restaurant
+router.get("/orders/restaurant/:restaurantId", getRestaurantOrders);
 
-// 🚚 Get orders assigned to delivery agent
-router.get("/delivery-agent/:riderId", getOrdersByDeliveryAgent);
-
-// ✏️ Assign rider to order (by restaurant/admin)
-router.put("/:id/assign-rider", assignDeliveryAgent);
+// 🔍 Get single order by ID
+router.get("/orders/:orderId", getOrderById);
 
 module.exports = router;
