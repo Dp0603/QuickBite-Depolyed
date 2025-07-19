@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { Helmet } from "react-helmet";
 import {
   FaFacebookF,
   FaTwitter,
@@ -11,11 +12,20 @@ import Navbar from "../components/Navbar";
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
-      {/* Always show Navbar on home, login, and register */}
+      {/* SEO Meta Tags */}
+      <Helmet>
+        <title>QuickBite | Order Food Online</title>
+        <meta
+          name="description"
+          content="Get food delivered from top-rated restaurants at your doorstep. Try QuickBite now!"
+        />
+      </Helmet>
+
+      {/* Navbar */}
       <Navbar />
 
       {/* Hero Section */}
-      <header className="relative w-full bg-primary text-white min-h-[80vh] py-20">
+      <header className="relative w-full bg-primary text-white min-h-[80vh] py-24">
         <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent opacity-90" />
         <div className="relative z-10 max-w-screen-2xl mx-auto w-full px-4 sm:px-6 lg:px-12 flex flex-col lg:flex-row justify-between items-center gap-10">
           <div className="lg:w-1/2">
@@ -46,6 +56,7 @@ export default function Home() {
               src="https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=800&q=80"
               alt="Delicious food on a plate"
               loading="lazy"
+              decoding="async"
               className="rounded-xl shadow-xl w-full object-cover"
             />
           </div>
@@ -80,7 +91,13 @@ export default function Home() {
                 key={i}
                 className="bg-gray-100 dark:bg-gray-900 p-8 rounded-xl shadow hover:shadow-lg transition"
               >
-                <div className="text-5xl mb-4">{step.icon}</div>
+                <div
+                  className="text-5xl mb-4"
+                  role="img"
+                  aria-label={step.title}
+                >
+                  {step.icon}
+                </div>
                 <h3 className="text-xl font-semibold mb-2 text-primary">
                   {step.title}
                 </h3>
@@ -126,6 +143,7 @@ export default function Home() {
                   src={r.img}
                   alt={`${r.name} preview`}
                   loading="lazy"
+                  decoding="async"
                   className="w-full h-48 object-cover"
                 />
                 <div className="p-6 text-center">

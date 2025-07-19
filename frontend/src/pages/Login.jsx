@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 import {
   FaEye,
   FaEyeSlash,
@@ -14,6 +13,8 @@ import {
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import { AuthContext } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+import { loginUser } from "../api/axios"; // ✅ Centralized login API call
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -21,32 +22,33 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const { login } = useContext(AuthContext);
+  const toast = useToast();
   const navigate = useNavigate();
 
-  // Load theme
+  // 🌙 Load theme from local storage
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme");
     setDarkMode(storedTheme === "dark");
   }, []);
 
+  // 🌗 Toggle theme on darkMode change
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
-  // 🧠 Handle Login Submit
+  // 🔐 Submit login
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      setLoading(true);
+      const { token, user } = await loginUser({ email, password });
 
-      const res = await axios.post("/api/auth/login", { email, password });
-      const { token, user } = res.data;
+      login(token, user); // Save token + user in context
+      toast.success("Login successful");
 
-      login(token, user); // Store token + user globally
-
-      // Role-based redirection
       switch (user.role) {
         case "admin":
           navigate("/admin");
@@ -57,23 +59,21 @@ export default function Login() {
         case "delivery":
           navigate("/delivery");
           break;
-        case "customer":
         default:
           navigate("/customer");
-          break;
       }
     } catch (err) {
       const msg =
-        err.response?.data?.message ||
-        "Login failed. Please check credentials.";
-      alert(msg);
+        err.response?.data?.message || "Login failed. Please try again.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   const handleSocialLogin = (provider) => {
-    alert(`Redirecting to ${provider} login...`);
+    toast.info(`Redirecting to ${provider} login...`);
+    // Optional: Add logic for social login redirection here
   };
 
   return (
@@ -89,7 +89,7 @@ export default function Login() {
       />
       <div className="absolute inset-0 bg-black/30 z-[-1]" />
 
-      <div className="pt-20 min-h-screen grid grid-cols-1 md:grid-cols-2 gap-2 bg-transparent dark:bg-transparent relative transition-colors duration-500">
+      <div className="pt-20 min-h-screen grid grid-cols-1 md:grid-cols-2 gap-2 bg-transparent relative transition-colors duration-500">
         <button
           className="absolute top-5 right-5 z-50 text-primary dark:text-white text-xl"
           onClick={() => setDarkMode((prev) => !prev)}
@@ -140,7 +140,7 @@ export default function Login() {
               Login to <span className="text-primary">QuickBite</span>
             </h2>
 
-            {/* Social Logins (Optional) */}
+            {/* Social Logins */}
             <div className="flex flex-wrap justify-center gap-3 mb-6">
               {[
                 { icon: <FaGoogle />, provider: "Google", color: "#DB4437" },
@@ -156,7 +156,7 @@ export default function Login() {
                   key={provider}
                   type="button"
                   onClick={() => handleSocialLogin(provider)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-white`}
+                  className="flex items-center gap-2 px-4 py-2 rounded-md text-white"
                   style={{ backgroundColor: color }}
                 >
                   {icon} {provider}

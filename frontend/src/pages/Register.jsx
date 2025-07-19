@@ -12,7 +12,8 @@ import {
 } from "react-icons/fa6";
 import { motion } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
-import Navbar from "../components/Navbar"; // ✅ Importing the Navbar
+import { useToast } from "../context/ToastContext";
+import Navbar from "../components/Navbar";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -22,6 +23,7 @@ export default function Register() {
   const [darkMode, setDarkMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -39,24 +41,24 @@ export default function Register() {
     try {
       setLoading(true);
       await register(name, email, password);
+      toast.success("Account created successfully!");
       navigate("/customer");
     } catch (err) {
-      alert("Signup failed. Try again.");
+      toast.error(err?.response?.data?.message || "Signup failed. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
   const handleSocialLogin = (provider) => {
-    alert(`Redirecting to ${provider} signup...`);
+    toast.info(`Redirecting to ${provider} signup...`);
   };
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      {/* ✅ Navbar */}
       <Navbar />
 
-      {/* Background Image */}
+      {/* Background */}
       <div
         className="fixed top-0 left-0 w-full h-full bg-cover bg-center"
         style={{
@@ -65,13 +67,10 @@ export default function Register() {
           filter: "blur(6px) brightness(0.7)",
         }}
       />
-
-      {/* Dark Overlay */}
       <div className="absolute inset-0 bg-black/30 z-[-1]" />
 
-      {/* ✅ Push content below fixed navbar */}
       <div className="pt-20 min-h-screen grid grid-cols-1 md:grid-cols-2 bg-transparent dark:bg-transparent relative transition-colors duration-500">
-        {/* Theme Toggle */}
+        {/* Dark mode toggle */}
         <button
           className="absolute top-5 right-5 z-50 text-primary dark:text-white text-xl"
           onClick={() => setDarkMode((prev) => !prev)}
@@ -80,7 +79,7 @@ export default function Register() {
           {darkMode ? <FaSun /> : <FaMoon />}
         </button>
 
-        {/* Branding Section */}
+        {/* Branding */}
         <motion.div
           className="hidden md:flex items-center justify-center p-10"
           initial={{ x: -100, opacity: 0 }}
@@ -109,7 +108,7 @@ export default function Register() {
           </div>
         </motion.div>
 
-        {/* Signup Form */}
+        {/* Form */}
         <motion.div
           className="flex items-center justify-center p-8"
           initial={{ x: 100, opacity: 0 }}
@@ -122,7 +121,7 @@ export default function Register() {
               account
             </h2>
 
-            {/* Social Signups */}
+            {/* Social login */}
             <div className="flex flex-wrap justify-center gap-3 mb-6">
               <button
                 type="button"
@@ -154,7 +153,7 @@ export default function Register() {
               </button>
             </div>
 
-            {/* Form */}
+            {/* Register Form */}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-secondary dark:text-gray-300 mb-1">

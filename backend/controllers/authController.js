@@ -6,15 +6,16 @@ const generateToken = require("../utils/generateToken");
 const sendEmail = require("../utils/sendEmail");
 const generateOTP = require("../utils/generateOTP");
 
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
 // ✅ Register a new user
 const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    if (existingUser)
       return res.status(400).json({ message: "User already exists" });
-    }
 
     const emailToken = crypto.randomBytes(32).toString("hex");
 
@@ -26,7 +27,7 @@ const register = async (req, res) => {
       emailToken,
     });
 
-    const verifyLink = `http://localhost:5173/verify-email/${emailToken}`;
+    const verifyLink = `${FRONTEND_URL}/verify-email/${emailToken}`;
 
     await sendEmail({
       to: user.email,
@@ -73,7 +74,7 @@ const resendEmailVerification = async (req, res) => {
     user.emailToken = crypto.randomBytes(32).toString("hex");
     await user.save();
 
-    const verifyLink = `http://localhost:5173/verify-email/${user.emailToken}`;
+    const verifyLink = `${FRONTEND_URL}/verify-email/${user.emailToken}`;
     await sendEmail({
       to: user.email,
       subject: "Verify your QuickBite email",
@@ -95,7 +96,7 @@ const login = async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
-    const match = await bcrypt.compare(password, user.password);
+    const match = await user.matchPassword(password);
     if (!match) return res.status(401).json({ message: "Invalid credentials" });
 
     if (!user.isVerified)
@@ -135,7 +136,7 @@ const verifyToken = async (req, res) => {
 // 📲 Send OTP (Login via mobile/email)
 const sendOTP = async (req, res) => {
   try {
-    const { contact } = req.body; // can be email or phone
+    const { contact } = req.body; // email or phone
     const user = await User.findOne({
       $or: [{ email: contact }, { phone: contact }],
     });
@@ -143,7 +144,7 @@ const sendOTP = async (req, res) => {
 
     const otp = generateOTP();
     user.otp = otp;
-    user.otpExpires = Date.now() + 5 * 60 * 1000; // 5 mins
+    user.otpExpiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
     await user.save();
 
     await sendEmail({
@@ -167,14 +168,14 @@ const verifyOTP = async (req, res) => {
     const user = await User.findOne({
       $or: [{ email: contact }, { phone: contact }],
       otp,
-      otpExpires: { $gt: Date.now() },
+      otpExpiresAt: { $gt: Date.now() },
     });
 
     if (!user)
       return res.status(400).json({ message: "Invalid or expired OTP" });
 
     user.otp = null;
-    user.otpExpires = null;
+    user.otpExpiresAt = null;
 
     if (!user.isVerified) user.isVerified = true;
     await user.save();
@@ -202,10 +203,10 @@ const forgotPassword = async (req, res) => {
 
     const resetToken = crypto.randomBytes(32).toString("hex");
     user.resetToken = resetToken;
-    user.resetTokenExpires = Date.now() + 30 * 60 * 1000;
+    user.resetTokenExpires = Date.now() + 30 * 60 * 1000; // 30 minutes
     await user.save();
 
-    const resetLink = `http://localhost:5173/reset-password/${resetToken}`;
+    const resetLink = `${FRONTEND_URL}/reset-password/${resetToken}`;
 
     await sendEmail({
       to: user.email,
