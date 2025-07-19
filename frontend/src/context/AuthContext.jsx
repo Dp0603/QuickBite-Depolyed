@@ -1,26 +1,21 @@
+// src/context/AuthContext.js
 import { createContext, useEffect, useState } from "react";
-import API from "../api/axios"; // ✅ Make sure the path is correct
+import API from "../api/axios";
 
 export const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // { _id, name, role, email }
-  const [token, setToken] = useState(localStorage.getItem("token"));
+  const [user, setUser] = useState(
+    JSON.parse(localStorage.getItem("user")) || null
+  );
+  const [token, setToken] = useState(localStorage.getItem("token") || null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Register function
   const register = async (name, email, password) => {
-    const res = await API.post("/auth/register", {
-      name,
-      email,
-      password,
-    });
-
-    // Auto login after successful registration
-    login(res.data.token, res.data.user);
+    const res = await API.post("/auth/register", { name, email, password });
+    return res.data;
   };
 
-  // ✅ Login
   const login = (token, user) => {
     setToken(token);
     setUser(user);
@@ -28,7 +23,6 @@ const AuthProvider = ({ children }) => {
     localStorage.setItem("user", JSON.stringify(user));
   };
 
-  // ✅ Logout
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -36,49 +30,29 @@ const AuthProvider = ({ children }) => {
     localStorage.removeItem("user");
   };
 
-  // ✅ Verify token on load
   useEffect(() => {
     const verifyToken = async () => {
       if (!token) {
         setLoading(false);
         return;
       }
-
       try {
-        const res = await API.post(
-          "/auth/verify-token",
-          {},
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
+        const res = await API.get("/auth/verify-token");
         setUser(res.data.user);
       } catch (err) {
-        console.error("Invalid token:", err.response?.data?.message);
-        logout(); // ⛔ Clear user if token fails
+        logout();
       } finally {
         setLoading(false);
       }
     };
-
     verifyToken();
   }, [token]);
 
   return (
     <AuthContext.Provider
-      value={{
-        user,
-        token,
-        login,
-        logout,
-        register,
-        loading,
-      }}
+      value={{ user, token, login, logout, register, loading }}
     >
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
