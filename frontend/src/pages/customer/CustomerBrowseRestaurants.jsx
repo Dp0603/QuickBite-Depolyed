@@ -22,11 +22,11 @@ const CustomerBrowseRestaurants = () => {
   const [wishlist, setWishlist] = useState([]);
   const navigate = useNavigate();
 
-  // 🧲 Fetch from backend
+  // 🧲 Fetch restaurants from backend
   useEffect(() => {
     axios
-      .get("/api/restaurant/public/restaurants")
-      .then((res) => setRestaurants(res.data.data))
+      .get("/api/restaurants/restaurants")
+      .then((res) => setRestaurants(res.data.restaurants))
       .catch((err) => console.error("❌ Error fetching restaurants:", err));
   }, []);
 
@@ -41,9 +41,10 @@ const CustomerBrowseRestaurants = () => {
     localStorage.setItem("wishlist", JSON.stringify(wishlist));
   }, [wishlist]);
 
+  // 🔎 Filter logic
   const filtered = restaurants.filter((r) => {
-    const matchCuisine = cuisine === "All" || r.cuisine === cuisine;
-    const matchSearch = `${r.restaurantName} ${r.address?.city || ""}`
+    const matchCuisine = cuisine === "All" || r.cuisineType?.includes(cuisine);
+    const matchSearch = `${r.name} ${r.addressId?.city || ""}`
       .toLowerCase()
       .includes(search.toLowerCase());
     return matchCuisine && matchSearch;
@@ -61,13 +62,13 @@ const CustomerBrowseRestaurants = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      {/* 🧭 Heading */}
+      {/* 🧭 Header */}
       <h1 className="text-3xl font-bold mb-2">🍽️ Discover Restaurants</h1>
       <p className="text-gray-600 dark:text-gray-300 mb-6">
         Find top-rated restaurants near you.
       </p>
 
-      {/* 🔍 Search & Filters */}
+      {/* 🔍 Search & Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <input
           type="text"
@@ -76,7 +77,6 @@ const CustomerBrowseRestaurants = () => {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-
         <div className="flex flex-wrap gap-2">
           {cuisines.map((c) => (
             <button
@@ -101,18 +101,20 @@ const CustomerBrowseRestaurants = () => {
             <div
               key={r._id}
               onClick={() => navigate(`/restaurant/${r._id}/menu`)}
-              className="cursor-pointer relative bg-white dark:bg-secondary rounded-2xl overflow-hidden shadow hover:shadow-lg transition duration-300 group"
+              className="cursor-pointer relative bg-white dark:bg-secondary rounded-xl overflow-hidden shadow-md hover:shadow-lg transition group"
             >
               {/* 🖼️ Image */}
-              <img
-                src={r.logoUrl || "/QuickBite.png"}
-                alt={r.restaurantName}
-                className="h-48 w-full object-cover group-hover:scale-105 transition-transform duration-300"
-              />
+              <div className="h-48 w-full overflow-hidden">
+                <img
+                  src={r.logo || "/QuickBite.png"}
+                  alt={r.name}
+                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
 
-              {/* 🏷️ Tags */}
+              {/* 🏷️ Open Tag */}
               {r.isOpen && (
-                <span className="absolute top-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs">
+                <span className="absolute top-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs shadow-md">
                   Open Now
                 </span>
               )}
@@ -121,35 +123,36 @@ const CustomerBrowseRestaurants = () => {
               <div
                 className="absolute top-3 right-3 z-10"
                 onClick={(e) => {
-                  e.stopPropagation(); // prevent redirect
+                  e.stopPropagation();
                   toggleWishlist(r._id);
                 }}
               >
                 {wishlist.includes(r._id) ? (
-                  <FaHeart className="text-red-500" />
+                  <FaHeart className="text-red-500 text-lg" />
                 ) : (
-                  <FaRegHeart className="text-white" />
+                  <FaRegHeart className="text-white text-lg" />
                 )}
               </div>
 
-              {/* 📝 Details Overlay */}
-              <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/70 to-transparent p-4">
-                <h3 className="text-lg font-bold text-white">
-                  {r.restaurantName}
+              {/* 📄 Details */}
+              <div className="p-4">
+                <h3 className="text-lg font-semibold truncate text-gray-800 dark:text-white">
+                  {r.name}
                 </h3>
-                <p className="text-sm text-gray-200 flex items-center gap-1">
+                <p className="text-sm text-gray-500 dark:text-gray-300 flex items-center gap-1 mt-1 truncate">
                   <FaMapMarkerAlt className="text-primary" />
-                  {r.address?.city || "Unknown"}
+                  {r.addressId?.city || "Unknown"}
                 </p>
-                <div className="text-sm text-gray-300">
-                  30–40 min • ₹20 {/* Optional: static */}
-                </div>
-              </div>
 
-              {/* ⭐ Rating */}
-              <div className="absolute top-3 right-10 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded-lg shadow">
-                <FaStar className="inline mr-1" />
-                {r.ratings?.toFixed(1) || "4.5"}
+                <div className="flex justify-between items-center mt-3 text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {r.deliveryTimeEstimate || "30–40 min"} • ₹20
+                  </span>
+                  <span className="flex items-center gap-1 bg-yellow-400 text-black px-2 py-0.5 rounded-full text-xs font-bold shadow">
+                    <FaStar />
+                    {r.averageRating?.toFixed(1) || "4.5"}
+                  </span>
+                </div>
               </div>
             </div>
           ))
