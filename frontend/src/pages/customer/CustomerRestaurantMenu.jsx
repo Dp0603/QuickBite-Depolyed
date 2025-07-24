@@ -5,21 +5,33 @@ import API from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 
 const CustomerRestaurantMenu = () => {
-  const { restaurantId } = useParams();
+  const { id: restaurantId } = useParams();
   const { user } = useContext(AuthContext);
+
+  const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [cart, setCart] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  // Fetch menu from backend
   useEffect(() => {
-    if (restaurantId) {
-      API.get(`/menu/restaurant/${restaurantId}`)
-        .then((res) => setMenuItems(res.data.data))
-        .catch((err) => console.error("❌ Error fetching menu:", err));
-    }
+    const fetchRestaurantAndMenu = async () => {
+      try {
+        const [resRestaurant, resMenu] = await Promise.all([
+          API.get(`/restaurants/restaurant/public/${restaurantId}`),
+          API.get(`/menu/restaurant/${restaurantId}`),
+        ]);
+        setRestaurant(resRestaurant.data.restaurant);
+        setMenuItems(resMenu.data.menu || []);
+      } catch (err) {
+        console.error("❌ Failed to fetch menu or restaurant:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (restaurantId) fetchRestaurantAndMenu();
   }, [restaurantId]);
 
-  // ✅ Add item to backend cart
   const handleAdd = async (itemId) => {
     try {
       await API.post("/cart/add", {
@@ -27,7 +39,6 @@ const CustomerRestaurantMenu = () => {
         foodId: itemId,
         quantity: 1,
       });
-
       setCart((prev) => ({
         ...prev,
         [itemId]: (prev[itemId] || 0) + 1,
@@ -37,117 +48,118 @@ const CustomerRestaurantMenu = () => {
     }
   };
 
-  // ✅ Remove or decrement from cart (backend logic optional for now)
   const handleRemove = (itemId) => {
     setCart((prev) => {
-      const newCart = { ...prev };
-      if (newCart[itemId] > 1) {
-        newCart[itemId] -= 1;
-      } else {
-        delete newCart[itemId];
-      }
-      return newCart;
+      const updated = { ...prev };
+      if (updated[itemId] > 1) updated[itemId] -= 1;
+      else delete updated[itemId];
+      return updated;
     });
   };
 
-  const totalItems = Object.values(cart).reduce((sum, qty) => sum + qty, 0);
+  const totalItems = Object.values(cart).reduce((sum, q) => sum + q, 0);
   const totalPrice = Object.entries(cart).reduce(
     (total, [id, qty]) =>
       total + qty * (menuItems.find((item) => item._id === id)?.price || 0),
     0
   );
 
+  if (loading) return <div className="p-6 text-center">Loading...</div>;
+
   return (
-    <div className="p-6 text-gray-800 dark:text-white max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-center gap-6 mb-10">
-        <img
-          src="/QuickBite.png"
-          alt="Restaurant Logo"
-          className="w-24 h-24 rounded-xl object-cover shadow"
-        />
-        <div className="text-center md:text-left">
-          <h1 className="text-3xl font-bold">Restaurant Menu</h1>
-          <p className="text-gray-500 dark:text-gray-400">
-            Delicious dishes at your fingertips.
-          </p>
-          <div className="flex items-center gap-4 text-sm mt-2">
-            <span className="flex items-center gap-1 text-green-600">
-              <FaStar /> 4.5
-            </span>
-            <span className="flex items-center gap-1 text-yellow-600">
-              <FaClock /> 30 mins
-            </span>
-            <span className="text-gray-400">₹40 Delivery Fee</span>
+    <div className="p-6 text-gray-800 dark:text-white max-w-6xl mx-auto">
+      {/* 🍽️ Restaurant Info */}
+      {restaurant && (
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-10">
+          <img
+            src={restaurant.logo || "/QuickBite.png"}
+            alt="Logo"
+            className="w-28 h-28 rounded-xl object-cover shadow-md"
+          />
+          <div className="text-center md:text-left">
+            <h1 className="text-3xl font-bold mb-1">{restaurant.name}</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-2">
+              {restaurant.description || "Delicious dishes available."}
+            </p>
+            <div className="flex flex-wrap justify-center md:justify-start gap-3 text-sm">
+              <span className="flex items-center gap-1 text-green-600 font-medium">
+                <FaStar /> {restaurant.averageRating || "4.2"}
+              </span>
+              <span className="flex items-center gap-1 text-yellow-600 font-medium">
+                <FaClock /> {restaurant.deliveryTimeEstimate || "30 mins"}
+              </span>
+              <span className="text-gray-400">₹40 Delivery Fee</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Menu Items */}
-      <div className="grid md:grid-cols-2 gap-6 animate-fade-in">
-        {menuItems.length > 0 ? (
+      {/* 🧾 Menu Items */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {menuItems.length ? (
           menuItems.map((item) => (
             <div
               key={item._id}
-              className="p-4 bg-white dark:bg-secondary rounded-xl shadow border dark:border-gray-700 flex gap-4"
+              className="p-4 bg-white dark:bg-secondary rounded-xl shadow-sm hover:shadow-md transition border dark:border-gray-700 flex flex-col"
             >
               <img
                 src={item.image || "/QuickBite.png"}
                 alt={item.name}
-                className="w-24 h-24 object-cover rounded-lg"
+                className="w-full h-36 object-cover rounded-md mb-3"
               />
               <div className="flex-1">
-                <h3 className="text-lg font-bold">{item.name}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {item.description || "No description"}
+                <h3 className="text-lg font-semibold">{item.name}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                  {item.description || "No description available."}
                 </p>
-                <div className="flex justify-between items-end mt-3">
-                  <span className="text-primary font-semibold text-lg">
-                    ₹{item.price}
-                  </span>
-                  {cart[item._id] ? (
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="w-8 h-8 flex items-center justify-center bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white rounded-full"
-                        onClick={() => handleRemove(item._id)}
-                      >
-                        <FaMinus />
-                      </button>
-                      <span className="font-medium">{cart[item._id]}</span>
-                      <button
-                        className="w-8 h-8 flex items-center justify-center bg-primary text-white rounded-full"
-                        onClick={() => handleAdd(item._id)}
-                      >
-                        <FaPlus />
-                      </button>
-                    </div>
-                  ) : (
+              </div>
+              <div className="flex justify-between items-center mt-4">
+                <span className="text-primary text-lg font-bold">
+                  ₹{item.price}
+                </span>
+                {cart[item._id] ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleRemove(item._id)}
+                      className="w-8 h-8 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-white rounded-full hover:bg-gray-300 dark:hover:bg-gray-500"
+                    >
+                      <FaMinus />
+                    </button>
+                    <span className="font-medium">{cart[item._id]}</span>
                     <button
                       onClick={() => handleAdd(item._id)}
-                      className="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition"
+                      className="w-8 h-8 bg-primary text-white rounded-full hover:bg-orange-600"
                     >
-                      Add
+                      <FaPlus />
                     </button>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleAdd(item._id)}
+                    className="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition"
+                  >
+                    Add
+                  </button>
+                )}
               </div>
             </div>
           ))
         ) : (
-          <p className="text-gray-500 dark:text-gray-400 col-span-full text-center mt-6">
+          <p className="col-span-full text-center text-gray-500 dark:text-gray-400 mt-4">
             No menu items available.
           </p>
         )}
       </div>
 
-      {/* Floating Cart Summary */}
+      {/* 🛒 Floating Cart Summary */}
       {totalItems > 0 && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary text-white shadow-lg px-6 py-3 rounded-full flex items-center gap-6 z-50 animate-fade-in">
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary text-white shadow-lg px-6 py-3 rounded-full flex items-center gap-6 z-50">
           <span>
-            🛒 {totalItems} item{totalItems > 1 ? "s" : ""} | ₹{totalPrice}
+            🛒 {totalItems} item{totalItems > 1 ? "s" : ""} | ₹
+            {totalPrice.toFixed(2)}
           </span>
           <button
-            onClick={() => alert("Proceeding to cart...")}
+            onClick={() => alert("🛒 Redirect to cart page")}
             className="bg-white text-primary px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-100 transition"
           >
             View Cart

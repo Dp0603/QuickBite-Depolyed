@@ -14,7 +14,7 @@ const router = express.Router();
 router.post("/menu", createMenuItem);
 
 // 📋 Get all menu items for a restaurant
-router.get("/menu/restaurant/:restaurantId", getMenuByRestaurant);
+router.get("/restaurant/:restaurantId", getMenuByRestaurant);
 
 // 📄 Get a specific menu item by ID
 router.get("/menu/:id", getMenuItemById);

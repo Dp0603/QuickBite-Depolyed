@@ -100,7 +100,7 @@ const CustomerBrowseRestaurants = () => {
           filtered.map((r) => (
             <div
               key={r._id}
-              onClick={() => navigate(`/restaurant/${r._id}/menu`)}
+              onClick={() => navigate(`/customer/menu/restaurant/${r._id}`)}
               className="cursor-pointer relative bg-white dark:bg-secondary rounded-xl overflow-hidden shadow-md hover:shadow-lg transition group"
             >
               {/* 🖼️ Image */}
@@ -141,6 +141,7 @@ const CustomerBrowseRestaurants = () => {
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-300 flex items-center gap-1 mt-1 truncate">
                   <FaMapMarkerAlt className="text-primary" />
+                  {r.addressId?.addressLine || "Unknown"}
                   {r.addressId?.city || "Unknown"}
                 </p>
 

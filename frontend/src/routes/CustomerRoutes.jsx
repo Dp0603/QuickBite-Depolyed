@@ -22,7 +22,7 @@ export const customerRoutes = [
   // Main
   <Route key="customer-dashboard" index element={<CustomerDashboard />} />,
   <Route key="customer-browse" path="browse" element={<CustomerBrowseRestaurants />} />,
-  <Route key="customer-restaurant-menu" path="restaurant/:id" element={<CustomerRestaurantMenu />} />,
+  <Route key="customer-restaurant-menu" path="menu/restaurant/:id" element={<CustomerRestaurantMenu />} />,
   <Route key="customer-cart" path="cart" element={<CustomerCart />} />,
   <Route key="customer-checkout" path="checkout" element={<CustomerCheckout />} />,
   <Route key="customer-payment-success" path="payment-success" element={<CustomerPaymentSuccess />} />,

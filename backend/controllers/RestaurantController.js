@@ -18,7 +18,7 @@ const createRestaurant = async (req, res) => {
 const getRestaurantById = async (req, res) => {
   try {
     const restaurant = await Restaurant.findById(req.params.id)
-      .populate("ownerId", "name email")
+      .populate("userId", "name email")
       .populate("addressId");
 
     if (!restaurant)
@@ -39,7 +39,7 @@ const getAllRestaurants = async (req, res) => {
     const restaurants = await Restaurant.find({
       isVerified: true,
       isOpen: true,
-    });
+    }).populate("addressId");
 
     res.status(200).json({
       message: "Restaurants fetched successfully",
