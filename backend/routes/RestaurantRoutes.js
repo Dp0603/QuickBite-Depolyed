@@ -15,7 +15,7 @@ const router = express.Router();
 router.post("/restaurants", createRestaurant);
 
 // 📄 Get a restaurant by ID
-router.get("/restaurants/id/:id", getRestaurantById);
+router.get("/restaurant/public/:id", getRestaurantById);
 
 // 📦 Get all verified & open restaurants (public)
 router.get("/restaurants", getAllRestaurants);

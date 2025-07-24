@@ -18,6 +18,7 @@ import { adminRoutes } from "./routes/AdminRoutes";
 import { restaurantRoutes } from "./routes/RestaurantRoutes";
 import { customerRoutes } from "./routes/CustomerRoutes";
 import { deliveryRoutes } from "./routes/DeliveryRoutes";
+// import CustomerRestaurantMenu from "./pages/customer/CustomerRestaurantMenu";
 
 import PrivateRoute from "./routes/PrivateRoute";
 
@@ -30,6 +31,7 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
       <Route path="/unauthorized" element={<Unauthorized />} />{" "}
+      {/* <Route path="/menu/menu/restaurant/:id" element={<CustomerRestaurantMenu />} /> */}
       {/* ⛔ Unauthorized */}
       {/* 🔐 Admin Routes - Only accessible to 'admin' */}
       <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
