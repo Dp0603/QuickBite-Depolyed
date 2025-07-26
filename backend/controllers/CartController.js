@@ -1,23 +1,23 @@
 const Cart = require("../models/CartModel");
-const Menu = require("../models/MenuModel");
 
-// ➕ Add or update item in cart
+// ➕ Add or update cart item
 const addOrUpdateCartItem = async (req, res) => {
   try {
     const { userId, restaurantId, menuItemId, quantity, note } = req.body;
 
-    // Check if cart exists for the user & restaurant
+    if (!userId || !restaurantId || !menuItemId || !quantity) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     let cart = await Cart.findOne({ userId, restaurantId });
 
     if (!cart) {
-      // Create new cart if none exists
       cart = new Cart({
         userId,
         restaurantId,
         items: [{ menuItem: menuItemId, quantity, note }],
       });
     } else {
-      // Check if item already exists in cart
       const existingItem = cart.items.find(
         (item) => item.menuItem.toString() === menuItemId
       );
@@ -32,21 +32,25 @@ const addOrUpdateCartItem = async (req, res) => {
 
     await cart.save();
 
+    const populatedCart = await Cart.findById(cart._id)
+      .populate("items.menuItem")
+      .populate("restaurantId", "name logo");
+
     res.status(200).json({
       message: "Cart updated successfully",
-      cart,
+      cart: populatedCart,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res
+      .status(500)
+      .json({ message: "Error updating cart", error: err.message });
   }
 };
 
 // 🛒 Get cart for a user
 const getUserCart = async (req, res) => {
   try {
-    const userId = req.params.userId;
-
-    const cart = await Cart.findOne({ userId })
+    const cart = await Cart.findOne({ userId: req.params.userId })
       .populate("items.menuItem")
       .populate("restaurantId", "name logo");
 
@@ -57,11 +61,13 @@ const getUserCart = async (req, res) => {
       cart,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res
+      .status(500)
+      .json({ message: "Error fetching cart", error: err.message });
   }
 };
 
-// ❌ Remove item from cart
+// ❌ Remove a specific item
 const removeCartItem = async (req, res) => {
   try {
     const { userId, menuItemId } = req.body;
@@ -75,32 +81,42 @@ const removeCartItem = async (req, res) => {
 
     await cart.save();
 
+    const updatedCart = await Cart.findById(cart._id)
+      .populate("items.menuItem")
+      .populate("restaurantId", "name logo");
+
     res.status(200).json({
       message: "Item removed from cart",
-      cart,
+      cart: updatedCart,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res
+      .status(500)
+      .json({ message: "Error removing item", error: err.message });
   }
 };
 
-// 🧹 Clear cart for a user
+// 🧹 Clear entire cart
 const clearCart = async (req, res) => {
   try {
-    const userId = req.params.userId;
-
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ userId: req.params.userId });
     if (!cart) return res.status(404).json({ message: "Cart not found" });
 
     cart.items = [];
     await cart.save();
 
+    const clearedCart = await Cart.findById(cart._id)
+      .populate("items.menuItem")
+      .populate("restaurantId", "name logo");
+
     res.status(200).json({
       message: "Cart cleared successfully",
-      cart,
+      cart: clearedCart,
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res
+      .status(500)
+      .json({ message: "Error clearing cart", error: err.message });
   }
 };
 
