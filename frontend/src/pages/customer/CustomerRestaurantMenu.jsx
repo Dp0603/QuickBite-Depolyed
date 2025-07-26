@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { FaStar, FaClock, FaPlus, FaMinus } from "react-icons/fa";
 import API from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
@@ -7,12 +7,17 @@ import { AuthContext } from "../../context/AuthContext";
 const CustomerRestaurantMenu = () => {
   const { id: restaurantId } = useParams();
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [cart, setCart] = useState({});
   const [loading, setLoading] = useState(true);
+  const [menuLoaded, setMenuLoaded] = useState(false);
+  const [cartLoaded, setCartLoaded] = useState(false);
 
+  // 🍴 Fetch Restaurant & Menu
   useEffect(() => {
     const fetchRestaurantAndMenu = async () => {
       try {
@@ -22,8 +27,9 @@ const CustomerRestaurantMenu = () => {
         ]);
         setRestaurant(resRestaurant.data.restaurant);
         setMenuItems(resMenu.data.menu || []);
+        setMenuLoaded(true);
       } catch (err) {
-        console.error("❌ Failed to fetch menu or restaurant:", err);
+        console.error("❌ Failed to fetch restaurant or menu:", err);
       } finally {
         setLoading(false);
       }
@@ -32,37 +38,101 @@ const CustomerRestaurantMenu = () => {
     if (restaurantId) fetchRestaurantAndMenu();
   }, [restaurantId]);
 
+  // 🛒 Fetch Cart AFTER Menu is Loaded
+  useEffect(() => {
+    const fetchCart = async () => {
+      try {
+        const res = await API.get(`/cart/${user._id}`);
+        const cartItems = res.data.cart.items || [];
+
+        const newCart = {};
+        cartItems.forEach((item) => {
+          const matchedItem = menuItems.find((m) => m._id === item.menuItemId);
+          if (matchedItem) {
+            newCart[item.menuItemId] = {
+              quantity: item.quantity,
+              item: matchedItem,
+            };
+          }
+        });
+
+        setCart(newCart);
+        setCartLoaded(true);
+      } catch (err) {
+        console.error("❌ Failed to fetch cart:", err.response?.data || err);
+      }
+    };
+
+    if (user?._id && menuLoaded) {
+      fetchCart();
+    }
+  }, [user?._id, menuLoaded, location.pathname]);
+
+  // ➕ Add to Cart
   const handleAdd = async (itemId) => {
     try {
-      await API.post("/cart/add", {
+      const quantity = (cart[itemId]?.quantity || 0) + 1;
+
+      await API.post("/cart", {
         userId: user._id,
-        foodId: itemId,
-        quantity: 1,
+        restaurantId,
+        menuItemId: itemId,
+        quantity,
       });
+
+      const item = menuItems.find((m) => m._id === itemId);
+      if (!item) return;
+
       setCart((prev) => ({
         ...prev,
-        [itemId]: (prev[itemId] || 0) + 1,
+        [itemId]: {
+          quantity,
+          item,
+        },
       }));
     } catch (err) {
-      console.error("❌ Error adding to cart:", err);
+      console.error("❌ Error adding to cart:", err.response?.data || err);
     }
   };
 
-  const handleRemove = (itemId) => {
-    setCart((prev) => {
-      const updated = { ...prev };
-      if (updated[itemId] > 1) updated[itemId] -= 1;
-      else delete updated[itemId];
-      return updated;
-    });
-  };
+  // ➖ Remove from Cart
+  const handleRemove = async (itemId) => {
+    try {
+      const currentQty = cart[itemId]?.quantity || 0;
+      const newQty = currentQty - 1;
 
-  const totalItems = Object.values(cart).reduce((sum, q) => sum + q, 0);
-  const totalPrice = Object.entries(cart).reduce(
-    (total, [id, qty]) =>
-      total + qty * (menuItems.find((item) => item._id === id)?.price || 0),
-    0
-  );
+      if (newQty > 0) {
+        await API.post("/cart", {
+          userId: user._id,
+          restaurantId,
+          menuItemId: itemId,
+          quantity: newQty,
+        });
+      } else {
+        await API.delete("/cart/item", {
+          data: {
+            userId: user._id,
+            menuItemId: itemId,
+          },
+        });
+      }
+
+      setCart((prev) => {
+        const updated = { ...prev };
+        if (newQty > 0) {
+          updated[itemId] = {
+            ...updated[itemId],
+            quantity: newQty,
+          };
+        } else {
+          delete updated[itemId];
+        }
+        return updated;
+      });
+    } catch (err) {
+      console.error("❌ Error removing from cart:", err.response?.data || err);
+    }
+  };
 
   if (loading) return <div className="p-6 text-center">Loading...</div>;
 
@@ -125,7 +195,9 @@ const CustomerRestaurantMenu = () => {
                     >
                       <FaMinus />
                     </button>
-                    <span className="font-medium">{cart[item._id]}</span>
+                    <span className="font-medium">
+                      {cart[item._id]?.quantity}
+                    </span>
                     <button
                       onClick={() => handleAdd(item._id)}
                       className="w-8 h-8 bg-primary text-white rounded-full hover:bg-orange-600"
@@ -152,20 +224,35 @@ const CustomerRestaurantMenu = () => {
       </div>
 
       {/* 🛒 Floating Cart Summary */}
-      {totalItems > 0 && (
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary text-white shadow-lg px-6 py-3 rounded-full flex items-center gap-6 z-50">
-          <span>
-            🛒 {totalItems} item{totalItems > 1 ? "s" : ""} | ₹
-            {totalPrice.toFixed(2)}
-          </span>
-          <button
-            onClick={() => alert("🛒 Redirect to cart page")}
-            className="bg-white text-primary px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-100 transition"
-          >
-            View Cart
-          </button>
-        </div>
-      )}
+      {menuLoaded &&
+        cartLoaded &&
+        Object.keys(cart).length > 0 &&
+        (() => {
+          let totalItems = 0;
+          let subtotal = 0;
+
+          for (const { quantity, item } of Object.values(cart)) {
+            totalItems += quantity;
+            subtotal += item.price * quantity;
+          }
+
+          return (
+            totalItems > 0 && (
+              <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary text-white shadow-lg px-6 py-3 rounded-full flex items-center gap-6 z-50">
+                <span>
+                  🛒 {totalItems} item{totalItems > 1 ? "s" : ""} | ₹
+                  {subtotal.toFixed(2)}
+                </span>
+                <button
+                  onClick={() => navigate("/customer/cart")}
+                  className="bg-white text-primary px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-100 transition"
+                >
+                  View Cart
+                </button>
+              </div>
+            )
+          );
+        })()}
     </div>
   );
 };

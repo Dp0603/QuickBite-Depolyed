@@ -4,12 +4,12 @@ import AddLottie from "../../assets/lottie icons/Plus.json";
 import RemoveLottie from "../../assets/lottie icons/Minus.json";
 import DeleteLottie from "../../assets/lottie icons/Bin side open.json";
 
-const CartItems = ({ item, increment, decrement, removeItem }) => {
+const CustomerCartItems = ({ item, increment, decrement, removeItem }) => {
   const addRef = useRef();
   const removeRef = useRef();
   const deleteRef = useRef();
 
-  const food = item.foodId;
+  const food = item; // item contains { id, name, price, quantity, image, note }
 
   return (
     <div className="flex items-center gap-5 p-5 bg-white dark:bg-secondary rounded-2xl shadow hover:shadow-md transition">
@@ -22,9 +22,9 @@ const CartItems = ({ item, increment, decrement, removeItem }) => {
       <div className="flex-1">
         <h4 className="font-semibold text-lg">{food.name}</h4>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          ₹{food.price} x {item.quantity} ={" "}
+          ₹{food.price} x {food.quantity} ={" "}
           <span className="font-semibold text-black dark:text-white">
-            ₹{food.price * item.quantity}
+            ₹{food.price * food.quantity}
           </span>
         </p>
       </div>
@@ -32,14 +32,14 @@ const CartItems = ({ item, increment, decrement, removeItem }) => {
       <div className="flex items-center gap-2">
         <button
           onClick={() => {
-            if (item.quantity > 1) {
+            if (food.quantity > 1) {
               decrement();
               removeRef.current?.play();
             }
           }}
-          disabled={item.quantity === 1}
+          disabled={food.quantity === 1}
           className={`rounded-full ${
-            item.quantity === 1
+            food.quantity === 1
               ? "opacity-50 cursor-not-allowed"
               : "hover:scale-110 transition-transform"
           }`}
@@ -54,7 +54,7 @@ const CartItems = ({ item, increment, decrement, removeItem }) => {
           />
         </button>
 
-        <span className="px-2 font-semibold">{item.quantity}</span>
+        <span className="px-2 font-semibold">{food.quantity}</span>
 
         <button
           onClick={() => {
@@ -94,4 +94,4 @@ const CartItems = ({ item, increment, decrement, removeItem }) => {
   );
 };
 
-export default CartItems;
+export default CustomerCartItems;
