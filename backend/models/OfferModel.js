@@ -16,16 +16,30 @@ const offerSchema = new mongoose.Schema(
       type: String,
       maxlength: 300,
     },
-    discountPercent: {
+
+    // 🔢 Discount Information
+    discountType: {
+      type: String,
+      enum: ["PERCENT", "FLAT", "UPTO"],
+      default: "PERCENT",
+    },
+    discountValue: {
       type: Number,
       required: true,
       min: 1,
-      max: 100,
     },
+    maxDiscountAmount: {
+      type: Number,
+      default: null, // Only for PERCENT/UPTO types
+    },
+
+    // 💰 Conditions
     minOrderAmount: {
       type: Number,
       default: 0,
     },
+
+    // 📅 Validity
     validFrom: {
       type: Date,
       required: true,
@@ -34,6 +48,29 @@ const offerSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+
+    // 🎯 Promo logic
+    promoCode: {
+      type: String,
+      trim: true,
+      unique: true,
+      sparse: true, // Allows null/undefined for auto apply
+    },
+    isAutoApply: {
+      type: Boolean,
+      default: true,
+    },
+
+    // 📊 Optional: Usage Controls
+    usageLimit: {
+      type: Number,
+      default: null,
+    },
+    perUserLimit: {
+      type: Number,
+      default: null,
+    },
+
     isActive: {
       type: Boolean,
       default: true,

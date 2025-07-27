@@ -4,14 +4,17 @@ import EmptyCartLottie from "../../assets/lottie icons/Shopping cart.json";
 import CartItem from "./CustomerCartItems";
 import { AuthContext } from "../../context/AuthContext";
 import API from "../../api/axios";
+import { useNavigate } from "react-router-dom";
 
 const CustomerCart = () => {
   const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
   const [restaurantId, setRestaurantId] = useState(null);
-  const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoError, setPromoError] = useState("");
+  const [availableOffers, setAvailableOffers] = useState([]);
+  const [selectedOfferId, setSelectedOfferId] = useState("");
 
   // 🛒 Fetch Cart Data
   useEffect(() => {
@@ -29,7 +32,19 @@ const CustomerCart = () => {
     }
   }, [user]);
 
-  // ➕ Increase Quantity
+  // 🎁 Fetch Offers
+  useEffect(() => {
+    if (restaurantId) {
+      API.get(`/offers/offers/valid/${restaurantId}`)
+        .then((res) => setAvailableOffers(res.data.offers))
+        .catch((err) => {
+          console.error("Error fetching offers:", err);
+          setAvailableOffers([]);
+        });
+    }
+  }, [restaurantId]);
+
+  // ➕ Increment
   const increment = async (id, currentQty, note = "") => {
     await API.post("/cart", {
       userId: user._id,
@@ -45,7 +60,7 @@ const CustomerCart = () => {
     );
   };
 
-  // ➖ Decrease Quantity
+  // ➖ Decrement
   const decrement = async (id, currentQty, note = "") => {
     if (currentQty === 1) return;
     await API.post("/cart", {
@@ -62,7 +77,7 @@ const CustomerCart = () => {
     );
   };
 
-  // ❌ Remove Item
+  // ❌ Remove
   const removeItem = async (id) => {
     await API.delete("/cart/item", {
       data: { userId: user._id, menuItemId: id },
@@ -70,7 +85,7 @@ const CustomerCart = () => {
     setCartItems((prev) => prev.filter((i) => i.menuItem._id !== id));
   };
 
-  // 🧾 Price Calculations
+  // 🧾 Pricing
   const subtotal = cartItems.reduce(
     (acc, item) => acc + item.menuItem.price * item.quantity,
     0
@@ -78,22 +93,52 @@ const CustomerCart = () => {
   const tax = Math.round(subtotal * 0.08);
   const deliveryFee = subtotal >= 500 ? 0 : 40;
   const totalBeforeDiscount = subtotal + tax + deliveryFee;
-  const totalPayable = totalBeforeDiscount - appliedDiscount;
+  const totalPayable = Math.max(totalBeforeDiscount - appliedDiscount, 0);
 
-  // 🎟️ Promo Code Logic
-  const validCoupons = { SAVE5: 0.05, WELCOME10: 0.1 };
-  const applyPromo = () => {
-    const discountPercent = validCoupons[promoCode.trim().toUpperCase()];
-    if (!promoCode.trim()) {
-      return setPromoError("Please enter a promo code.");
+  // 🎯 Apply Offer
+  const applySelectedOffer = () => {
+    console.log("Trying to apply offer:", selectedOfferId);
+
+    const offer = availableOffers.find((o) => o._id === selectedOfferId);
+    console.log("Matched offer:", offer);
+
+    if (!offer) {
+      setPromoError("Please select a valid offer.");
+      return;
     }
-    if (discountPercent) {
-      setAppliedDiscount(Math.floor(subtotal * discountPercent));
-      setPromoError("");
-    } else {
-      setAppliedDiscount(0);
-      setPromoError("Invalid promo code.");
+
+    if (subtotal < offer.minOrderAmount) {
+      setPromoError(`Minimum order ₹${offer.minOrderAmount} required.`);
+      return;
     }
+
+    let discount = 0;
+
+    switch (offer.discountType.toLowerCase()) {
+      case "flat":
+        discount = offer.discountValue;
+        break;
+      case "percent":
+        discount = Math.floor((subtotal * offer.discountValue) / 100);
+        break;
+      case "upto":
+        discount = Math.min(offer.discountValue, subtotal);
+        break;
+      case "upto_percent":
+        discount = Math.min(
+          Math.floor((subtotal * offer.discountValue) / 100),
+          offer.maxDiscountAmount || 0
+        );
+        break;
+      default:
+        discount = 0;
+        break;
+    }
+
+    console.log("Discount Calculated:", discount);
+
+    setAppliedDiscount(discount);
+    setPromoError("");
   };
 
   return (
@@ -116,7 +161,7 @@ const CustomerCart = () => {
         </div>
       ) : (
         <div className="grid md:grid-cols-3 gap-10">
-          {/* 🧺 Cart Items */}
+          {/* Items */}
           <div className="md:col-span-2 space-y-6">
             {cartItems.map((item) => (
               <CartItem
@@ -140,30 +185,46 @@ const CustomerCart = () => {
             ))}
           </div>
 
-          {/* 💳 Summary Box */}
+          {/* Summary */}
           <div className="bg-white dark:bg-secondary p-6 rounded-xl shadow-md sticky top-24 h-fit space-y-5">
             <h3 className="text-xl font-bold border-b pb-2">
               🧾 Order Summary
             </h3>
 
-            {/* Promo Input */}
+            {/* Offers */}
             <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Enter promo code"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-800 dark:text-white"
-              />
-              <button
-                onClick={applyPromo}
-                className="bg-primary text-white px-4 py-2 rounded-lg text-sm hover:bg-orange-600 transition"
+              <select
+                value={selectedOfferId}
+                onChange={(e) => {
+                  setSelectedOfferId(e.target.value);
+                  setPromoError("");
+                  setAppliedDiscount(0);
+                }}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm dark:bg-gray-800 dark:text-white"
               >
-                Apply
+                <option value="">Select an Offer</option>
+                {availableOffers.map((offer) => (
+                  <option key={offer._id} value={offer._id}>
+                    {offer.title} ({offer.discountType}) -{" "}
+                    {offer.discountType.toLowerCase().includes("percent")
+                      ? `${offer.discountValue}%`
+                      : `₹${offer.discountValue}`}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={applySelectedOffer}
+                disabled={!selectedOfferId}
+                className={`${
+                  selectedOfferId
+                    ? "bg-primary hover:bg-orange-600"
+                    : "bg-gray-400"
+                } text-white px-4 py-2 rounded-lg text-sm transition mt-2 w-full`}
+              >
+                Apply Offer
               </button>
             </div>
 
-            {/* Promo Messages */}
             {promoError && <p className="text-red-500 text-sm">{promoError}</p>}
             {appliedDiscount > 0 && (
               <p className="text-green-600 text-sm">
@@ -199,13 +260,36 @@ const CustomerCart = () => {
             </div>
 
             <hr className="border-gray-200 dark:border-gray-600" />
-
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
               <span>₹{totalPayable}</span>
             </div>
 
-            <button className="w-full bg-primary text-white py-3 rounded-lg hover:bg-orange-600 transition font-semibold mt-4">
+            <button
+              onClick={() =>
+                navigate("/customer/checkout", {
+                  state: {
+                    cartItems: cartItems.map((item) => ({
+                      id: item.menuItem._id,
+                      name: item.menuItem.name,
+                      price: item.menuItem.price,
+                      quantity: item.quantity,
+                      note: item.note || "",
+                    })),
+                    subtotal,
+                    tax,
+                    deliveryFee,
+                    appliedDiscount,
+                    totalPayable,
+                    selectedOfferId,
+                    offer:
+                      availableOffers.find((o) => o._id === selectedOfferId) ||
+                      null,
+                  },
+                })
+              }
+              className="w-full bg-primary text-white py-3 rounded-lg hover:bg-orange-600 transition font-semibold mt-4"
+            >
               Proceed to Checkout
             </button>
           </div>

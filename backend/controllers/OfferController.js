@@ -3,12 +3,20 @@ const Offer = require("../models/OfferModel");
 // 🎁 Create new offer
 const createOffer = async (req, res) => {
   try {
+    if (req.body.promoCode) {
+      req.body.promoCode = req.body.promoCode.toUpperCase().trim();
+    }
+
     const offer = await Offer.create(req.body);
+
     res.status(201).json({
       message: "Offer created successfully",
       offer,
     });
   } catch (err) {
+    if (err.code === 11000 && err.keyPattern?.promoCode) {
+      return res.status(400).json({ message: "Promo code already exists" });
+    }
     res.status(500).json({ message: err.message });
   }
 };
@@ -44,12 +52,14 @@ const getOfferById = async (req, res) => {
 // 🔁 Update offer
 const updateOffer = async (req, res) => {
   try {
+    if (req.body.promoCode) {
+      req.body.promoCode = req.body.promoCode.toUpperCase().trim();
+    }
+
     const updatedOffer = await Offer.findByIdAndUpdate(
       req.params.id,
       req.body,
-      {
-        new: true,
-      }
+      { new: true }
     );
 
     if (!updatedOffer)
@@ -60,6 +70,9 @@ const updateOffer = async (req, res) => {
       offer: updatedOffer,
     });
   } catch (err) {
+    if (err.code === 11000 && err.keyPattern?.promoCode) {
+      return res.status(400).json({ message: "Promo code already exists" });
+    }
     res.status(500).json({ message: err.message });
   }
 };
@@ -114,6 +127,32 @@ const toggleOfferStatus = async (req, res) => {
   }
 };
 
+// 🎟️ Validate and fetch offer by promo code
+const getOfferByPromoCode = async (req, res) => {
+  try {
+    const { promoCode, restaurantId } = req.query;
+    const now = new Date();
+
+    const offer = await Offer.findOne({
+      promoCode: promoCode?.toUpperCase(),
+      restaurantId,
+      isActive: true,
+      validFrom: { $lte: now },
+      validTill: { $gte: now },
+    });
+
+    if (!offer)
+      return res.status(404).json({ message: "Invalid or expired promo code" });
+
+    res.status(200).json({
+      message: "Promo code applied successfully",
+      offer,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   createOffer,
   getOffersByRestaurant,
@@ -122,4 +161,5 @@ module.exports = {
   deleteOffer,
   getValidOffersForCustomer,
   toggleOfferStatus,
+  getOfferByPromoCode,
 };
