@@ -24,6 +24,10 @@ const CustomerCart = () => {
           const items = res.data.cart?.items || [];
           setCartItems(items);
           setRestaurantId(res.data.cart?.restaurantId?._id);
+          console.log(
+            "Fetched Restaurant ID:",
+            res.data.cart?.restaurantId?._id
+          );
         })
         .catch((err) => {
           if (err.response?.status === 404) setCartItems([]);
@@ -285,10 +289,16 @@ const CustomerCart = () => {
                     offer:
                       availableOffers.find((o) => o._id === selectedOfferId) ||
                       null,
+                    restaurantId, // ✅ included
                   },
                 })
               }
-              className="w-full bg-primary text-white py-3 rounded-lg hover:bg-orange-600 transition font-semibold mt-4"
+              disabled={!restaurantId} // ⛔ prevent click if not ready
+              className={`w-full py-3 rounded-lg font-semibold mt-4 transition ${
+                restaurantId
+                  ? "bg-primary text-white hover:bg-orange-600"
+                  : "bg-gray-400 text-white cursor-not-allowed"
+              }`}
             >
               Proceed to Checkout
             </button>
