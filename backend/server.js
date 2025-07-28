@@ -20,6 +20,7 @@ const PremiumSubscriptionRoutes = require("./routes/PremiumSubscriptionRoutes");
 const MessageRoutes = require("./routes/MessageRoutes");
 const AnalyticsRoutes = require("./routes/AnalyticsRoutes");
 const FeedbackRoutes = require("./routes/FeedbackRoutes");
+const PaymentRoutes = require("./routes/PaymentRoutes");
 
 // 📦 Load environment variables
 dotenv.config();
@@ -52,7 +53,7 @@ app.use("/api/premium", PremiumSubscriptionRoutes);
 app.use("/api/messages", MessageRoutes);
 app.use("/api/analytics", AnalyticsRoutes);
 app.use("/api/feedback", FeedbackRoutes);
-
+app.use("/api/payment", PaymentRoutes);
 // 🏠 Root route
 app.get("/", (req, res) => {
   res.send("🍔 QuickBite API is running...");

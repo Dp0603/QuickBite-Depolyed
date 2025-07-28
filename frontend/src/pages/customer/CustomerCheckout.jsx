@@ -1,16 +1,15 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
+import API from "../../api/axios"; // ✅ use centralized axios instance
 
 const CustomerCheckout = () => {
-  const { user, token } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
 
   const [placingOrder, setPlacingOrder] = useState(false);
 
-  // ✅ Destructure data passed from Cart page
   const {
     cartItems = [],
     subtotal = 0,
@@ -20,50 +19,127 @@ const CustomerCheckout = () => {
     totalPayable = 0,
     selectedOfferId = null,
     offer = null,
+    restaurantId = null,
   } = location.state || {};
+  console.log("🚀 Received restaurantId in Checkout page:", restaurantId);
 
-  // 🔒 Redirect if no data passed (e.g. user refreshed the page)
   useEffect(() => {
     if (!location.state || cartItems.length === 0) {
       navigate("/cart");
     }
   }, [location.state, cartItems, navigate]);
 
-  // 🧾 Place Order
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePlaceOrder = async () => {
     if (placingOrder) return;
     setPlacingOrder(true);
 
+    console.log("🛒 Starting order placement process...");
+
     try {
-      const payload = {
-        customerId: user._id,
-        restaurantId: cartItems[0]?.restaurantId || null,
-        items: cartItems.map((item) => ({
-          menuItemId: item.menuItemId || item.id || item._id,
-          quantity: item.quantity,
-          note: item.note || "",
-        })),
-        subtotal,
-        tax,
-        deliveryFee,
-        discount: appliedDiscount,
-        totalAmount: totalPayable,
-        offerId: selectedOfferId || null,
-        paymentMethod: "Razorpay",
+      const isRazorpayLoaded = await loadRazorpayScript();
+      if (!isRazorpayLoaded) {
+        alert("❌ Razorpay failed to load.");
+        console.log("🚫 Razorpay script load failed.");
+        setPlacingOrder(false);
+        return;
+      }
+
+      console.log("✅ Razorpay script loaded.");
+
+      // Create Razorpay order on backend
+      console.log("📡 Creating Razorpay order...");
+      const razorpayOrderRes = await API.post("/payment/create-order", {
+        amount: totalPayable,
+      });
+
+      console.log("✅ Razorpay order response:", razorpayOrderRes.data);
+
+      const { razorpayOrderId, amount } = razorpayOrderRes.data;
+
+      const options = {
+        key: "rzp_test_GDBH9Rf7wvZ3R6", // 🔑 Test key
+        amount: amount * 100,
+        currency: "INR",
+        name: "QuickBite",
+        description: "Food Order Payment",
+        order_id: razorpayOrderId,
+        handler: async function (response) {
+          console.log("💸 Payment successful:", response);
+
+          console.log("🧪 First cart item:", cartItems[0]);
+
+          const payload = {
+            customerId: user._id,
+            restaurantId,
+            items: cartItems.map((item) => ({
+              menuItemId: item.menuItemId || item.id || item._id,
+              quantity: item.quantity,
+              note: item.note || "",
+            })),
+            subtotal,
+            tax,
+            deliveryFee,
+            discount: appliedDiscount,
+            totalAmount: totalPayable,
+            offerId: selectedOfferId || null,
+            paymentMethod: "Razorpay",
+            paymentDetails: {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            },
+          };
+          console.log("📦 Final Payload to backend:", payload);
+
+          console.log("📦 Sending order to backend:", payload);
+
+          try {
+            const res = await API.post("/orders/orders", payload);
+            console.log("✅ Order created successfully:", res.data);
+
+            navigate("/customer/payment-success", {
+              state: { order: res.data.order },
+            });
+          } catch (err) {
+            console.error(
+              "❌ Order creation error:",
+              err.response?.data || err.message
+            );
+            alert("Order creation failed after payment.");
+          }
+        },
+        prefill: {
+          name: user.name,
+          email: user.email,
+          contact: "9999999999",
+        },
+        notes: {
+          address: "QuickBite - Test Payment",
+        },
+        theme: {
+          color: "#f97316",
+        },
       };
 
-      const res = await axios.post("/api/customer/orders", payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      navigate("/customer/payment-success", {
-        state: { order: res.data.order },
-      });
+      console.log("🚀 Opening Razorpay modal...");
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
     } catch (err) {
-      console.error("❌ Error placing order:", err);
-      alert("Failed to place order. Please try again.");
+      console.error("❌ Payment initiation failed:", err);
+      alert("Something went wrong while starting the payment.");
     } finally {
       setPlacingOrder(false);
+      console.log("🛑 Finished order placement attempt.");
     }
   };
 
@@ -108,7 +184,6 @@ const CustomerCheckout = () => {
           ))}
         </ul>
 
-        {/* 💰 Breakdown */}
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
             <span>Subtotal</span>

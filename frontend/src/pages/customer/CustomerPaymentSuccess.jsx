@@ -7,6 +7,8 @@ const CustomerPaymentSuccess = () => {
   const location = useLocation();
   const order = location.state?.order;
 
+  console.log("✅ Received Order:", order); // 👈 Debug order object
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 text-gray-800 dark:text-white">
       <div className="bg-white dark:bg-secondary p-8 rounded-2xl shadow-md border dark:border-gray-700 max-w-lg w-full text-center animate-fade-in">
@@ -20,24 +22,36 @@ const CustomerPaymentSuccess = () => {
           delivered soon.
         </p>
 
-        {/* ✅ Order Summary (dynamic if available) */}
+        {/* ✅ Order Summary */}
         {order ? (
           <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-left text-sm mb-6 border dark:border-gray-700">
             <p>
-              <strong>Order ID:</strong> {order.orderId}
+              <strong>Order ID:</strong> {order.orderId || order._id || "N/A"}
             </p>
-            <p>
+            <p className="mt-2">
               <strong>Items:</strong>
             </p>
-            <ul className="list-disc pl-5 mt-1 mb-2 text-gray-600 dark:text-gray-300">
-              {order.items.map((item, index) => (
-                <li key={index}>
-                  {item.name} × {item.quantity} = ₹{item.price * item.quantity}
-                </li>
-              ))}
-            </ul>
+
+            {Array.isArray(order.items) && order.items.length > 0 ? (
+              <ul className="list-disc pl-5 mt-1 mb-2 text-gray-600 dark:text-gray-300">
+                {order.items.map((item, index) => (
+                  <li key={index}>
+                    {item.name || item.title || "Item"} × {item.quantity ?? 1} =
+                    ₹
+                    {(
+                      Number(item.price || 0) * Number(item.quantity || 1)
+                    ).toFixed(2)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No items found in order.
+              </p>
+            )}
+
             <p>
-              <strong>Total:</strong> ₹{order.total}
+              <strong>Total:</strong> ₹{Number(order.total || 0).toFixed(2)}
             </p>
           </div>
         ) : (
