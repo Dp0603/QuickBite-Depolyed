@@ -19,16 +19,48 @@ const orderSchema = new mongoose.Schema(
           ref: "Menu",
           required: true,
         },
+        name: {
+          type: String,
+          required: true,
+        },
+        price: {
+          type: Number,
+          required: true,
+        },
         quantity: {
           type: Number,
           required: true,
           min: 1,
         },
+        note: {
+          type: String,
+        },
       },
     ],
+    subtotal: {
+      type: Number,
+      required: true,
+    },
+    tax: {
+      type: Number,
+      required: true,
+    },
+    deliveryFee: {
+      type: Number,
+      required: true,
+    },
+    discount: {
+      type: Number,
+      default: 0,
+    },
     totalAmount: {
       type: Number,
       required: true,
+    },
+    offerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Offer",
+      default: null,
     },
     paymentStatus: {
       type: String,
@@ -73,6 +105,11 @@ const orderSchema = new mongoose.Schema(
     },
     notes: {
       type: String,
+    },
+    paymentDetails: {
+      razorpay_order_id: String,
+      razorpay_payment_id: String,
+      razorpay_signature: String,
     },
   },
   { timestamps: true }
