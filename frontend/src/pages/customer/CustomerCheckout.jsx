@@ -83,6 +83,8 @@ const CustomerCheckout = () => {
             restaurantId,
             items: cartItems.map((item) => ({
               menuItemId: item.menuItemId || item.id || item._id,
+              name: item.name,
+              price: item.price,
               quantity: item.quantity,
               note: item.note || "",
             })),
@@ -104,7 +106,7 @@ const CustomerCheckout = () => {
           console.log("📦 Sending order to backend:", payload);
 
           try {
-            const res = await API.post("/orders/orders", payload);
+            const res = await API.post("/payment/verify-signature", payload);
             console.log("✅ Order created successfully:", res.data);
 
             navigate("/customer/payment-success", {

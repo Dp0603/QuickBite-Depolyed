@@ -2,6 +2,8 @@
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Order = require("../models/OrderModel");
+const Menu = require("../models/MenuModel");
+const generateInvoice = require("../utils/generateInvoice"); // ✅ Add this at the top
 
 // 🔐 Initialize Razorpay
 const razorpay = new Razorpay({
@@ -48,6 +50,7 @@ const verifyRazorpaySignature = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
       req.body.paymentDetails;
 
+    // 🔐 Step 1: Verify Razorpay Signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -60,11 +63,29 @@ const verifyRazorpaySignature = async (req, res) => {
       });
     }
 
-    // ✅ Signature valid — Create order in DB
+    // 🛒 Step 2: Fetch full item details from Menu
+    const detailedItems = await Promise.all(
+      req.body.items.map(async (item) => {
+        const menu = await Menu.findById(item.menuItemId).lean();
+        if (!menu) {
+          throw new Error(`Menu item not found: ${item.menuItemId}`);
+        }
+
+        return {
+          menuItemId: item.menuItemId,
+          name: menu.name,
+          price: menu.price,
+          quantity: item.quantity || 1,
+          note: item.note || "",
+        };
+      })
+    );
+
+    // 🧾 Step 3: Build order object
     const orderData = {
       customerId: req.body.customerId,
       restaurantId: req.body.restaurantId,
-      items: req.body.items,
+      items: detailedItems,
       subtotal: req.body.subtotal,
       tax: req.body.tax,
       deliveryFee: req.body.deliveryFee,
@@ -85,6 +106,7 @@ const verifyRazorpaySignature = async (req, res) => {
       },
     };
 
+    // 🧾 Step 4: Create order in DB
     const createdOrder = await Order.create(orderData);
 
     res.status(201).json({
@@ -96,12 +118,31 @@ const verifyRazorpaySignature = async (req, res) => {
     console.error("💥 Payment Verification Error:", err);
     res.status(500).json({
       success: false,
-      message: "Server error during payment verification",
+      message: err.message || "Server error during payment verification",
     });
+  }
+};
+
+// 📄 Generate PDF Invoice
+const getInvoicePDF = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    generateInvoice(order, res); // ✅ Send the PDF to client
+  } catch (err) {
+    console.error("❌ Invoice Generation Error:", err);
+    res.status(500).json({ message: "Failed to generate invoice" });
   }
 };
 
 module.exports = {
   createRazorpayOrder,
   verifyRazorpaySignature,
+  getInvoicePDF,
 };
