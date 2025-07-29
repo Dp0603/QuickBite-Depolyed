@@ -26,6 +26,14 @@ const updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
+    // ✅ Emit real-time update to customer via Socket.IO
+    const io = req.app.get("io");
+    io.to(orderId).emit("orderStatusUpdated", {
+      orderId,
+      orderStatus,
+      updatedAt: new Date(),
+    });
+
     res
       .status(200)
       .json({ message: "Order status updated", order: updatedOrder });
@@ -55,6 +63,16 @@ const updateDeliveryStatus = async (req, res) => {
     if (!updatedOrder) {
       return res.status(404).json({ message: "Order not found" });
     }
+
+    // ✅ Emit delivery update via socket
+    const io = req.app.get("io");
+    io.to(orderId).emit("deliveryStatusUpdated", {
+      orderId,
+      deliveryStatus,
+      deliveryAgentId,
+      deliveryTime,
+      updatedAt: new Date(),
+    });
 
     res
       .status(200)

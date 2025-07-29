@@ -1,8 +1,13 @@
 import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext"; // ✅ Adjust path as needed
-import API from "../../api/axios"; // ✅ Axios instance with base URL and token
-import { FaRedoAlt, FaFileInvoice, FaMapMarkedAlt } from "react-icons/fa";
+import { AuthContext } from "../../context/AuthContext"; // ✅ Adjust path if needed
+import API from "../../api/axios";
+import {
+  FaRedoAlt,
+  FaFileInvoice,
+  FaMapMarkedAlt,
+  FaEye,
+} from "react-icons/fa"; // 👈 FaEye for view button
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -26,8 +31,8 @@ const CustomerOrders = () => {
 
   useEffect(() => {
     if (user?._id) {
-      API.get(`/orders/customer/${user._id}`)
-        .then((res) => setOrders(res.data.data))
+      API.get(`/orders/orders/customer/${user._id}`)
+        .then((res) => setOrders(res.data.orders))
         .catch((err) =>
           console.error("❌ Error fetching customer orders:", err)
         );
@@ -35,11 +40,13 @@ const CustomerOrders = () => {
   }, [user]);
 
   const activeOrders = orders.filter(
-    (order) => order.status !== "Delivered" && order.status !== "Cancelled"
+    (order) =>
+      order.orderStatus !== "Delivered" && order.orderStatus !== "Cancelled"
   );
 
   const pastOrders = orders.filter(
-    (order) => order.status === "Delivered" || order.status === "Cancelled"
+    (order) =>
+      order.orderStatus === "Delivered" || order.orderStatus === "Cancelled"
   );
 
   return (
@@ -72,10 +79,10 @@ const CustomerOrders = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusColor(
-                      order.status
+                      order.orderStatus
                     )}`}
                   >
-                    {order.status}
+                    {order.orderStatus}
                   </span>
                 </div>
 
@@ -91,13 +98,27 @@ const CustomerOrders = () => {
                   Total: ₹{order.totalAmount}
                 </p>
 
-                <button
-                  onClick={() => navigate(`/customer/track-order/${order._id}`)}
-                  className="flex items-center gap-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
-                >
-                  <FaMapMarkedAlt />
-                  Track Order
-                </button>
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={() =>
+                      navigate(`/customer/track-order/${order._id}`)
+                    }
+                    className="flex items-center gap-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
+                  >
+                    <FaMapMarkedAlt />
+                    Track Order
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      navigate(`/customer/order-details/${order._id}`)
+                    }
+                    className="flex items-center gap-2 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition"
+                  >
+                    <FaEye />
+                    View Order
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -130,10 +151,10 @@ const CustomerOrders = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusColor(
-                      order.status
+                      order.orderStatus
                     )}`}
                   >
-                    {order.status}
+                    {order.orderStatus}
                   </span>
                 </div>
 
@@ -163,6 +184,15 @@ const CustomerOrders = () => {
                   >
                     <FaFileInvoice />
                     View Invoice
+                  </button>
+                  <button
+                    onClick={() =>
+                      navigate(`/customer/order-details/${order._id}`)
+                    }
+                    className="flex items-center gap-2 text-sm font-medium bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition"
+                  >
+                    <FaEye />
+                    View Order
                   </button>
                 </div>
               </div>

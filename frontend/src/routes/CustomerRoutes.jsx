@@ -9,6 +9,7 @@ import CustomerCheckout from "../pages/customer/CustomerCheckout";
 import CustomerPaymentSuccess from "../pages/customer/CustomerPaymentSuccess";
 import CustomerOrders from "../pages/customer/CustomerOrders";
 import CustomerTrackOrder from "../pages/customer/CustomerTrackOrder";
+import CustomerOrderDetails from "../pages/customer/CustomerOrderDetails";
 import CustomerProfile from "../pages/customer/CustomerProfile";
 import CustomerAddressBook from "../pages/customer/CustomerAddressBook";
 import CustomerSettings from "../pages/customer/CustomerSetting";
@@ -28,6 +29,7 @@ export const customerRoutes = [
   <Route key="customer-payment-success" path="payment-success" element={<CustomerPaymentSuccess />} />,
   <Route key="customer-orders" path="orders" element={<CustomerOrders />} />,
   <Route key="customer-track-order" path="track-order/:orderId" element={<CustomerTrackOrder />} />,
+  <Route key="customer-order-details" path="order-details/:orderId" element={<CustomerOrderDetails />} />,
 
   // Account
   <Route key="customer-profile" path="profile" element={<CustomerProfile />} />,
