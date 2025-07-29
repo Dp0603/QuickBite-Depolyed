@@ -1,7 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
+const http = require("http"); // ✅ for attaching socket.io
 const connectDB = require("./config/db");
+const { initSocket } = require("./utils/socket"); // ✅ import your socket setup
 
 // 🌐 Route Imports (PascalCase)
 const AuthRoutes = require("./routes/AuthRoutes");
@@ -32,6 +34,13 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// ✅ Create HTTP server for socket.io to hook into
+const server = http.createServer(app);
+
+// ✅ Initialize Socket.IO
+const io = initSocket(server);
+app.set("io", io); // Optional: so you can access it inside routes/controllers using req.app.get("io")
+
 // 🛡️ Middleware
 app.use(cors());
 app.use(express.json());
@@ -54,6 +63,7 @@ app.use("/api/messages", MessageRoutes);
 app.use("/api/analytics", AnalyticsRoutes);
 app.use("/api/feedback", FeedbackRoutes);
 app.use("/api/payment", PaymentRoutes);
+
 // 🏠 Root route
 app.get("/", (req, res) => {
   res.send("🍔 QuickBite API is running...");
@@ -79,7 +89,7 @@ process.on("uncaughtException", (err) => {
 });
 
 // 🚀 Start Server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.clear();
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
