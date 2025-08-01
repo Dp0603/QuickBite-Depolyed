@@ -132,6 +132,28 @@ const getOrderById = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+// ⭐ Mark order as rated after feedback
+const markOrderAsRated = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      { isRated: true },
+      { new: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Order marked as rated", order: updatedOrder });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 module.exports = {
   createOrder,
@@ -140,4 +162,5 @@ module.exports = {
   getCustomerOrders,
   getRestaurantOrders,
   getOrderById,
+  markOrderAsRated,
 };
