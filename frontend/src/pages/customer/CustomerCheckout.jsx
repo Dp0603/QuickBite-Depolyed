@@ -58,8 +58,9 @@ const CustomerCheckout = () => {
 
       // Create Razorpay order on backend
       console.log("📡 Creating Razorpay order...");
+      const roundedAmount = Math.round(Number(totalPayable) * 100); // Convert to paise (integer)
       const razorpayOrderRes = await API.post("/payment/create-order", {
-        amount: totalPayable,
+        amount: roundedAmount / 100, // Send back in ₹ (2 decimal places)
       });
 
       console.log("✅ Razorpay order response:", razorpayOrderRes.data);

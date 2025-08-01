@@ -11,16 +11,20 @@ import {
 
 const getStatusColor = (status) => {
   switch (status) {
+    case "Pending":
+      return "bg-slate-200 text-slate-800 border border-slate-300";
     case "Preparing":
-      return "bg-yellow-100 text-yellow-700";
+      return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+    case "Ready":
+      return "bg-orange-100 text-orange-800 border border-orange-300";
     case "Out for Delivery":
-      return "bg-blue-100 text-blue-700";
+      return "bg-sky-100 text-sky-800 border border-sky-300";
     case "Delivered":
-      return "bg-green-100 text-green-700";
+      return "bg-green-100 text-green-800 border border-green-300";
     case "Cancelled":
-      return "bg-red-100 text-red-600";
+      return "bg-rose-100 text-rose-800 border border-rose-300";
     default:
-      return "bg-gray-100 text-gray-600";
+      return "bg-gray-100 text-gray-700 border border-gray-300";
   }
 };
 
@@ -48,6 +52,35 @@ const CustomerOrders = () => {
     (order) =>
       order.orderStatus === "Delivered" || order.orderStatus === "Cancelled"
   );
+
+  const downloadInvoice = (orderId) => {
+    if (!orderId) return;
+    window.open(`/api/payment/invoice/${orderId}`, "_blank");
+  };
+
+  const handleReorder = async (order) => {
+    try {
+      // Clear existing cart (optional, or enforce same restaurant rule)
+      await API.delete(`/cart/${user._id}`);
+
+      // Re-add each item from past order to cart
+      for (const item of order.items) {
+        await API.post("/cart", {
+          userId: user._id,
+          restaurantId: order.restaurantId._id,
+          menuItemId: item.menuItemId._id,
+          quantity: item.quantity,
+          note: item.note || "",
+        });
+      }
+
+      // Navigate to cart
+      navigate("/customer/cart");
+    } catch (err) {
+      console.error("Error during reorder:", err);
+      alert("Failed to reorder. Please try again.");
+    }
+  };
 
   return (
     <div className="px-4 md:px-10 py-8 text-gray-800 dark:text-white">
@@ -150,7 +183,7 @@ const CustomerOrders = () => {
 
                 <div className="flex items-center gap-2 mb-1">
                   <span
-                    className={`text-xs px-3 py-1 rounded-full font-medium ${getStatusColor(
+                    className={`text-xs px-3 py-1 rounded-full font-medium capitalize ${getStatusColor(
                       order.orderStatus
                     )}`}
                   >
@@ -172,19 +205,20 @@ const CustomerOrders = () => {
 
                 <div className="flex flex-wrap gap-3">
                   <button
-                    onClick={() => alert("Reordering not implemented yet")}
+                    onClick={() => handleReorder(order)}
                     className="flex items-center gap-2 text-sm font-medium bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-md transition"
                   >
                     <FaRedoAlt />
                     Reorder
                   </button>
                   <button
-                    onClick={() => alert("Invoice not available yet")}
-                    className="flex items-center gap-2 text-sm font-medium bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-md transition"
+                    onClick={() => downloadInvoice(order._id)}
+                    className="flex items-center gap-2 text-sm font-medium bg-green-100 dark:bg-green-700 text-green-800 dark:text-white px-4 py-2 rounded-md hover:bg-green-200 dark:hover:bg-green-600 transition"
                   >
                     <FaFileInvoice />
-                    View Invoice
+                    Download Invoice
                   </button>
+
                   <button
                     onClick={() =>
                       navigate(`/customer/order-details/${order._id}`)

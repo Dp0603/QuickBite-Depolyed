@@ -6,6 +6,7 @@ const {
   getCustomerOrders,
   getRestaurantOrders,
   getOrderById,
+  markOrderAsRated,
 } = require("../controllers/OrderController");
 
 const router = express.Router();
@@ -27,5 +28,8 @@ router.get("/orders/restaurant/:restaurantId", getRestaurantOrders);
 
 // 🔍 Get single order by ID
 router.get("/orders/:orderId", getOrderById);
+
+// ⭐ Mark order as rated (after feedback)
+router.patch("/orders/rated/:orderId", markOrderAsRated);
 
 module.exports = router;

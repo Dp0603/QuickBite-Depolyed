@@ -97,7 +97,9 @@ const CustomerCart = () => {
   const tax = Math.round(subtotal * 0.08);
   const deliveryFee = subtotal >= 500 ? 0 : 40;
   const totalBeforeDiscount = subtotal + tax + deliveryFee;
-  const totalPayable = Math.max(totalBeforeDiscount - appliedDiscount, 0);
+  const totalPayable = Number(
+    Math.max(totalBeforeDiscount - appliedDiscount, 0).toFixed(2)
+  );
 
   // 🎯 Apply Offer
   const applySelectedOffer = () => {
@@ -240,11 +242,11 @@ const CustomerCart = () => {
             <div className="space-y-2 text-sm pt-2">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>₹{subtotal}</span>
+                <span>₹{subtotal.toFixed(2)}</span>{" "}
               </div>
               <div className="flex justify-between">
                 <span>Tax (8%)</span>
-                <span>₹{tax}</span>
+                <span>₹{tax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>
@@ -266,7 +268,7 @@ const CustomerCart = () => {
             <hr className="border-gray-200 dark:border-gray-600" />
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span>₹{totalPayable}</span>
+              <span>₹{totalPayable.toFixed(2)}</span>{" "}
             </div>
 
             <button
