@@ -28,7 +28,12 @@ const registerUser = async (req, res) => {
         _id: newUser._id,
         name: newUser.name,
         email: newUser.email,
+        phone: newUser.phone || "",
+        avatar: newUser.avatar || "",
         role: newUser.role,
+        isPremium: newUser.isPremium,
+        isActive: newUser.isActive,
+        isVerified: newUser.isVerified,
       },
     });
   } catch (err) {
@@ -61,7 +66,12 @@ const loginUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phone: user.phone || "",
+        avatar: user.avatar || "",
         role: user.role,
+        isPremium: user.isPremium,
+        isActive: user.isActive,
+        isVerified: user.isVerified,
       },
     });
   } catch (err) {
@@ -73,6 +83,7 @@ const loginUser = async (req, res) => {
 const getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
+    console.log("Fetched user:", user);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.status(200).json({
@@ -87,11 +98,14 @@ const getUserById = async (req, res) => {
 // ✏️ Update user profile
 const updateUser = async (req, res) => {
   try {
-    const updates = { ...req.body };
+    const allowedFields = ["name", "phone", "avatar"];
+    const updates = {};
 
-    if (updates.password) {
-      updates.password = await bcrypt.hash(updates.password, 10);
-    }
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
 
     const updatedUser = await User.findByIdAndUpdate(req.params.id, updates, {
       new: true,

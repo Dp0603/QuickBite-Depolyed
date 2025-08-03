@@ -12,6 +12,7 @@ import {
 import API from "../../api/axios";
 import { io } from "socket.io-client";
 import { AuthContext } from "../../context/AuthContext";
+import CustomerSupportModal from "../customer/CustomerSupportModal";
 
 // Full order lifecycle
 const orderStatusSteps = [
@@ -35,6 +36,7 @@ const CustomerTrackOrder = () => {
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [showSupportModal, setShowSupportModal] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -302,11 +304,19 @@ const CustomerTrackOrder = () => {
       {/* Help + Reorder */}
       <div className="flex justify-between flex-wrap gap-4 mt-6">
         <button
-          onClick={() => alert("Opening support...")}
+          onClick={() => setShowSupportModal(true)}
           className="w-full md:w-auto bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white px-5 py-3 rounded-lg shadow hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm font-medium"
         >
           Need Help?
         </button>
+
+        {showSupportModal && (
+          <CustomerSupportModal
+            order={order}
+            onClose={() => setShowSupportModal(false)}
+          />
+        )}
+
         <button
           onClick={() => alert("Reordering...")}
           className="w-full md:w-auto bg-primary text-white px-5 py-3 rounded-lg shadow hover:bg-orange-600 transition text-sm font-medium"
