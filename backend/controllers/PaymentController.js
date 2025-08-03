@@ -1,9 +1,9 @@
-// controllers/paymentController.js
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Order = require("../models/OrderModel");
 const Menu = require("../models/MenuModel");
-const generateInvoice = require("../utils/generateInvoice"); // ✅ Add this at the top
+const Address = require("../models/AddressModel"); // ✅ Added explicitly
+const generateInvoice = require("../utils/generateInvoice");
 
 // 🔐 Initialize Razorpay
 const razorpay = new Razorpay({
@@ -81,7 +81,11 @@ const verifyRazorpaySignature = async (req, res) => {
       })
     );
 
-    // 🧾 Step 3: Build order object
+    // 📍 Step 3: Fetch address by ID
+    const address = await Address.findById(req.body.addressId).lean();
+    if (!address) throw new Error("Address not found");
+
+    // 🧾 Step 4: Build order object
     const orderData = {
       customerId: req.body.customerId,
       restaurantId: req.body.restaurantId,
@@ -92,6 +96,14 @@ const verifyRazorpaySignature = async (req, res) => {
       discount: req.body.discount,
       totalAmount: req.body.totalAmount,
       offerId: req.body.offerId || null,
+      deliveryAddress: {
+        addressLine: address.addressLine,
+        landmark: address.landmark || "",
+        city: address.city,
+        state: address.state,
+        pincode: address.pincode,
+        label: address.label || "",
+      },
       paymentMethod: "Razorpay",
       paymentStatus: "Paid",
       orderStatus: "Pending",
@@ -106,7 +118,7 @@ const verifyRazorpaySignature = async (req, res) => {
       },
     };
 
-    // 🧾 Step 4: Create order in DB
+    // 🧾 Step 5: Create order in DB
     const createdOrder = await Order.create(orderData);
 
     res.status(201).json({

@@ -62,6 +62,15 @@ const orderSchema = new mongoose.Schema(
       ref: "Offer",
       default: null,
     },
+    deliveryAddress: {
+      addressLine: { type: String, required: true },
+      landmark: { type: String },
+      city: { type: String, required: true },
+      state: { type: String, required: true },
+      pincode: { type: String, required: true },
+      label: { type: String },
+    },
+
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "Failed"],

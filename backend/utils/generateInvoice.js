@@ -6,14 +6,14 @@ const moment = require("moment");
 const generateInvoice = (order, res) => {
   const doc = new PDFDocument({ margin: 50 });
 
-  // === Helper: Precisely center text
+  // === Centered Text Helper
   const centerText = (text, y, options = {}) => {
     const textWidth = doc.widthOfString(text, options);
     const x = (doc.page.width - textWidth) / 2;
     doc.text(text, x, y, options);
   };
 
-  // Load custom font with fallback
+  // === Font
   const fontPath = path.join(__dirname, "../assets/fonts/NotoSans-Regular.ttf");
   const hasFont = fs.existsSync(fontPath);
   if (hasFont) {
@@ -29,7 +29,7 @@ const generateInvoice = (order, res) => {
   res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
   doc.pipe(res);
 
-  // === Header: Logo + Brand
+  // === Header
   doc.image(path.join(__dirname, "../assets/Quickbite.png"), 50, 40, {
     width: 60,
   });
@@ -43,7 +43,7 @@ const generateInvoice = (order, res) => {
     .text("Ahmedabad, India", 120, 85)
     .text("support@quickbite.com", 120, 98);
 
-  // === Invoice title + details
+  // === Invoice title
   doc
     .fontSize(20)
     .fillColor("#111827")
@@ -57,18 +57,24 @@ const generateInvoice = (order, res) => {
 
   doc.moveDown(2);
 
-  // === Customer & Billing Info
+  // === Billing Info
   const topY = doc.y;
+  const addr = order.deliveryAddress || {};
   doc
     .fontSize(11)
     .fillColor("#111827")
     .text("Billed To:", 50, topY)
     .fontSize(10)
     .fillColor("#444")
-    .text(order.customer?.name || "Customer Name", 50)
-    .text(order.customer?.address || "123, MG Road", 50)
-    .text(order.customer?.city || "Bengaluru, India", 50)
-    .text(`Phone: ${order.customer?.phone || "+91 98765 43210"}`, 50);
+    .text(addr.label || "Customer", 50)
+    .text(addr.addressLine || "N/A", 50)
+    .text(addr.landmark || "", 50)
+    .text(
+      `${addr.city || "City"}, ${addr.state || "State"} - ${
+        addr.pincode || ""
+      }`,
+      50
+    );
 
   const paymentX = 350;
   doc
@@ -89,7 +95,7 @@ const generateInvoice = (order, res) => {
   doc.strokeColor("#E5E7EB").moveTo(50, doc.y).lineTo(550, doc.y).stroke();
   doc.moveDown();
 
-  // === Offer (Optional)
+  // === Offer (optional)
   if (order.offerId && order.offerTitle) {
     doc
       .fillColor("#0d9488")
@@ -116,7 +122,7 @@ const generateInvoice = (order, res) => {
 
   let y = tableTopY + 25;
 
-  // === Table Rows
+  // === Items
   order.items.forEach((item) => {
     const name = item.name || "Item";
     const quantity = item.quantity ?? 1;
@@ -136,7 +142,7 @@ const generateInvoice = (order, res) => {
 
   doc.moveDown(2);
 
-  // === Summary Section
+  // === Summary
   const summaryData = [
     { label: "Subtotal", value: order.subtotal ?? 0 },
     { label: "Tax (GST)", value: order.tax ?? 0 },
@@ -160,9 +166,8 @@ const generateInvoice = (order, res) => {
 
   doc.moveDown(3);
 
-  // === Footer (Precisely Centered)
+  // === Footer
   doc.strokeColor("#E5E7EB").moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-
   doc.moveDown(1.2);
 
   const footerY = doc.y;
