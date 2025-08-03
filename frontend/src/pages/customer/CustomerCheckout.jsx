@@ -1,14 +1,16 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
-import API from "../../api/axios"; // ✅ use centralized axios instance
+import API from "../../api/axios";
 
 const CustomerCheckout = () => {
-  const { user } = useContext(AuthContext);
+  const { user, token } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
 
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [addresses, setAddresses] = useState([]);
+  const [defaultAddress, setDefaultAddress] = useState(null);
 
   const {
     cartItems = [],
@@ -21,13 +23,30 @@ const CustomerCheckout = () => {
     offer = null,
     restaurantId = null,
   } = location.state || {};
-  console.log("🚀 Received restaurantId in Checkout page:", restaurantId);
 
   useEffect(() => {
     if (!location.state || cartItems.length === 0) {
       navigate("/cart");
     }
   }, [location.state, cartItems, navigate]);
+
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        const res = await API.get(`/addresses/entity/User/${user._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const all = res.data.addresses || [];
+        setAddresses(all);
+        const def = all.find((a) => a.isDefault) || all[0];
+        setDefaultAddress(def || null);
+      } catch (err) {
+        console.error("Failed to load address:", err);
+      }
+    };
+
+    if (user?._id) fetchAddresses();
+  }, [user, token]);
 
   const loadRazorpayScript = () => {
     return new Promise((resolve) => {
@@ -41,44 +60,36 @@ const CustomerCheckout = () => {
 
   const handlePlaceOrder = async () => {
     if (placingOrder) return;
-    setPlacingOrder(true);
+    if (!defaultAddress) {
+      alert("Please add a delivery address first.");
+      return;
+    }
 
-    console.log("🛒 Starting order placement process...");
+    setPlacingOrder(true);
 
     try {
       const isRazorpayLoaded = await loadRazorpayScript();
       if (!isRazorpayLoaded) {
         alert("❌ Razorpay failed to load.");
-        console.log("🚫 Razorpay script load failed.");
         setPlacingOrder(false);
         return;
       }
 
-      console.log("✅ Razorpay script loaded.");
-
-      // Create Razorpay order on backend
-      console.log("📡 Creating Razorpay order...");
-      const roundedAmount = Math.round(Number(totalPayable) * 100); // Convert to paise (integer)
+      const roundedAmount = Math.round(Number(totalPayable) * 100);
       const razorpayOrderRes = await API.post("/payment/create-order", {
-        amount: roundedAmount / 100, // Send back in ₹ (2 decimal places)
+        amount: roundedAmount / 100,
       });
-
-      console.log("✅ Razorpay order response:", razorpayOrderRes.data);
 
       const { razorpayOrderId, amount } = razorpayOrderRes.data;
 
       const options = {
-        key: "rzp_test_GDBH9Rf7wvZ3R6", // 🔑 Test key
+        key: "rzp_test_GDBH9Rf7wvZ3R6", // Replace with live key in prod
         amount: amount * 100,
         currency: "INR",
         name: "QuickBite",
         description: "Food Order Payment",
         order_id: razorpayOrderId,
         handler: async function (response) {
-          console.log("💸 Payment successful:", response);
-
-          console.log("🧪 First cart item:", cartItems[0]);
-
           const payload = {
             customerId: user._id,
             restaurantId,
@@ -96,28 +107,29 @@ const CustomerCheckout = () => {
             totalAmount: totalPayable,
             offerId: selectedOfferId || null,
             paymentMethod: "Razorpay",
+            deliveryAddress: {
+              addressLine: defaultAddress.addressLine,
+              landmark: defaultAddress.landmark,
+              city: defaultAddress.city,
+              state: defaultAddress.state,
+              pincode: defaultAddress.pincode,
+              contactNumber: defaultAddress.contactNumber || user.phone,
+              name: user.name,
+            },
             paymentDetails: {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
             },
           };
-          console.log("📦 Final Payload to backend:", payload);
-
-          console.log("📦 Sending order to backend:", payload);
 
           try {
             const res = await API.post("/payment/verify-signature", payload);
-            console.log("✅ Order created successfully:", res.data);
-
             navigate("/customer/payment-success", {
               state: { order: res.data.order },
             });
           } catch (err) {
-            console.error(
-              "❌ Order creation error:",
-              err.response?.data || err.message
-            );
+            console.error("❌ Order creation error:", err);
             alert("Order creation failed after payment.");
           }
         },
@@ -134,7 +146,6 @@ const CustomerCheckout = () => {
         },
       };
 
-      console.log("🚀 Opening Razorpay modal...");
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (err) {
@@ -142,7 +153,6 @@ const CustomerCheckout = () => {
       alert("Something went wrong while starting the payment.");
     } finally {
       setPlacingOrder(false);
-      console.log("🛑 Finished order placement attempt.");
     }
   };
 
@@ -153,8 +163,35 @@ const CustomerCheckout = () => {
       {/* 📍 Delivery Address */}
       <div className="bg-white dark:bg-secondary p-5 rounded-xl shadow border dark:border-gray-700 mb-6">
         <h2 className="text-xl font-semibold mb-3">📍 Delivery Address</h2>
-        <p>123, MG Road, Bengaluru</p>
-        <p>Phone: +91 98765 43210</p>
+
+        {!defaultAddress ? (
+          <div>
+            <p className="text-red-600 text-sm mb-2">
+              ⚠️ No delivery address found.
+            </p>
+            <button
+              className="bg-primary text-white px-4 py-2 rounded hover:bg-orange-600 text-sm"
+              onClick={() => navigate("/customer/addresses")}
+            >
+              ➕ Add Address
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p>
+              {defaultAddress.addressLine},{" "}
+              {defaultAddress.landmark && `${defaultAddress.landmark}, `}
+              {defaultAddress.city}, {defaultAddress.state} -{" "}
+              {defaultAddress.pincode}
+            </p>
+            <button
+              className="mt-2 text-sm text-blue-600 hover:underline"
+              onClick={() => navigate("/customer/addresses")}
+            >
+              ✏️ Change Address
+            </button>
+          </div>
+        )}
         <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           🚚 Estimated Delivery: 30–40 mins
         </div>
@@ -219,7 +256,7 @@ const CustomerCheckout = () => {
       {/* ✅ Pay Button */}
       <button
         onClick={handlePlaceOrder}
-        disabled={placingOrder}
+        disabled={placingOrder || !defaultAddress}
         className="w-full bg-primary hover:bg-orange-600 text-white py-3 rounded-xl font-semibold transition disabled:opacity-60"
       >
         {placingOrder ? "Placing Order..." : "Proceed to Pay"}
