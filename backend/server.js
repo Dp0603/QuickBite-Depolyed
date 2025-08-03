@@ -23,6 +23,7 @@ const MessageRoutes = require("./routes/MessageRoutes");
 const AnalyticsRoutes = require("./routes/AnalyticsRoutes");
 const FeedbackRoutes = require("./routes/FeedbackRoutes");
 const PaymentRoutes = require("./routes/PaymentRoutes");
+const SupportRoutes = require("./routes/SupportRoutes");
 
 // 📦 Load environment variables
 dotenv.config();
@@ -63,6 +64,7 @@ app.use("/api/messages", MessageRoutes);
 app.use("/api/analytics", AnalyticsRoutes);
 app.use("/api/feedback", FeedbackRoutes);
 app.use("/api/payment", PaymentRoutes);
+app.use("/api/support", SupportRoutes);
 
 // 🏠 Root route
 app.get("/", (req, res) => {
