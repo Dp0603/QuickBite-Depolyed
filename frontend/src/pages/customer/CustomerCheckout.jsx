@@ -107,6 +107,7 @@ const CustomerCheckout = () => {
             totalAmount: totalPayable,
             offerId: selectedOfferId || null,
             paymentMethod: "Razorpay",
+            addressId: defaultAddress._id, // ✅ ADD THIS LINE
             deliveryAddress: {
               addressLine: defaultAddress.addressLine,
               landmark: defaultAddress.landmark,

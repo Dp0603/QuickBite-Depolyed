@@ -13,6 +13,7 @@ import CustomerOrderDetails from "../pages/customer/CustomerOrderDetails";
 import CustomerProfile from "../pages/customer/CustomerProfile";
 import CustomerAddressBook from "../pages/customer/CustomerAddressBook";
 import CustomerSettings from "../pages/customer/CustomerSetting";
+import ChangePassword from "../pages/ChangePassword";
 import CustomerFavorites from "../pages/customer/CustomerFavorites";
 import CustomerPremium from "../pages/customer/CustomerPremium";
 import CustomerOffers from "../pages/customer/CustomerOffers";
@@ -35,7 +36,8 @@ export const customerRoutes = [
   <Route key="customer-profile" path="profile" element={<CustomerProfile />} />,
   <Route key="customer-addresses" path="addresses" element={<CustomerAddressBook />} />,
   <Route key="customer-settings" path="settings" element={<CustomerSettings />} />,
-
+  <Route key="customer-change-password" path="change-password" element={<ChangePassword />} />,
+  
   // Extras
   <Route key="customer-favorites" path="favorites" element={<CustomerFavorites />} />,
   <Route key="customer-premium" path="premium" element={<CustomerPremium />} />,

@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { protect } = require("../middlewares/authMiddleware");
 const {
   register,
   verifyEmail,
@@ -29,6 +30,6 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 
 // Authenticated user route (e.g., middleware to attach user ID required)
-router.post("/change-password", changePassword);
+router.post("/change-password", protect, changePassword);
 
 module.exports = router;
