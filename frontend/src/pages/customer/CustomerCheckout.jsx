@@ -107,7 +107,7 @@ const CustomerCheckout = () => {
             totalAmount: totalPayable,
             offerId: selectedOfferId || null,
             paymentMethod: "Razorpay",
-            addressId: defaultAddress._id, // ✅ ADD THIS LINE
+            addressId: defaultAddress._id,
             deliveryAddress: {
               addressLine: defaultAddress.addressLine,
               landmark: defaultAddress.landmark,
@@ -144,6 +144,25 @@ const CustomerCheckout = () => {
         },
         theme: {
           color: "#f97316",
+        },
+        modal: {
+          ondismiss: () => {
+            navigate("/customer/payment-failure", {
+              state: {
+                reason: "Payment was cancelled or failed.",
+                amount: totalPayable,
+                restaurantId,
+                cartItems,
+                subtotal,
+                tax,
+                deliveryFee,
+                appliedDiscount,
+                totalPayable,
+                selectedOfferId,
+                offer,
+              },
+            });
+          },
         },
       };
 

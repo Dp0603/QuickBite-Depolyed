@@ -7,6 +7,7 @@ import CustomerRestaurantMenu from "../pages/customer/CustomerRestaurantMenu";
 import CustomerCart from "../pages/customer/CustomerCart";
 import CustomerCheckout from "../pages/customer/CustomerCheckout";
 import CustomerPaymentSuccess from "../pages/customer/CustomerPaymentSuccess";
+import CustomerPaymentFailure from "../pages/customer/CustomerPaymentFailure";
 import CustomerOrders from "../pages/customer/CustomerOrders";
 import CustomerTrackOrder from "../pages/customer/CustomerTrackOrder";
 import CustomerOrderDetails from "../pages/customer/CustomerOrderDetails";
@@ -28,6 +29,7 @@ export const customerRoutes = [
   <Route key="customer-cart" path="cart" element={<CustomerCart />} />,
   <Route key="customer-checkout" path="checkout" element={<CustomerCheckout />} />,
   <Route key="customer-payment-success" path="payment-success" element={<CustomerPaymentSuccess />} />,
+  <Route key="customer-payment-failure" path="payment-failure" element={<CustomerPaymentFailure />} />,
   <Route key="customer-orders" path="orders" element={<CustomerOrders />} />,
   <Route key="customer-track-order" path="track-order/:orderId" element={<CustomerTrackOrder />} />,
   <Route key="customer-order-details" path="order-details/:orderId" element={<CustomerOrderDetails />} />,
