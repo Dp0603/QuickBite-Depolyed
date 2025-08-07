@@ -3,6 +3,9 @@ const {
   addToFavorites,
   removeFromFavorites,
   getUserFavorites,
+  addMenuItemToFavorites,
+  removeMenuItemFromFavorites,
+  getUserMenuItemFavorites,
 } = require("../controllers/FavoriteController");
 
 const router = express.Router();
@@ -15,5 +18,14 @@ router.delete("/favorites", removeFromFavorites);
 
 // 📜 Get all favorite restaurants for a user
 router.get("/favorites/:userId", getUserFavorites);
+
+// ❤️ Add menu item to favorites
+router.post("/favorites/menu", addMenuItemToFavorites);
+
+// ❌ Remove menu item from favorites
+router.delete("/favorites/menu", removeMenuItemFromFavorites);
+
+// 📜 Get all favorite menu items for a user
+router.get("/favorites/menu/:userId", getUserMenuItemFavorites);
 
 module.exports = router;

@@ -13,6 +13,12 @@ const favoriteSchema = new mongoose.Schema(
         ref: "Restaurant",
       },
     ],
+    menuItemIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Menu",
+      },
+    ],
   },
   { timestamps: true }
 );

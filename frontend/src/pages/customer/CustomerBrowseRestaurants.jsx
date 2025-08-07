@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState, useEffect, useContext } from "react";
 import { motion } from "framer-motion";
 import { FaStar, FaMapMarkerAlt, FaHeart, FaRegHeart } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import { AuthContext } from "../../context/AuthContext"; // ✅ Global auth context
+import API from "../../api/axios"; // ✅ Custom Axios with token
 
 const cuisines = [
   "All",
@@ -16,30 +17,57 @@ const cuisines = [
 ];
 
 const CustomerBrowseRestaurants = () => {
-  const [restaurants, setRestaurants] = useState([]);
-  const [search, setSearch] = useState("");
-  const [cuisine, setCuisine] = useState("All");
-  const [wishlist, setWishlist] = useState([]);
+  const { user } = useContext(AuthContext); // ✅ use global context
+  const userId = user?._id;
   const navigate = useNavigate();
 
-  // 🧲 Fetch restaurants from backend
+  const [restaurants, setRestaurants] = useState([]);
+  const [wishlist, setWishlist] = useState([]);
+  const [search, setSearch] = useState("");
+  const [cuisine, setCuisine] = useState("All");
+
+  // 🍽️ Fetch all restaurants
   useEffect(() => {
-    axios
-      .get("/api/restaurants/restaurants")
+    API.get("/restaurants/restaurants")
       .then((res) => setRestaurants(res.data.restaurants))
       .catch((err) => console.error("❌ Error fetching restaurants:", err));
   }, []);
 
-  // 💾 Load wishlist from localStorage
+  // ❤️ Fetch user's favorite restaurant IDs
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("wishlist")) || [];
-    setWishlist(saved);
-  }, []);
+    if (!userId) return;
 
-  // 💾 Save wishlist to localStorage
-  useEffect(() => {
-    localStorage.setItem("wishlist", JSON.stringify(wishlist));
-  }, [wishlist]);
+    API.get(`/favorites/favorites/${userId}`)
+      .then((res) => {
+        const ids = res.data.favorites.map((r) => r._id);
+        setWishlist(ids);
+      })
+      .catch((err) => console.error("❌ Error fetching favorites:", err));
+  }, [userId]);
+
+  // ❤️ Toggle favorite
+  const toggleWishlist = async (restaurantId) => {
+    if (!userId) {
+      alert("Please log in to use favorites.");
+      return;
+    }
+
+    const isFavorited = wishlist.includes(restaurantId);
+
+    try {
+      if (isFavorited) {
+        await API.delete("/favorites/favorites", {
+          data: { userId, restaurantId },
+        });
+        setWishlist((prev) => prev.filter((id) => id !== restaurantId));
+      } else {
+        await API.post("/favorites/favorites", { userId, restaurantId });
+        setWishlist((prev) => [...prev, restaurantId]);
+      }
+    } catch (err) {
+      console.error("❌ Error updating favorites:", err);
+    }
+  };
 
   // 🔎 Filter logic
   const filtered = restaurants.filter((r) => {
@@ -49,11 +77,6 @@ const CustomerBrowseRestaurants = () => {
       .includes(search.toLowerCase());
     return matchCuisine && matchSearch;
   });
-
-  const toggleWishlist = (id) =>
-    setWishlist((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
 
   return (
     <motion.div
@@ -68,7 +91,7 @@ const CustomerBrowseRestaurants = () => {
         Find top-rated restaurants near you.
       </p>
 
-      {/* 🔍 Search & Filter */}
+      {/* 🔍 Search & Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <input
           type="text"
@@ -103,7 +126,6 @@ const CustomerBrowseRestaurants = () => {
               onClick={() => navigate(`/customer/menu/restaurant/${r._id}`)}
               className="cursor-pointer relative bg-white dark:bg-secondary rounded-xl overflow-hidden shadow-md hover:shadow-lg transition group"
             >
-              {/* 🖼️ Image */}
               <div className="h-48 w-full overflow-hidden">
                 <img
                   src={r.logo || "/QuickBite.png"}
@@ -112,14 +134,13 @@ const CustomerBrowseRestaurants = () => {
                 />
               </div>
 
-              {/* 🏷️ Open Tag */}
               {r.isOpen && (
                 <span className="absolute top-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs shadow-md">
                   Open Now
                 </span>
               )}
 
-              {/* ❤️ Wishlist */}
+              {/* ❤️ Favorite Button */}
               <div
                 className="absolute top-3 right-3 z-10"
                 onClick={(e) => {
@@ -134,7 +155,6 @@ const CustomerBrowseRestaurants = () => {
                 )}
               </div>
 
-              {/* 📄 Details */}
               <div className="p-4">
                 <h3 className="text-lg font-semibold truncate text-gray-800 dark:text-white">
                   {r.name}

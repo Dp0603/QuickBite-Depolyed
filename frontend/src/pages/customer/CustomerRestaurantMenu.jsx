@@ -1,6 +1,13 @@
 import React, { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { FaStar, FaClock, FaPlus, FaMinus } from "react-icons/fa";
+import {
+  FaStar,
+  FaClock,
+  FaPlus,
+  FaMinus,
+  FaHeart,
+  FaRegHeart,
+} from "react-icons/fa";
 import API from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 
@@ -16,6 +23,8 @@ const CustomerRestaurantMenu = () => {
   const [loading, setLoading] = useState(true);
   const [menuLoaded, setMenuLoaded] = useState(false);
   const [cartLoaded, setCartLoaded] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteMenuItems, setFavoriteMenuItems] = useState([]); // 🍽️ Menu item favorites
 
   // 🍴 Fetch Restaurant & Menu
   useEffect(() => {
@@ -37,6 +46,93 @@ const CustomerRestaurantMenu = () => {
 
     if (restaurantId) fetchRestaurantAndMenu();
   }, [restaurantId]);
+
+  // 📥 Check if restaurant is in user's favorites
+  useEffect(() => {
+    const checkIfFavorite = async () => {
+      if (!user?._id) return;
+
+      try {
+        const res = await API.get(`/favorites/favorites/${user._id}`);
+        const favoriteIds = res.data.favorites.map((r) => r._id);
+        setIsFavorite(favoriteIds.includes(restaurantId));
+      } catch (err) {
+        console.error("❌ Error fetching favorites:", err);
+      }
+    };
+
+    checkIfFavorite();
+  }, [user?._id, restaurantId]);
+
+  // 🍽️ Fetch user's favorite menu items
+  useEffect(() => {
+    const fetchFavoriteMenuItems = async () => {
+      if (!user?._id) return;
+      try {
+        const res = await API.get(`/favorites/favorites/menu/${user._id}`);
+        const menuItemIds = res.data.favorites.map((m) => m._id);
+        setFavoriteMenuItems(menuItemIds);
+      } catch (err) {
+        console.error("❌ Error fetching favorite menu items:", err);
+      }
+    };
+
+    fetchFavoriteMenuItems();
+  }, [user?._id]);
+
+  // ❤️ Toggle favorite for restaurant
+  const toggleFavorite = async () => {
+    if (!user?._id) {
+      alert("Please login to use favorites.");
+      return;
+    }
+
+    try {
+      if (isFavorite) {
+        await API.delete("/favorites/favorites", {
+          data: { userId: user._id, restaurantId },
+        });
+      } else {
+        await API.post("/favorites/favorites", {
+          userId: user._id,
+          restaurantId,
+        });
+      }
+      setIsFavorite((prev) => !prev);
+    } catch (err) {
+      console.error("❌ Failed to toggle favorite:", err.response?.data || err);
+    }
+  };
+
+  // ❤️ Toggle favorite for a menu item
+  const toggleMenuItemFavorite = async (menuItemId) => {
+    if (!user?._id) {
+      alert("Please login to use favorites.");
+      return;
+    }
+
+    try {
+      const isFav = favoriteMenuItems.includes(menuItemId);
+
+      if (isFav) {
+        await API.delete("/favorites/favorites/menu", {
+          data: { userId: user._id, menuItemId },
+        });
+        setFavoriteMenuItems((prev) => prev.filter((id) => id !== menuItemId));
+      } else {
+        await API.post("/favorites/favorites/menu", {
+          userId: user._id,
+          menuItemId,
+        });
+        setFavoriteMenuItems((prev) => [...prev, menuItemId]);
+      }
+    } catch (err) {
+      console.error(
+        "❌ Failed to toggle menu item favorite:",
+        err.response?.data || err
+      );
+    }
+  };
 
   // 🛒 Fetch Cart AFTER Menu is Loaded
   useEffect(() => {
@@ -160,6 +256,21 @@ const CustomerRestaurantMenu = () => {
               </span>
               <span className="text-gray-400">₹40 Delivery Fee</span>
             </div>
+            {/* ❤️ Favorite Toggle Button */}
+            <div className="mt-3">
+              <button
+                onClick={toggleFavorite}
+                className={`text-sm font-medium px-3 py-1 rounded-full border transition ${
+                  isFavorite
+                    ? "bg-red-100 text-red-600 border-red-300 hover:bg-red-200"
+                    : "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200"
+                }`}
+              >
+                {isFavorite
+                  ? "❤️ Remove from Favorites"
+                  : "🤍 Add to Favorites"}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -172,11 +283,24 @@ const CustomerRestaurantMenu = () => {
               key={item._id}
               className="p-4 bg-white dark:bg-secondary rounded-xl shadow-sm hover:shadow-md transition border dark:border-gray-700 flex flex-col"
             >
-              <img
-                src={item.image || "/QuickBite.png"}
-                alt={item.name}
-                className="w-full h-36 object-cover rounded-md mb-3"
-              />
+              <div className="relative">
+                <img
+                  src={item.image || "/QuickBite.png"}
+                  alt={item.name}
+                  className="w-full h-36 object-cover rounded-md mb-3"
+                />
+                {/* ❤️ Menu Item Favorite Icon */}
+                <button
+                  onClick={() => toggleMenuItemFavorite(item._id)}
+                  className="absolute top-2 right-2 text-xl text-red-500 hover:scale-110 transition"
+                >
+                  {favoriteMenuItems.includes(item._id) ? (
+                    <FaHeart />
+                  ) : (
+                    <FaRegHeart />
+                  )}
+                </button>
+              </div>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{item.name}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
