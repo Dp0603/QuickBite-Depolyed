@@ -10,25 +10,22 @@ const {
 
 const router = express.Router();
 
-// ➕ Create a new subscription
+// Create a new subscription
 router.post("/subscriptions", createSubscription);
 
-// 📦 Get all subscriptions for a specific user/restaurant
-router.get(
-  "/subscriptions/:subscriberType/:subscriberId",
-  getSubscriptionsBySubscriber
-);
+// Get subscriptions by subscriber type and ID (via query params)
+router.get("/subscriptions", getSubscriptionsBySubscriber);
 
-// 📄 Get a single subscription by ID
-router.get("/subscriptions/id/:id", getSubscriptionById);
+// Get a subscription by ID
+router.get("/subscriptions/:id", getSubscriptionById);
 
-// ✏️ Update a subscription
+// Update subscription by ID
 router.put("/subscriptions/:id", updateSubscription);
 
-// 🗑️ Delete a subscription
+// Delete subscription by ID
 router.delete("/subscriptions/:id", deleteSubscription);
 
-// 📊 Get all active subscriptions (Admin/report use)
+// Get all active subscriptions (admin/reporting)
 router.get("/subscriptions/active/all", getAllActiveSubscriptions);
 
 module.exports = router;
