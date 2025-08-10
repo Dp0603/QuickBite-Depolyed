@@ -3,6 +3,28 @@ const PremiumSubscription = require("../models/PremiumSubscriptionModel");
 // ➕ Create new premium subscription
 const createSubscription = async (req, res) => {
   try {
+    const {
+      subscriberId,
+      subscriberType,
+      planName,
+      price,
+      durationInDays,
+      endDate,
+    } = req.body;
+
+    if (
+      !subscriberId ||
+      !subscriberType ||
+      !planName ||
+      !price ||
+      !durationInDays ||
+      !endDate
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Missing required subscription fields" });
+    }
+
     const newSubscription = await PremiumSubscription.create(req.body);
 
     res.status(201).json({
@@ -10,14 +32,24 @@ const createSubscription = async (req, res) => {
       subscription: newSubscription,
     });
   } catch (err) {
+    console.error("Create Subscription Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// 📦 Get all subscriptions for a specific user or restaurant
+// 📦 Get all subscriptions for a specific user or restaurant (via query params)
 const getSubscriptionsBySubscriber = async (req, res) => {
   try {
-    const { subscriberId, subscriberType } = req.params;
+    const { subscriberId, subscriberType } = req.query;
+
+    if (!subscriberId || !subscriberType) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "subscriberId and subscriberType query parameters are required",
+        });
+    }
 
     const subscriptions = await PremiumSubscription.find({
       subscriberId,
@@ -29,6 +61,7 @@ const getSubscriptionsBySubscriber = async (req, res) => {
       subscriptions,
     });
   } catch (err) {
+    console.error("Get Subscriptions Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -45,6 +78,7 @@ const getSubscriptionById = async (req, res) => {
       subscription,
     });
   } catch (err) {
+    console.error("Get Subscription By ID Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -66,6 +100,7 @@ const updateSubscription = async (req, res) => {
       subscription: updated,
     });
   } catch (err) {
+    console.error("Update Subscription Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -79,6 +114,7 @@ const deleteSubscription = async (req, res) => {
 
     res.status(200).json({ message: "Subscription deleted successfully" });
   } catch (err) {
+    console.error("Delete Subscription Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -93,6 +129,7 @@ const getAllActiveSubscriptions = async (req, res) => {
       subscriptions: activeSubs,
     });
   } catch (err) {
+    console.error("Get Active Subscriptions Error:", err);
     res.status(500).json({ message: err.message });
   }
 };

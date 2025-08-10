@@ -43,7 +43,12 @@ const io = initSocket(server);
 app.set("io", io); // Optional: so you can access it inside routes/controllers using req.app.get("io")
 
 // 🛡️ Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: "*", // Or specify your frontend: "https://yourfrontend.com"
+    exposedHeaders: ["x-rtb-fingerprint-id"], // 👈 Allow browser to read this header
+  })
+);
 app.use(express.json());
 
 // 🔗 Mount Routes (clean + organized)
@@ -68,6 +73,7 @@ app.use("/api/support", SupportRoutes);
 
 // 🏠 Root route
 app.get("/", (req, res) => {
+  res.setHeader("x-rtb-fingerprint-id", "sample-id-123"); // Example: send the header
   res.send("🍔 QuickBite API is running...");
 });
 

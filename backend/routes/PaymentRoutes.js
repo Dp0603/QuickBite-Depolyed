@@ -4,13 +4,19 @@ const {
   createRazorpayOrder,
   verifyRazorpaySignature,
   getInvoicePDF,
+  createPremiumRazorpayOrder,
+  verifyPremiumPayment,
 } = require("../controllers/PaymentController");
 
-// 🧾 Razorpay Routes
+// 🛍 Normal Order Razorpay Routes
 router.post("/create-order", createRazorpayOrder);
 router.post("/verify-signature", verifyRazorpaySignature);
 
 // 📄 Generate Invoice PDF
-router.get("/invoice/:orderId", getInvoicePDF); // ✅ New route
+router.get("/invoice/:orderId", getInvoicePDF);
+
+// 💎 Premium Razorpay Routes
+router.post("/create-premium-order", createPremiumRazorpayOrder);
+router.post("/verify-premium-payment", verifyPremiumPayment);
 
 module.exports = router;

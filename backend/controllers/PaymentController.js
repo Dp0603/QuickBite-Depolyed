@@ -2,7 +2,8 @@ const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Order = require("../models/OrderModel");
 const Menu = require("../models/MenuModel");
-const Address = require("../models/AddressModel"); // ✅ Added explicitly
+const Address = require("../models/AddressModel");
+const PremiumSubscription = require("../models/PremiumSubscriptionModel");
 const generateInvoice = require("../utils/generateInvoice");
 
 // 🔐 Initialize Razorpay
@@ -50,20 +51,18 @@ const verifyRazorpaySignature = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
       req.body.paymentDetails;
 
-    // 🔐 Step 1: Verify Razorpay Signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
     if (generatedSignature !== razorpay_signature) {
-      return res.status(400).json({
-        success: false,
-        message: "❌ Invalid Razorpay signature",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "❌ Invalid Razorpay signature" });
     }
 
-    // 🛒 Step 2: Fetch full item details from Menu
+    // Fetch menu item details
     const detailedItems = await Promise.all(
       req.body.items.map(async (item) => {
         const menu = await Menu.findById(item.menuItemId).lean();
@@ -81,11 +80,11 @@ const verifyRazorpaySignature = async (req, res) => {
       })
     );
 
-    // 📍 Step 3: Fetch address by ID
+    // Fetch address
     const address = await Address.findById(req.body.addressId).lean();
     if (!address) throw new Error("Address not found");
 
-    // 🧾 Step 4: Build order object
+    // Create order object
     const orderData = {
       customerId: req.body.customerId,
       restaurantId: req.body.restaurantId,
@@ -118,7 +117,6 @@ const verifyRazorpaySignature = async (req, res) => {
       },
     };
 
-    // 🧾 Step 5: Create order in DB
     const createdOrder = await Order.create(orderData);
 
     res.status(201).json({
@@ -146,15 +144,102 @@ const getInvoicePDF = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    generateInvoice(order, res); // ✅ Send the PDF to client
+    generateInvoice(order, res);
   } catch (err) {
     console.error("❌ Invoice Generation Error:", err);
     res.status(500).json({ message: "Failed to generate invoice" });
   }
 };
 
+// ✅ Create Razorpay Order for Premium
+const createPremiumRazorpayOrder = async (req, res) => {
+  try {
+    const { amount } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid amount" });
+    }
+
+    const options = {
+      amount: amount * 100,
+      currency: "INR",
+      receipt: `premium_rcpt_${Date.now()}`,
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.status(200).json({
+      success: true,
+      razorpayOrderId: order.id,
+      amount: order.amount / 100,
+      currency: order.currency,
+    });
+  } catch (err) {
+    console.error("❌ Premium Razorpay Order Error:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to create premium order" });
+  }
+};
+
+// ✅ Verify Razorpay Signature for Premium & Save Subscription
+const verifyPremiumPayment = async (req, res) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      subscriptionData,
+    } = req.body;
+
+    const generatedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (generatedSignature !== razorpay_signature) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Razorpay signature" });
+    }
+
+    const subscription = await PremiumSubscription.create({
+      subscriberId: subscriptionData.subscriberId,
+      subscriberType: "User",
+      planName: subscriptionData.planName,
+      price: subscriptionData.price,
+      durationInDays: subscriptionData.durationInDays,
+      startDate: new Date(),
+      endDate: subscriptionData.endDate,
+      paymentStatus: "Paid",
+      paymentDetails: {
+        razorpay_order_id,
+        razorpay_payment_id,
+        razorpay_signature,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "✅ Premium payment verified & subscription activated",
+      subscription,
+    });
+  } catch (err) {
+    console.error("💥 Premium Payment Verification Error:", err);
+    res
+      .status(500)
+      .json({ success: false, message: "Payment verification failed" });
+  }
+};
+
 module.exports = {
+  // Orders
   createRazorpayOrder,
   verifyRazorpaySignature,
   getInvoicePDF,
+  // Premium
+  createPremiumRazorpayOrder,
+  verifyPremiumPayment,
 };
