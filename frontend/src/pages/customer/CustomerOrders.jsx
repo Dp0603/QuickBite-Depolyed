@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext"; // ✅ Adjust path if needed
+import { AuthContext } from "../../context/AuthContext";
 import API from "../../api/axios";
 import {
   FaRedoAlt,
   FaFileInvoice,
   FaMapMarkedAlt,
   FaEye,
-} from "react-icons/fa"; // 👈 FaEye for view button
+} from "react-icons/fa";
 
 const getStatusColor = (status) => {
   switch (status) {
@@ -60,10 +60,7 @@ const CustomerOrders = () => {
 
   const handleReorder = async (order) => {
     try {
-      // Clear existing cart (optional, or enforce same restaurant rule)
       await API.delete(`/cart/${user._id}`);
-
-      // Re-add each item from past order to cart
       for (const item of order.items) {
         await API.post("/cart", {
           userId: user._id,
@@ -73,8 +70,6 @@ const CustomerOrders = () => {
           note: item.note || "",
         });
       }
-
-      // Navigate to cart
       navigate("/customer/cart");
     } catch (err) {
       console.error("Error during reorder:", err);
@@ -228,6 +223,20 @@ const CustomerOrders = () => {
                     <FaEye />
                     View Order
                   </button>
+
+                  {/* Always show Leave Review for delivered orders */}
+                  {order.orderStatus === "Delivered" && (
+                    <button
+                      onClick={() =>
+                        navigate(
+                          `/customer/review/${order._id}?restaurant=${order.restaurantId._id}`
+                        )
+                      }
+                      className="flex items-center gap-2 text-sm font-medium bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition"
+                    >
+                      ⭐ Leave Review
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
