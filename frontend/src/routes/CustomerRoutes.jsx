@@ -20,6 +20,8 @@ import CustomerPremium from "../pages/customer/CustomerPremium";
 import CustomerOffers from "../pages/customer/CustomerOffers";
 import CustomerReviews from "../pages/customer/CustomerReviews";
 import CustomerHelp from "../pages/customer/CustomerHelp";
+import CustomerLeaveReview from "../pages/customer/CustomerLeaveReview";
+
 
 export const customerRoutes = [
   // Main
@@ -45,5 +47,6 @@ export const customerRoutes = [
   <Route key="customer-premium" path="premium" element={<CustomerPremium />} />,
   <Route key="customer-offers" path="offers" element={<CustomerOffers />} />,
   <Route key="customer-reviews" path="reviews" element={<CustomerReviews />} />,
+  <Route key="customer-leave-review" path="review/:orderId" element={<CustomerLeaveReview />} />,
   <Route key="customer-help" path="help" element={<CustomerHelp />} />,
 ];

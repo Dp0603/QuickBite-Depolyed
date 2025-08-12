@@ -1,22 +1,52 @@
 const Review = require("../models/ReviewModel");
 const Order = require("../models/OrderModel");
+const mongoose = require("mongoose");
 
-// Create review
 const createReview = async (req, res) => {
   try {
-    const { restaurantId, rating, comment } = req.body;
-    if (!restaurantId || !rating) {
+    let { restaurantId, rating, comment } = req.body;
+
+    // Trim values if strings
+    if (typeof comment === "string") comment = comment.trim();
+
+    // Validate required fields
+    if (!restaurantId) {
+      return res.status(400).json({ message: "Restaurant ID is required" });
+    }
+    if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
+      return res.status(400).json({ message: "Invalid restaurant ID format" });
+    }
+    if (!rating) {
+      return res.status(400).json({ message: "Rating is required" });
+    }
+    if (rating < 1 || rating > 5) {
       return res
         .status(400)
-        .json({ message: "Restaurant ID and rating are required" });
+        .json({ message: "Rating must be between 1 and 5" });
+    }
+    if (comment && (comment.length < 5 || comment.length > 500)) {
+      return res
+        .status(400)
+        .json({ message: "Comment must be 5-500 characters" });
     }
 
-    // Check if user ordered from this restaurant (for verified badge)
+    // Check if the user has ordered from this restaurant (only mark verified if yes)
     const hasOrdered = await Order.exists({
       userId: req.user._id,
       restaurantId,
       status: "Delivered",
     });
+
+    // Prevent duplicate reviews from same user for the same restaurant
+    const existingReview = await Review.findOne({
+      userId: req.user._id,
+      restaurantId,
+    });
+    if (existingReview) {
+      return res
+        .status(400)
+        .json({ message: "You have already reviewed this restaurant" });
+    }
 
     const review = new Review({
       restaurantId,
@@ -27,35 +57,107 @@ const createReview = async (req, res) => {
     });
 
     await review.save();
-    res.status(201).json({ message: "Review submitted", review });
+    res.status(201).json({ message: "Review submitted successfully", review });
   } catch (err) {
     console.error("Error creating review:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// Get reviews for a restaurant
 const getReviews = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid restaurant ID format" });
+    }
+
     const reviews = await Review.find({ restaurantId: req.params.id })
       .populate("userId", "name")
       .sort({ createdAt: -1 });
-    res.json(reviews);
+
+    const averageRating =
+      reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        : 0;
+
+    res.json({ reviews, averageRating });
   } catch (err) {
+    console.error("Error fetching reviews:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// Get current user's reviews
 const getMyReviews = async (req, res) => {
   try {
     const reviews = await Review.find({ userId: req.user._id })
-      .populate("restaurantId", "restaurantName")
+      .populate("restaurantId", "name logo")
       .sort({ createdAt: -1 });
+
     res.json(reviews);
   } catch (err) {
+    console.error("Error fetching user reviews:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-module.exports = { createReview, getReviews, getMyReviews };
+const updateReview = async (req, res) => {
+  try {
+    const review = await Review.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    if (req.body.rating && (req.body.rating < 1 || req.body.rating > 5)) {
+      return res
+        .status(400)
+        .json({ message: "Rating must be between 1 and 5" });
+    }
+    if (
+      req.body.comment &&
+      (req.body.comment.trim().length < 5 ||
+        req.body.comment.trim().length > 500)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Comment must be between 5 and 500 characters" });
+    }
+
+    review.rating = req.body.rating ?? review.rating;
+    review.comment = req.body.comment?.trim() ?? review.comment;
+
+    await review.save();
+    res.json({ message: "Review updated", review });
+  } catch (err) {
+    console.error("Error updating review:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const deleteReview = async (req, res) => {
+  try {
+    const review = await Review.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user._id,
+    });
+
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    res.json({ message: "Review deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting review:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = {
+  createReview,
+  getReviews,
+  getMyReviews,
+  updateReview,
+  deleteReview,
+};

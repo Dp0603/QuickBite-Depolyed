@@ -24,6 +24,7 @@ const AnalyticsRoutes = require("./routes/AnalyticsRoutes");
 const FeedbackRoutes = require("./routes/FeedbackRoutes");
 const PaymentRoutes = require("./routes/PaymentRoutes");
 const SupportRoutes = require("./routes/SupportRoutes");
+const ReviewRoutes = require("./routes/ReviewRoutes");
 
 // 📦 Load environment variables
 dotenv.config();
@@ -70,6 +71,7 @@ app.use("/api/analytics", AnalyticsRoutes);
 app.use("/api/feedback", FeedbackRoutes);
 app.use("/api/payment", PaymentRoutes);
 app.use("/api/support", SupportRoutes);
+app.use("/api/reviews", ReviewRoutes);
 
 // 🏠 Root route
 app.get("/", (req, res) => {
