@@ -5,7 +5,8 @@ const offerSchema = new mongoose.Schema(
     restaurantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Restaurant",
-      required: true,
+      // required: true,
+      default: null,
     },
     title: {
       type: String,
