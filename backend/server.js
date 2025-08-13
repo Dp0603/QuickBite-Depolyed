@@ -1,11 +1,14 @@
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const http = require("http"); // ✅ for attaching socket.io
-const connectDB = require("./config/db");
-const { initSocket } = require("./utils/socket"); // ✅ import your socket setup
+const http = require("http");
+const path = require("path");
+const fs = require("fs");
 
-// 🌐 Route Imports (PascalCase)
+const connectDB = require("./config/db");
+const { initSocket } = require("./utils/socket");
+
+// 🌐 Route Imports
 const AuthRoutes = require("./routes/AuthRoutes");
 const AdminRoutes = require("./routes/AdminRoutes");
 const UserRoutes = require("./routes/UserRoutes");
@@ -25,6 +28,7 @@ const FeedbackRoutes = require("./routes/FeedbackRoutes");
 const PaymentRoutes = require("./routes/PaymentRoutes");
 const SupportRoutes = require("./routes/SupportRoutes");
 const ReviewRoutes = require("./routes/ReviewRoutes");
+const HelpSupportRoutes = require("./routes/HelpSupportRoutes");
 
 // 📦 Load environment variables
 dotenv.config();
@@ -36,23 +40,32 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ Create HTTP server for socket.io to hook into
+// ✅ Create HTTP server for socket.io
 const server = http.createServer(app);
 
 // ✅ Initialize Socket.IO
 const io = initSocket(server);
-app.set("io", io); // Optional: so you can access it inside routes/controllers using req.app.get("io")
+app.set("io", io);
 
-// 🛡️ Middleware
+// 🛡 Middleware
 app.use(
   cors({
-    origin: "*", // Or specify your frontend: "https://yourfrontend.com"
-    exposedHeaders: ["x-rtb-fingerprint-id"], // 👈 Allow browser to read this header
+    origin: "*",
+    exposedHeaders: ["x-rtb-fingerprint-id"],
   })
 );
 app.use(express.json());
 
-// 🔗 Mount Routes (clean + organized)
+// ✅ Ensure uploads folder exists
+const uploadsPath = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath);
+}
+
+// ✅ Serve uploads folder as static
+app.use("/uploads", express.static(uploadsPath));
+
+// 🔗 Mount Routes
 app.use("/api/auth", AuthRoutes);
 app.use("/api/admin", AdminRoutes);
 app.use("/api/users", UserRoutes);
@@ -72,10 +85,11 @@ app.use("/api/feedback", FeedbackRoutes);
 app.use("/api/payment", PaymentRoutes);
 app.use("/api/support", SupportRoutes);
 app.use("/api/reviews", ReviewRoutes);
+app.use("/api/helpsupport", HelpSupportRoutes);
 
 // 🏠 Root route
 app.get("/", (req, res) => {
-  res.setHeader("x-rtb-fingerprint-id", "sample-id-123"); // Example: send the header
+  res.setHeader("x-rtb-fingerprint-id", "sample-id-123");
   res.send("🍔 QuickBite API is running...");
 });
 
