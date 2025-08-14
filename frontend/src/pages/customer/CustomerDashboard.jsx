@@ -1,136 +1,252 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useMemo, useRef } from "react";
 import {
   FaCrown,
   FaStar,
   FaShoppingCart,
   FaClock,
   FaMapMarkerAlt,
+  FaCheckCircle,
+  FaHourglassHalf,
+  FaTimesCircle,
+  FaSearch,
+  FaRedo,
+  FaTruck,
+  FaChevronLeft,
+  FaChevronRight,
 } from "react-icons/fa";
-import { motion } from "framer-motion";
+import { motion, useMotionValue, animate } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import API from "../../api/axios";
+
+/* ----------------------------- Small Utilities ---------------------------- */
+
+const useTimeGreeting = () => {
+  const h = new Date().getHours();
+  if (h < 12) return "Morning";
+  if (h < 18) return "Afternoon";
+  return "Evening";
+};
+
+const useCountUp = (to = 0, duration = 0.8) => {
+  const mv = useMotionValue(0);
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    const controls = animate(mv, to, {
+      duration,
+      ease: "easeOut",
+      onUpdate: (v) => setVal(v),
+    });
+    return () => controls.stop();
+  }, [to]);
+  return Math.round(val);
+};
+
+const currency = (n) =>
+  typeof n === "number"
+    ? n.toLocaleString("en-IN", { maximumFractionDigits: 0 })
+    : n;
+
+/* ------------------------------- Main Screen ------------------------------ */
 
 const CustomerDashboard = () => {
   const { user, token } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [averageRating, setAverageRating] = useState(0);
+  const [premium, setPremium] = useState(null);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const greeting = useTimeGreeting();
 
-  // 🔄 Fetch Orders
+  // Fetch Orders
   useEffect(() => {
     if (user?._id) {
-      API.get(`/orders/customer/${user._id}`, {
+      API.get(`/orders/orders/customer/${user._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-        .then((res) => setOrders(res.data.data.slice(0, 3)))
-        .catch((err) =>
-          console.error(
-            "❌ Failed to fetch orders:",
-            err.response?.data?.message
-          )
-        );
+        .then((res) => {
+          setOrders(res.data.orders || []);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
     }
-  }, [user]);
+  }, [user, token]);
 
-  // 🔄 Fetch Reviews
+  // Fetch Reviews
   useEffect(() => {
-    API.get("/reviews/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    API.get(`/reviews/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => {
-        const reviews = res.data.data;
+        const reviews = Array.isArray(res.data) ? res.data : [];
         if (reviews.length) {
           const avg =
-            reviews.reduce((a, b) => a + b.rating, 0) / reviews.length;
-          setAverageRating(avg.toFixed(1));
+            reviews.reduce((sum, r) => sum + (r?.rating || 0), 0) /
+            reviews.length;
+          setAverageRating(Number(avg.toFixed(1)));
         }
       })
-      .catch((err) =>
-        console.error(
-          "❌ Failed to fetch reviews:",
-          err.response?.data?.message
-        )
-      );
-  }, []);
+      .catch(() => {});
+  }, [token]);
 
-  // 🔄 Fetch Restaurants
+  // Fetch Restaurants
   useEffect(() => {
-    API.get("/restaurant/public/restaurants")
+    API.get(`/restaurants/restaurants`)
       .then((res) => {
-        const top = res.data.data
-          .sort((a, b) => b.ratings - a.ratings)
-          .slice(0, 3);
+        const list = res.data?.restaurants || [];
+        const top = list
+          .slice()
+          .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
+          .slice(0, 12);
         setRecommended(top);
       })
-      .catch((err) =>
-        console.error(
-          "❌ Failed to fetch restaurants:",
-          err.response?.data?.message
-        )
-      );
+      .catch(() => {});
   }, []);
+
+  // Fetch Premium
+  useEffect(() => {
+    if (user?._id) {
+      API.get(`/premium/subscriptions`, {
+        params: { subscriberId: user._id, subscriberType: "Customer" },
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => {
+          const subs = res.data?.subscriptions || [];
+          if (subs.length) setPremium(subs[0]);
+        })
+        .catch(() => {});
+    }
+  }, [user, token]);
+
+  /* --------------------------- Numbers to Animate -------------------------- */
+  const ordersCount = useCountUp(orders.length, 0.9);
+  const savingsCount = useCountUp(premium?.totalSavings || 0, 1);
+  const ratingCount = useMemo(
+    () => (averageRating ? averageRating.toFixed(1) : "0.0"),
+    [averageRating]
+  );
+
+  /* ------------------------ Active Order --------------------- */
+  const activeOrder = orders.find(
+    (o) =>
+      o.status &&
+      o.status.toLowerCase() !== "delivered" &&
+      o.status.toLowerCase() !== "cancelled"
+  );
+
+  /* ------------------------ Carousel Scroll --------------------- */
+  const railRef = useRef(null);
+  const scrollCarousel = (dir) => {
+    if (railRef.current) {
+      railRef.current.scrollBy({ left: dir * 300, behavior: "smooth" });
+    }
+  };
 
   return (
     <motion.div
       className="px-4 sm:px-8 md:px-10 lg:px-12 py-8 text-gray-800 dark:text-white"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+      transition={{ duration: 0.35 }}
     >
-      {/* 👋 Welcome */}
-      <h2 className="text-3xl font-bold mb-2">
-        Welcome back, {user?.name?.split(" ")[0] || "Foodie"} 👋
-      </h2>
-      <p className="text-gray-600 dark:text-gray-300 mb-6">
-        Here’s what’s cooking in your QuickBite world.
-      </p>
+      {/* HERO */}
+      <div className="relative overflow-hidden rounded-2xl shadow-brand-lg mb-8">
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(120deg, rgba(0,0,0,0.65), rgba(0,0,0,0.25)), url('/hero/food-banner.jpg')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        />
+        <div className="relative z-10 p-6 md:p-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-white drop-shadow">
+            Good {greeting}, {user?.name?.split(" ")[0] || "Foodie"} 👋
+          </h2>
+          <p className="text-white/90 mt-1">
+            Your daily taste of <span className="font-semibold">QuickBite</span>
+          </p>
 
-      {/* 📊 Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
-        <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-md">
-          <FaShoppingCart className="text-2xl text-primary mb-2" />
-          <h4 className="text-xl font-semibold">{orders.length} Orders</h4>
-          <p className="text-sm text-gray-500">Last 3 Orders</p>
-        </div>
-        <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-md">
-          <FaCrown className="text-2xl text-yellow-500 mb-2" />
-          <h4 className="text-xl font-semibold">₹4,150 Saved</h4>
-          <p className="text-sm text-gray-500">Using Premium</p>
-        </div>
-        <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-md">
-          <FaStar className="text-2xl text-yellow-400 mb-2" />
-          <h4 className="text-xl font-semibold">
-            {averageRating || "0.0"} Rating
-          </h4>
-          <p className="text-sm text-gray-500">From your reviews</p>
-        </div>
-      </div>
-
-      {/* 🏅 Premium Membership */}
-      <div className="bg-gradient-to-r from-orange-100 to-orange-200 dark:from-orange-600 dark:to-orange-500 rounded-xl p-6 flex justify-between items-center mb-10 shadow hover:shadow-lg transition">
-        <div className="flex items-center gap-4">
-          <FaCrown className="text-yellow-600 text-3xl" />
-          <div>
-            <h2 className="text-lg font-semibold">Premium Membership Active</h2>
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              Valid till: March 2025
-            </p>
+          {/* Quick Actions */}
+          <div className="flex gap-3 mt-5 flex-wrap">
+            <button
+              onClick={() => navigate("/customer/browse")}
+              className="flex items-center gap-2 bg-white text-primary px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-50"
+            >
+              <FaSearch /> Search Food
+            </button>
+            {orders.length > 0 && (
+              <button
+                onClick={() =>
+                  navigate(`/restaurant/${orders[0].restaurantId?._id}/menu`)
+                }
+                className="flex items-center gap-2 bg-white text-primary px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-50"
+              >
+                <FaRedo /> Reorder Last
+              </button>
+            )}
+            {activeOrder && (
+              <button
+                onClick={() => navigate(`/order/${activeOrder._id}`)}
+                className="flex items-center gap-2 bg-white text-primary px-4 py-2 rounded-lg font-semibold shadow hover:bg-gray-50"
+              >
+                <FaTruck /> Track Current Order
+              </button>
+            )}
           </div>
         </div>
-        <button
-          className="bg-white text-primary font-medium px-4 py-2 rounded-lg shadow hover:bg-gray-100"
-          onClick={() => navigate("/premium-benefits")}
-        >
-          View Benefits
-        </button>
       </div>
 
-      {/* 🍽️ Recommended Restaurants */}
-      <div className="mb-12">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold">🍽️ Recommended Restaurants</h3>
+      {/* Current Order Tracker */}
+      {activeOrder && (
+        <div className="mb-8 p-4 bg-primary/10 rounded-xl shadow">
+          <h4 className="font-semibold flex items-center gap-2">
+            <FaTruck /> Your order is on the way!
+          </h4>
+          <p className="text-sm mt-1">
+            {activeOrder.items.map((it) => it?.menuItemId?.name).join(", ")}
+          </p>
+          <div className="mt-3 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div className="bg-primary h-2 w-2/3"></div>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            ETA:{" "}
+            {new Date(activeOrder.estimatedDelivery).toLocaleTimeString(
+              "en-IN"
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
+        <GradientTile onClick={() => navigate("/customer/orders")}>
+          <TileContent
+            icon={<FaShoppingCart className="text-primary text-xl" />}
+            title={`${ordersCount} Orders`}
+            subtitle="Last orders"
+          />
+        </GradientTile>
+        <GradientTile onClick={() => navigate("/premium-benefits")}>
+          <TileContent
+            icon={<FaCrown className="text-yellow-500 text-xl" />}
+            title={`₹${currency(savingsCount)} Saved`}
+            subtitle="Using Premium"
+          />
+        </GradientTile>
+        <GradientTile onClick={() => navigate("/customer/reviews")}>
+          <TileContent
+            icon={<FaStar className="text-yellow-400 text-xl" />}
+            title={`${ratingCount} Rating`}
+            subtitle="From your reviews"
+          />
+        </GradientTile>
+      </div>
+
+      {/* Recommended */}
+      <div className="mb-12 relative">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold">🍽️ Recommended for You</h3>
           <button
             onClick={() => navigate("/customer/browse")}
             className="text-primary hover:underline text-sm font-medium"
@@ -138,76 +254,168 @@ const CustomerDashboard = () => {
             View All →
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <button
+          onClick={() => scrollCarousel(-1)}
+          className="absolute -left-4 top-1/3 bg-white shadow p-2 rounded-full z-10"
+        >
+          <FaChevronLeft />
+        </button>
+        <button
+          onClick={() => scrollCarousel(1)}
+          className="absolute -right-4 top-1/3 bg-white shadow p-2 rounded-full z-10"
+        >
+          <FaChevronRight />
+        </button>
+        <div
+          ref={railRef}
+          className="flex gap-5 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory"
+        >
           {recommended.map((res) => (
-            <div
+            <motion.div
               key={res._id}
+              whileHover={{ scale: 1.03 }}
               onClick={() => navigate(`/restaurant/${res._id}/menu`)}
-              className="cursor-pointer bg-white dark:bg-secondary p-4 rounded-xl shadow hover:shadow-md transition"
+              className="min-w-[260px] snap-start rounded-xl shadow hover:shadow-brand cursor-pointer bg-white dark:bg-secondary overflow-hidden"
             >
-              <img
-                src={res.logoUrl || "/QuickBite.png"}
-                alt={res.restaurantName}
-                className="h-24 w-full object-cover rounded mb-3"
-              />
-              <h4 className="font-semibold">{res.restaurantName}</h4>
-              <p className="text-sm text-gray-500 dark:text-gray-300 flex items-center gap-1">
-                <FaMapMarkerAlt /> {res.address?.city || "Unknown"} • ₹20
-                Delivery
-              </p>
-              <div className="flex items-center mt-1 text-yellow-500 text-sm">
-                <FaStar className="mr-1" /> {res.ratings?.toFixed(1) || "4.5"}
+              <div className="relative h-40">
+                <img
+                  src={res.logo || "/QuickBite.png"}
+                  alt={res.name}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                  <FaStar className="text-yellow-300" />
+                  {res.averageRating?.toFixed(1) || "4.5"}
+                </div>
+                {res.discount && (
+                  <div className="absolute bottom-2 left-2 bg-primary text-white text-xs px-2 py-1 rounded-full">
+                    {res.discount}% OFF
+                  </div>
+                )}
               </div>
-            </div>
+              <div className="p-4">
+                <h4 className="font-semibold truncate">{res.name}</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-300 flex items-center gap-1">
+                  <FaMapMarkerAlt />
+                  {res.addressId?.city || "Unknown"} • ₹20 Delivery
+                </p>
+              </div>
+            </motion.div>
           ))}
         </div>
       </div>
 
-      {/* 🕒 Recent Orders */}
+      {/* Orders */}
       <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
         <FaClock /> Recent Orders
       </h3>
-      <div className="grid gap-4">
-        {orders.length === 0 ? (
-          <p className="text-sm text-gray-500">
+      {loading ? (
+        <p>Loading orders...</p>
+      ) : orders.length === 0 ? (
+        <div className="text-center p-6 bg-gray-50 dark:bg-secondary rounded-lg shadow">
+          <img
+            src="/empty-orders.png"
+            alt="No Orders"
+            className="mx-auto w-32 h-32 mb-3"
+          />
+          <p className="text-gray-500 mb-2">
             You haven't placed any orders yet.
           </p>
-        ) : (
-          orders.map((order, i) => (
-            <div
-              key={i}
-              className="bg-white dark:bg-secondary rounded-lg shadow p-4 flex justify-between items-center hover:shadow-md"
-            >
-              <div>
-                <h4 className="font-medium truncate max-w-[260px]">
-                  {order.items.map((i) => i.menuItemId?.name).join(", ")}
-                </h4>
-                <p className="text-xs text-gray-500">
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-semibold">₹{order.totalAmount}</p>
-                <span
-                  className={`text-sm font-medium ${
-                    order.status === "Delivered"
-                      ? "text-green-600"
-                      : order.status === "Pending"
-                      ? "text-yellow-600"
-                      : order.status === "Cancelled"
-                      ? "text-red-500"
-                      : "text-blue-500"
-                  }`}
+          <button
+            onClick={() => navigate("/customer/browse")}
+            className="bg-primary text-white px-4 py-2 rounded-lg"
+          >
+            Start Ordering
+          </button>
+        </div>
+      ) : (
+        <div className="relative pl-6">
+          <div className="absolute left-3 top-0 bottom-0 w-[2px] bg-gradient-to-b from-primary/60 to-orange-400/60 rounded-full" />
+          <div className="grid gap-5">
+            {orders.slice(0, 5).map((order, i) => {
+              const status = (order.status || "").toLowerCase();
+              const { icon, color } = getStatusMeta(status);
+              return (
+                <motion.div
+                  key={i}
+                  whileHover={{ scale: 1.01 }}
+                  className="relative bg-white dark:bg-secondary rounded-xl shadow p-4 hover:shadow-brand"
                 >
-                  {order.status}
-                </span>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+                  <span
+                    className={`absolute -left-[7px] top-5 inline-flex h-3.5 w-3.5 rounded-full ${color} ring-4 ring-white dark:ring-secondary ${
+                      status === "pending" ? "animate-pulseDot" : ""
+                    }`}
+                  />
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h4 className="font-semibold truncate max-w-[320px]">
+                        {order.items
+                          .map((it) => it?.menuItemId?.name)
+                          .join(", ")}
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(order.createdAt).toLocaleDateString("en-IN")}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-semibold">
+                        ₹{currency(order.totalAmount)}
+                      </p>
+                      <span
+                        className={`inline-flex items-center gap-1 text-sm font-medium ${color.replace(
+                          "bg-",
+                          "text-"
+                        )}`}
+                      >
+                        {icon} {capitalize(order.status)}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };
+
+/* --------------------------------- Parts --------------------------------- */
+
+const GradientTile = ({ children, onClick }) => (
+  <div
+    onClick={onClick}
+    className="cursor-pointer p-[1px] rounded-2xl bg-gradient-to-br from-primary/40 via-orange-300/50 to-yellow-300/60 shadow-brand"
+  >
+    <div className="bg-white/80 dark:bg-secondary/80 backdrop-blur-lg rounded-2xl p-5 h-full">
+      {children}
+    </div>
+  </div>
+);
+
+const TileContent = ({ icon, title, subtitle }) => (
+  <div className="flex items-center gap-3">
+    <div className="p-3 bg-primary/10 rounded-xl">{icon}</div>
+    <div>
+      <h4 className="text-lg font-semibold">{title}</h4>
+      <p className="text-sm opacity-70">{subtitle}</p>
+    </div>
+  </div>
+);
+
+function getStatusMeta(status = "") {
+  if (status === "delivered")
+    return { icon: <FaCheckCircle />, color: "bg-green-500" };
+  if (status === "pending")
+    return { icon: <FaHourglassHalf />, color: "bg-yellow-500" };
+  if (status === "cancelled")
+    return { icon: <FaTimesCircle />, color: "bg-red-500" };
+  return { icon: <FaClock />, color: "bg-blue-500" };
+}
+
+const capitalize = (s) =>
+  typeof s === "string" ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
 export default CustomerDashboard;
