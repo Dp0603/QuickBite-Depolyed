@@ -12,6 +12,7 @@ const {
   forgotPassword,
   resetPassword,
   changePassword,
+  checkVerification,
 } = require("../controllers/AuthController");
 
 // Public Routes
@@ -31,5 +32,6 @@ router.post("/reset-password/:token", resetPassword);
 
 // Authenticated user route (e.g., middleware to attach user ID required)
 router.post("/change-password", protect, changePassword);
+router.get("/check-verification", checkVerification);
 
 module.exports = router;

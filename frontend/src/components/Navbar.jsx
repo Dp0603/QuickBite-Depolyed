@@ -27,7 +27,18 @@ export default function Navbar() {
       </Link>
 
       {/* Navigation Links */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* Partner Link - always visible on public pages */}
+        {isPublicPage && (
+          <Link
+            to="/partner"
+            className="text-sm font-medium px-3 py-1 rounded-full border border-white/30 dark:border-gray-700 bg-yellow-100 dark:bg-yellow-800 text-yellow-800 dark:text-yellow-200 hover:bg-yellow-200 dark:hover:bg-yellow-700 transition"
+          >
+            Partner with Us
+          </Link>
+        )}
+
+        {/* Existing Links */}
         {location.pathname === "/" && (
           <>
             <Link

@@ -51,11 +51,18 @@ const verifyEmail = async (req, res) => {
 
     if (!user) return res.status(400).json({ message: "Invalid token" });
 
+    // Mark as verified
     user.emailToken = null;
     user.isVerified = true;
     await user.save();
 
-    res.status(200).json({ message: "Email verified successfully!" });
+    // Generate token so user can continue registration without login
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      message: "Email verified successfully!",
+      token, // <-- send the JWT
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -266,6 +273,26 @@ const changePassword = async (req, res) => {
   }
 };
 
+// GET /auth/check-verification?email=<email>
+const checkVerification = async (req, res) => {
+  try {
+    const { email } = req.query;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const response = { isVerified: user.isVerified };
+
+    if (user.isVerified) {
+      const token = generateToken(user._id); // your JWT function
+      response.token = token;
+    }
+
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   register,
   verifyEmail,
@@ -277,4 +304,5 @@ module.exports = {
   forgotPassword,
   resetPassword,
   changePassword,
+  checkVerification,
 };
