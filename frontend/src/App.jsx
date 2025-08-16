@@ -3,8 +3,10 @@ import React from "react";
 import { Routes, Route } from "react-router-dom";
 
 import Home from "./pages/Home";
+import Partner from "./pages/Partner";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import RestaurantRegistration from "./pages/RestaurantRegistration";
 import VerifyEmail from "./pages/VerifyEmail";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
@@ -27,6 +29,8 @@ function App() {
     <Routes>
       {/* 🌐 Public Routes */}
       <Route path="/" element={<Home />} />
+      <Route path="/partner" element={<Partner />} />
+      <Route path="/partner/join" element={<RestaurantRegistration />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
