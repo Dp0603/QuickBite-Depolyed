@@ -61,7 +61,13 @@ const verifyEmail = async (req, res) => {
 
     res.status(200).json({
       message: "Email verified successfully!",
-      token, // <-- send the JWT
+      token, // JWT
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -283,8 +289,15 @@ const checkVerification = async (req, res) => {
     const response = { isVerified: user.isVerified };
 
     if (user.isVerified) {
-      const token = generateToken(user._id); // your JWT function
+      const token = generateToken(user._id);
+
       response.token = token;
+      response.user = {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      };
     }
 
     res.status(200).json(response);

@@ -9,7 +9,8 @@ export default function RestaurantRegistration() {
   const [loading, setLoading] = useState(false);
   const [polling, setPolling] = useState(false);
   const [userEmail, setUserEmail] = useState("");
-  const [token, setToken] = useState(""); // store registration JWT
+  const [token, setToken] = useState("");
+  const [user, setUser] = useState(null); // store logged-in user
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -70,25 +71,30 @@ export default function RestaurantRegistration() {
 
   // ---------------- Polling to check email verification ----------------
   useEffect(() => {
-    let interval;
+    let interval, timeout;
     if (polling && userEmail) {
       interval = setInterval(async () => {
         try {
           const res = await API.get(
             `/auth/check-verification?email=${userEmail}`
           );
-
           if (res.data.isVerified) {
             clearInterval(interval);
+            clearTimeout(timeout);
             setPolling(false);
             toast.success("Email verified! Proceeding to next step.");
 
-            // Directly store token from check-verification response if your backend returns it
             if (res.data.token) {
               localStorage.setItem("token", res.data.token);
               API.defaults.headers.common[
                 "Authorization"
               ] = `Bearer ${res.data.token}`;
+              setToken(res.data.token);
+            }
+
+            if (res.data.user) {
+              localStorage.setItem("user", JSON.stringify(res.data.user));
+              setUser(res.data.user);
             }
 
             setStep(2);
@@ -97,8 +103,19 @@ export default function RestaurantRegistration() {
           console.error("Polling error:", err);
         }
       }, 5000);
+
+      // Timeout after 5 minutes
+      timeout = setTimeout(() => {
+        clearInterval(interval);
+        setPolling(false);
+        toast.error("Verification timed out. Please try again.");
+        setStep(1);
+      }, 5 * 60 * 1000);
     }
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
   }, [polling, userEmail]);
 
   // ---------------- Attach token to API requests ----------------
@@ -113,14 +130,19 @@ export default function RestaurantRegistration() {
     e.preventDefault();
     try {
       setLoading(true);
-      await API.post("/restaurant-step2/create", {
-        restaurantName: formData.restaurantName,
+      const ownerId =
+        user?._id || JSON.parse(localStorage.getItem("user"))?._id;
+
+      await API.post("/restaurants/restaurants/create", {
+        ownerId, // link restaurant to user
+        name: formData.restaurantName,
         phoneNumber: formData.phoneNumber,
         address: formData.address,
         latitude: formData.latitude,
         longitude: formData.longitude,
         cuisines: formData.cuisines.split(","),
       });
+
       toast.success("Restaurant profile created!");
       setStep(3);
     } catch (err) {
@@ -141,7 +163,11 @@ export default function RestaurantRegistration() {
     e.preventDefault();
     try {
       setLoading(true);
-      await API.put("/restaurant-step2/update", {
+      const ownerId =
+        user?._id || JSON.parse(localStorage.getItem("user"))?._id;
+
+      const { data } = await API.put("/restaurants/restaurants/update", {
+        ownerId,
         licenseNumber: formData.licenseNumber,
         gstNumber: formData.gstNumber,
         logo: formData.logo,
@@ -149,8 +175,13 @@ export default function RestaurantRegistration() {
         gallery: formData.gallery,
         bankAccount: formData.bankAccount,
       });
+
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
       toast.success("Registration completed! Pending admin approval.");
-      navigate("/dashboard");
+      navigate("/restaurant");
     } catch (err) {
       toast.error(err?.response?.data?.message || "Submission failed");
     } finally {
