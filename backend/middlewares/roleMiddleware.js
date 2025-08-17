@@ -1,4 +1,9 @@
-const roleMiddleware = (allowedRoles = []) => {
+const roleMiddleware = (allowedRoles) => {
+  // if user passes single string → wrap in array
+  if (typeof allowedRoles === "string") {
+    allowedRoles = [allowedRoles];
+  }
+
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized: No user found" });

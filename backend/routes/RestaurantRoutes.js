@@ -1,35 +1,89 @@
 const express = require("express");
 const {
-  createRestaurant,
-  getRestaurantById,
+  createProfile,
+  updateProfile,
+  getMyProfile,
   getAllRestaurants,
-  getRestaurantsByOwner,
-  verifyRestaurant,
-  updateRestaurant,
+  getRestaurantById,
+  changeStatus,
   deleteRestaurant,
-} = require("../controllers/RestaurantController");
+} = require("../controllers/restaurantController");
+
+// ✅ Import protect & authorize correctly
+const { protect, authorize } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
-// 🍽️ Create a new restaurant
-router.post("/restaurants", createRestaurant);
+// 🟢 Restaurant Routes (Owner actions)
+router.post(
+  "/restaurants/create",
+  protect,
+  authorize("restaurant"),
+  createProfile
+);
+router.put(
+  "/restaurants/update",
+  protect,
+  authorize("restaurant"),
+  updateProfile
+);
+router.get("/restaurants/me", protect, authorize("restaurant"), getMyProfile);
 
-// 📄 Get a restaurant by ID
-router.get("/restaurant/public/:id", getRestaurantById);
-
-// 📦 Get all verified & open restaurants (public)
+// 🔵 Customer Routes (no auth)
 router.get("/restaurants", getAllRestaurants);
+router.get("/restaurants/:id", getRestaurantById);
 
-// 🔍 Get restaurants by owner (owner dashboard)
-router.get("/restaurants/owner/:ownerId", getRestaurantsByOwner);
+// 🟣 Admin Routes
+router.patch(
+  "/restaurants/:id/status",
+  protect,
+  authorize("admin"),
+  changeStatus
+);
 
-// ✅ Verify restaurant (admin only)
-router.put("/restaurants/verify/:id", verifyRestaurant);
-
-// 🔁 Update restaurant details
-router.put("/restaurants/:id", updateRestaurant);
-
-// ❌ Delete a restaurant
-router.delete("/restaurants/:id", deleteRestaurant);
+// 🟢 Restaurant/Admin Common
+router.delete(
+  "/restaurants/:id",
+  protect,
+  authorize("restaurant", "admin"),
+  deleteRestaurant
+);
 
 module.exports = router;
+
+//OLD
+//  const express = require("express");
+// const {
+//   createRestaurant,
+//   getRestaurantById,
+//   getAllRestaurants,
+//   getRestaurantsByOwner,
+//   verifyRestaurant,
+//   updateRestaurant,
+//   deleteRestaurant,
+// } = require("../controllers/RestaurantController");
+
+// const router = express.Router();
+
+// // 🍽️ Create a new restaurant
+// router.post("/restaurants", createRestaurant);
+
+// // 📄 Get a restaurant by ID
+// router.get("/restaurant/public/:id", getRestaurantById);
+
+// // 📦 Get all verified & open restaurants (public)
+// router.get("/restaurants", getAllRestaurants);
+
+// // 🔍 Get restaurants by owner (owner dashboard)
+// router.get("/restaurants/owner/:ownerId", getRestaurantsByOwner);
+
+// // ✅ Verify restaurant (admin only)
+// router.put("/restaurants/verify/:id", verifyRestaurant);
+
+// // 🔁 Update restaurant details
+// router.put("/restaurants/:id", updateRestaurant);
+
+// // ❌ Delete a restaurant
+// router.delete("/restaurants/:id", deleteRestaurant);
+
+// module.exports = router;

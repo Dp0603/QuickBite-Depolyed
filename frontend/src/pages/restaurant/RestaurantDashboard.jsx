@@ -13,9 +13,76 @@ import dayjs from "dayjs";
 
 const RestaurantDashboard = () => {
   const [orders, setOrders] = useState([]);
+  const [restaurant, setRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 📊 Derived Stats
+  // 📌 Fetch restaurant profile & orders
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // get my profile
+        const profileRes = await API.get("/restaurants/restaurants/me");
+        setRestaurant(profileRes.data.restaurant);
+
+        // only fetch orders if approved
+        if (profileRes.data.restaurant?.status === "approved") {
+          const orderRes = await API.get("/restaurant/orders");
+          setOrders(orderRes.data.data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) return <div className="p-8">Loading...</div>;
+
+  // 🟠 Status checks
+  if (!restaurant) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen text-center">
+        <h2 className="text-2xl font-bold text-gray-600">
+          ⚠️ No profile found
+        </h2>
+        <p className="text-gray-500 mt-2">
+          Please create your restaurant profile to access the dashboard.
+        </p>
+      </div>
+    );
+  }
+
+  if (restaurant.status === "pending") {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen text-center">
+        <h2 className="text-2xl font-bold text-orange-600">
+          ⏳ Waiting for Approval
+        </h2>
+        <p className="text-gray-500 mt-2">
+          Your account is under review. Once approved by admin, you’ll get full
+          access.
+        </p>
+      </div>
+    );
+  }
+
+  if (restaurant.status === "rejected") {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen text-center">
+        <h2 className="text-2xl font-bold text-red-600">
+          ❌ Application Rejected
+        </h2>
+        <p className="text-gray-500 mt-2">
+          Your registration was not approved. Please contact support for more
+          info.
+        </p>
+      </div>
+    );
+  }
+
+  // ✅ Compute stats only if approved
   const todayOrders = orders.filter((order) =>
     dayjs(order.createdAt).isAfter(dayjs().startOf("day"))
   );
@@ -60,22 +127,6 @@ const RestaurantDashboard = () => {
       status: order.status,
     }));
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await API.get("/restaurant/orders");
-        setOrders(res.data.data || []);
-      } catch (err) {
-        console.error("Failed to fetch orders", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOrders();
-  }, []);
-
-  if (loading) return <div className="p-8">Loading...</div>;
-
   const stats = [
     {
       label: "Today’s Orders",
@@ -102,7 +153,9 @@ const RestaurantDashboard = () => {
       transition={{ duration: 0.3 }}
     >
       {/* 👋 Welcome */}
-      <h2 className="text-3xl font-bold mb-2">Welcome back, Chef! 👨‍🍳</h2>
+      <h2 className="text-3xl font-bold mb-2">
+        Welcome back, {restaurant.name || "Chef"}! 👨‍🍳
+      </h2>
       <p className="text-gray-600 dark:text-gray-400 mb-6">
         Here's how your kitchen is performing today.
       </p>
@@ -122,6 +175,7 @@ const RestaurantDashboard = () => {
           </div>
         ))}
       </div>
+
       {/* 🔥 Top Selling Dishes */}
       <div className="mb-10">
         <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">

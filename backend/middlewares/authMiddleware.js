@@ -29,7 +29,6 @@ const protect = async (req, res, next) => {
   }
 };
 
-// 👮 Role-based access control middleware: allows multiple roles
 const authorize = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
