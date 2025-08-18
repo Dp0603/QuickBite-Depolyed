@@ -7,7 +7,7 @@ const {
   getRestaurantById,
   changeStatus,
   deleteRestaurant,
-} = require("../controllers/restaurantController");
+} = require("../controllers/RestaurantController");
 
 // ✅ Import protect & authorize correctly
 const { protect, authorize } = require("../middlewares/authMiddleware");

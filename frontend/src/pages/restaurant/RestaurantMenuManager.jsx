@@ -1,50 +1,58 @@
-import React, { useEffect, useState, useContext } from "react";
+// src/pages/restaurant/RestaurantMenuManager.jsx
+import React, { useEffect, useState } from "react";
 import { FaEdit, FaTrashAlt, FaPlus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
-import { AuthContext } from "../../context/AuthContext";
 
 const ITEMS_PER_PAGE = 6;
 
 const RestaurantMenuManager = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+
   const [dishes, setDishes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // ✅ Fetch restaurant → then fetch menu
   const fetchMenu = async () => {
     try {
-      const res = await API.get(`/menu/restaurant/${user._id}`);
-      setDishes(res.data.data || []);
-    } catch (err) {
-      console.error("Failed to load menu:", err);
+      console.log("📡 Fetching restaurant profile...");
+      const profileRes = await API.get("/restaurants/restaurants/me");
+      const restaurantId = profileRes.data.restaurant._id;
+      console.log("✅ Restaurant profile:", profileRes.data);
+
+      console.log("📡 Fetching menu for restaurant:", restaurantId);
+      const res = await API.get(`/menu/restaurant/${restaurantId}/menu`);
+      console.log("✅ Menu loaded:", res.data);
+
+      setDishes(res.data.menu || []);
+    } catch (error) {
+      console.error("❌ Failed to load menu:", error.response?.data || error);
     } finally {
       setLoading(false);
     }
   };
 
+  // 🗑️ Delete dish
   const handleDelete = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this dish?"
-    );
-    if (confirmed) {
-      try {
-        await API.delete(`/menu/${id}`);
-        setDishes((prev) => prev.filter((dish) => dish._id !== id));
-      } catch (err) {
-        console.error("Failed to delete dish:", err);
-      }
+    if (!window.confirm("Are you sure you want to delete this dish?")) return;
+
+    try {
+      await API.delete(`/menu/menu/${id}`);
+      setDishes((prev) => prev.filter((dish) => dish._id !== id));
+      console.log(`🗑️ Dish ${id} deleted successfully`);
+    } catch (err) {
+      console.error("❌ Failed to delete dish:", err.response?.data || err);
     }
   };
 
   useEffect(() => {
-    if (user?._id) fetchMenu();
-  }, [user]);
+    fetchMenu();
+  }, []);
 
-  // 🔍 Filter and search logic
+  // 🔍 Filter + Search
   const filteredDishes = dishes.filter((dish) => {
     const matchCategory =
       categoryFilter === "All" || dish.category === categoryFilter;
@@ -54,6 +62,7 @@ const RestaurantMenuManager = () => {
     return matchCategory && matchSearch;
   });
 
+  // 📑 Pagination
   const totalPages = Math.ceil(filteredDishes.length / ITEMS_PER_PAGE);
   const displayedDishes = filteredDishes.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
