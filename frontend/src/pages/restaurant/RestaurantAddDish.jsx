@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import API from "../../api/axios";
@@ -6,6 +6,9 @@ import API from "../../api/axios";
 const RestaurantAddDish = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+
+  const [restaurantId, setRestaurantId] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   const [form, setForm] = useState({
     name: "",
@@ -15,21 +18,79 @@ const RestaurantAddDish = () => {
     image: "",
   });
 
+  // ✅ Fetch restaurantId for logged-in restaurant owner
+  useEffect(() => {
+    const fetchRestaurant = async () => {
+      try {
+        console.log("📡 Fetching restaurant profile...");
+        const res = await API.get("/restaurants/restaurants/me");
+
+        console.log("✅ Restaurant profile response:", res.data);
+
+        if (res.data?.restaurant?._id) {
+          setRestaurantId(res.data.restaurant._id);
+          console.log("✅ Restaurant ID set:", res.data.restaurant._id);
+        } else {
+          console.warn("⚠️ No restaurant profile found in response:", res.data);
+          alert("You must create a restaurant profile first!");
+          navigate("/restaurant/create-profile");
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch restaurant profile:", err);
+        alert("You must create a restaurant profile first!");
+        navigate("/restaurant/create-profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user?.role === "restaurant") {
+      fetchRestaurant();
+    } else {
+      console.warn(
+        "⚠️ Unauthorized role trying to access add dish:",
+        user?.role
+      );
+      alert("Only restaurant owners can add dishes!");
+      navigate("/");
+    }
+  }, [user, navigate]);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log("📝 Submitting form with values:", form);
+
+    if (!restaurantId) {
+      console.error("❌ No restaurantId found, cannot add dish.");
+      alert("No restaurant profile found. Please create one first.");
+      return;
+    }
+
     try {
-      await API.post("/menu", { ...form, restaurantId: user._id });
+      console.log(
+        "📡 Sending request to create dish with restaurantId:",
+        restaurantId
+      );
+      const res = await API.post("/menu/menu", { ...form, restaurantId });
+
+      console.log("✅ Dish created successfully:", res.data);
+
       alert("Dish added successfully!");
       navigate("/restaurant/menu-manager");
     } catch (err) {
-      console.error("❌ Failed to add dish:", err);
+      console.error(
+        "❌ Failed to add dish:",
+        err.response?.data || err.message
+      );
       alert("Failed to add dish");
     }
   };
+
+  if (loading) return <p className="text-center">Loading...</p>;
 
   return (
     <div className="max-w-xl mx-auto p-6 text-gray-800 dark:text-white">
@@ -63,8 +124,9 @@ const RestaurantAddDish = () => {
           name="category"
           value={form.category}
           onChange={handleChange}
-          placeholder="Category"
+          placeholder="Category (e.g., Starter, Main, Dessert)"
           className="w-full p-2 rounded border dark:bg-gray-800"
+          required
         />
         <input
           name="image"

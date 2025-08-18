@@ -8,24 +8,23 @@ const {
   toggleAvailability,
 } = require("../controllers/MenuController");
 
+const { protect, authorize } = require("../middlewares/authMiddleware");
+
 const router = express.Router();
 
-// 🍽️ Create a new menu item
-router.post("/menu", createMenuItem);
+// 🟢 Restaurant Owner Actions
+router.post("/menu", protect, authorize("restaurant"), createMenuItem);
+router.put("/menu/:id", protect, authorize("restaurant"), updateMenuItem);
+router.delete("/menu/:id", protect, authorize("restaurant"), deleteMenuItem);
+router.patch(
+  "/menu/toggle/:id",
+  protect,
+  authorize("restaurant"),
+  toggleAvailability
+);
 
-// 📋 Get all menu items for a restaurant
-router.get("/restaurant/:restaurantId", getMenuByRestaurant);
-
-// 📄 Get a specific menu item by ID
+// 🔵 Customer (public) Routes
 router.get("/menu/:id", getMenuItemById);
-
-// 🔁 Update a menu item
-router.put("/menu/:id", updateMenuItem);
-
-// ❌ Delete a menu item
-router.delete("/menu/:id", deleteMenuItem);
-
-// 🚦 Toggle availability
-router.patch("/menu/toggle/:id", toggleAvailability);
+router.get("/restaurant/:restaurantId/menu", getMenuByRestaurant);
 
 module.exports = router;

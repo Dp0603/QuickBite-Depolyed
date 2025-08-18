@@ -2,27 +2,38 @@
 import React from "react";
 import { Route } from "react-router-dom";
 
+// Main
 import RestaurantDashboard from "../pages/restaurant/RestaurantDashboard";
+
+// Orders
 import RestaurantOrders from "../pages/restaurant/RestaurantOrders";
+
+// Menu Management
 import RestaurantMenuManager from "../pages/restaurant/RestaurantMenuManager";
-// import RestaurantAddMenu from "../pages/restaurant/RestaurantAddMenu";
-// import RestaurantEditMenu from "../pages/restaurant/RestaurantEditMenu";
 import RestaurantMenuScheduler from "../pages/restaurant/RestaurantMenuScheduler";
+import RestaurantAddDish from "../pages/restaurant/RestaurantAddDish";
+import RestaurantEditDish from "../pages/restaurant/RestaurantEditDish";
 // import RestaurantAvailability from "../pages/restaurant/RestaurantAvailability";
-// import RestaurantOffers from "../pages/restaurant/RestaurantOffers";
-// import RestaurantLoyaltyProgram from "../pages/restaurant/RestaurantLoyaltyProgram";
-// import RestaurantDeliveryStatus from "../pages/restaurant/RestaurantDeliveryStatus";
-// import RestaurantDeliverySettings from "../pages/restaurant/RestaurantDeliverySettings";
+
+// Customer Engagement
 import RestaurantReviews from "../pages/restaurant/RestaurantReviews";
 // import RestaurantChat from "../pages/restaurant/RestaurantChat";
 // import RestaurantNotifications from "../pages/restaurant/RestaurantNotifications";
+
+// Analytics
 import RestaurantAnalytics from "../pages/restaurant/RestaurantAnalytics";
 // import RestaurantHeatmap from "../pages/restaurant/RestaurantHeatmap";
+
+// Finance
 import RestaurantPayouts from "../pages/restaurant/RestaurantPayouts";
 // import RestaurantInvoices from "../pages/restaurant/RestaurantInvoices";
+
+// Profile & Settings
 import RestaurantProfile from "../pages/restaurant/RestaurantProfile";
-// import RestaurantStaff from "../pages/restaurant/RestaurantStaff";
 import RestaurantSettings from "../pages/restaurant/RestaurantSettings";
+// import RestaurantStaff from "../pages/restaurant/RestaurantStaff";
+
+// Support
 import RestaurantHelp from "../pages/restaurant/RestaurantHelp";
 
 export const restaurantRoutes = [
@@ -34,18 +45,10 @@ export const restaurantRoutes = [
 
   // Menu Management
   <Route key="restaurant-menu-manager" path="menu-manager" element={<RestaurantMenuManager />} />,
-  // <Route key="restaurant-add-menu" path="menu/add" element={<RestaurantAddMenu />} />,
-  // <Route key="restaurant-edit-menu" path="menu/edit/:id" element={<RestaurantEditMenu />} />,
   <Route key="restaurant-menu-scheduler" path="menu-scheduler" element={<RestaurantMenuScheduler />} />,
-  // <Route key="restaurant-availability" path="availability" element={<RestaurantAvailability />} />,
-
-  // Offers & Promotions
-  // <Route key="restaurant-offers" path="offers" element={<RestaurantOffers />} />,
-  // <Route key="restaurant-loyalty" path="loyalty-program" element={<RestaurantLoyaltyProgram />} />,
-
-  // Delivery Management
-  // <Route key="restaurant-delivery-status" path="delivery-status" element={<RestaurantDeliveryStatus />} />,
-  // <Route key="restaurant-delivery-settings" path="delivery-settings" element={<RestaurantDeliverySettings />} />,
+  <Route key="restaurant-add-menu" path="menu/add" element={<RestaurantAddDish />} />,
+  <Route key="restaurant-edit-menu" path="menu/edit/:id" element={<RestaurantEditDish />} />,
+  // <Route key="restaurant-availability" path="menu/availability" element={<RestaurantAvailability />} />,
 
   // Customer Engagement
   <Route key="restaurant-reviews" path="reviews" element={<RestaurantReviews />} />,
@@ -54,16 +57,16 @@ export const restaurantRoutes = [
 
   // Analytics
   <Route key="restaurant-analytics" path="analytics" element={<RestaurantAnalytics />} />,
-  // <Route key="restaurant-heatmap" path="heatmap" element={<RestaurantHeatmap />} />,
+  // <Route key="restaurant-heatmap" path="analytics/heatmap" element={<RestaurantHeatmap />} />,
 
   // Finance
   <Route key="restaurant-payouts" path="payouts" element={<RestaurantPayouts />} />,
-  // <Route key="restaurant-invoices" path="invoices" element={<RestaurantInvoices />} />,
+  // <Route key="restaurant-invoices" path="payouts/invoices" element={<RestaurantInvoices />} />,
 
   // Profile & Settings
   <Route key="restaurant-profile" path="profile" element={<RestaurantProfile />} />,
-  // <Route key="restaurant-staff" path="staff" element={<RestaurantStaff />} />,
   <Route key="restaurant-settings" path="settings" element={<RestaurantSettings />} />,
+  // <Route key="restaurant-staff" path="staff" element={<RestaurantStaff />} />,
 
   // Support
   <Route key="restaurant-help" path="help" element={<RestaurantHelp />} />,
