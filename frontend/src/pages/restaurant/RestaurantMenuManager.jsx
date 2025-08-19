@@ -1,6 +1,12 @@
 // src/pages/restaurant/RestaurantMenuManager.jsx
 import React, { useEffect, useState } from "react";
-import { FaEdit, FaTrashAlt, FaPlus } from "react-icons/fa";
+import {
+  FaEdit,
+  FaTrashAlt,
+  FaPlus,
+  FaToggleOn,
+  FaToggleOff,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 
@@ -48,6 +54,23 @@ const RestaurantMenuManager = () => {
     }
   };
 
+  // 🚦 Toggle availability
+  const handleToggleAvailability = async (id) => {
+    try {
+      const res = await API.patch(`/menu/menu/toggle/${id}`);
+      const updatedDish = res.data.menuItem;
+      setDishes((prev) =>
+        prev.map((dish) => (dish._id === id ? updatedDish : dish))
+      );
+      console.log("✅ Availability toggled:", updatedDish);
+    } catch (err) {
+      console.error(
+        "❌ Failed to toggle availability:",
+        err.response?.data || err
+      );
+    }
+  };
+
   useEffect(() => {
     fetchMenu();
   }, []);
@@ -73,6 +96,27 @@ const RestaurantMenuManager = () => {
     "All",
     ...new Set(dishes.map((d) => d.category || "Uncategorized")),
   ];
+
+  // 🗓️ Small schedule preview (for owner awareness)
+  const renderSchedulePreview = (schedule) => {
+    if (!schedule) return null;
+    return (
+      <div className="mt-2 text-xs text-gray-500 dark:text-gray-300">
+        {Object.entries(schedule).map(([day, data]) =>
+          data.available ? (
+            <div key={day}>
+              <span className="capitalize">{day}:</span> {data.startTime} -{" "}
+              {data.endTime}
+            </div>
+          ) : (
+            <div key={day} className="capitalize line-through opacity-60">
+              {day}: Closed
+            </div>
+          )
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="p-6 text-gray-800 dark:text-white">
@@ -143,7 +187,28 @@ const RestaurantMenuManager = () => {
                   </p>
                   <p className="text-md font-medium mt-1">₹{dish.price}</p>
 
+                  {/* Availability + Schedule */}
+                  <div className="mt-2 flex items-center gap-2">
+                    {dish.isAvailable ? (
+                      <span className="text-green-600 font-semibold text-sm flex items-center gap-1">
+                        <FaToggleOn /> Available
+                      </span>
+                    ) : (
+                      <span className="text-red-600 font-semibold text-sm flex items-center gap-1">
+                        <FaToggleOff /> Unavailable
+                      </span>
+                    )}
+                  </div>
+                  {renderSchedulePreview(dish.schedule)}
+
+                  {/* Actions */}
                   <div className="flex justify-end gap-3 mt-4">
+                    <button
+                      onClick={() => handleToggleAvailability(dish._id)}
+                      className="text-yellow-600 hover:text-yellow-800 text-sm flex items-center gap-1"
+                    >
+                      Toggle
+                    </button>
                     <button
                       onClick={() =>
                         navigate(`/restaurant/menu/edit/${dish._id}`)
