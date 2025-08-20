@@ -7,6 +7,8 @@ const {
   getRestaurantById,
   changeStatus,
   deleteRestaurant,
+  getAvailability,
+  updateAvailability,
 } = require("../controllers/RestaurantController");
 
 // ✅ Import protect & authorize correctly
@@ -47,6 +49,20 @@ router.delete(
   protect,
   authorize("restaurant", "admin"),
   deleteRestaurant
+);
+
+// 🟢 Restaurant Availability Routes
+router.get(
+  "/restaurants/availability/me",
+  protect,
+  authorize("restaurant"),
+  getAvailability
+);
+router.put(
+  "/restaurants/availability",
+  protect,
+  authorize("restaurant"),
+  updateAvailability
 );
 
 module.exports = router;

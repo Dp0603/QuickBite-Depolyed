@@ -13,7 +13,7 @@ import RestaurantMenuManager from "../pages/restaurant/RestaurantMenuManager";
 import RestaurantMenuScheduler from "../pages/restaurant/RestaurantMenuScheduler";
 import RestaurantAddDish from "../pages/restaurant/RestaurantAddDish";
 import RestaurantEditDish from "../pages/restaurant/RestaurantEditDish";
-// import RestaurantAvailability from "../pages/restaurant/RestaurantAvailability";
+import RestaurantAvailabilityToggle from "../pages/restaurant/RestaurantAvailabilityToggle";
 
 // Customer Engagement
 import RestaurantReviews from "../pages/restaurant/RestaurantReviews";
@@ -48,7 +48,7 @@ export const restaurantRoutes = [
   <Route key="restaurant-menu-scheduler" path="menu-scheduler" element={<RestaurantMenuScheduler />} />,
   <Route key="restaurant-add-menu" path="menu/add" element={<RestaurantAddDish />} />,
   <Route key="restaurant-edit-menu" path="menu/edit/:id" element={<RestaurantEditDish />} />,
-  // <Route key="restaurant-availability" path="menu/availability" element={<RestaurantAvailability />} />,
+  <Route key="restaurant-availability-toggle" path="availability-toggle" element={<RestaurantAvailabilityToggle />} />,
 
   // Customer Engagement
   <Route key="restaurant-reviews" path="reviews" element={<RestaurantReviews />} />,
