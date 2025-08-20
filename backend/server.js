@@ -32,7 +32,6 @@ const HelpSupportRoutes = require("./routes/HelpSupportRoutes");
 const testOfferRoutes = require("./routes/TestOfferRoutes");
 
 
-const RestaurantStep2Routes = require("./routes/RestaurantStep2Routes");
 
 
 // 📦 Load environment variables
@@ -94,7 +93,7 @@ app.use("/api/helpsupport", HelpSupportRoutes);
 app.use("/api", testOfferRoutes);
 
 
-app.use("/api/restaurant-step2", RestaurantStep2Routes);
+
 
 
 // 🏠 Root route

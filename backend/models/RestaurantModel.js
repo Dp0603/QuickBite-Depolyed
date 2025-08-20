@@ -1,5 +1,39 @@
 const mongoose = require("mongoose");
 
+// ✅ Availability per day
+const availabilitySchema = new mongoose.Schema({
+  day: {
+    type: String,
+    enum: [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ],
+    required: true,
+  },
+  isClosed: { type: Boolean, default: false },
+  open: { type: String }, // e.g. "09:00"
+  close: { type: String }, // e.g. "22:00"
+  breaks: [
+    {
+      start: { type: String }, // e.g. "14:00"
+      end: { type: String }, // e.g. "17:00"
+    },
+  ],
+});
+
+// ✅ Override schema (special days)
+const overrideSchema = new mongoose.Schema({
+  date: { type: Date, required: true },
+  open: { type: String },
+  close: { type: String },
+  isClosed: { type: Boolean, default: false },
+});
+
 const restaurantSchema = new mongoose.Schema(
   {
     owner: {
@@ -9,24 +43,14 @@ const restaurantSchema = new mongoose.Schema(
     },
 
     // Basic Info
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    phoneNumber: {
-      type: String,
-      required: true,
-    },
-    address: {
-      type: String,
-      required: true,
-    },
+    name: { type: String, required: true, trim: true },
+    phoneNumber: { type: String, required: true },
+    address: { type: String, required: true },
     latitude: Number,
     longitude: Number,
     cuisines: [{ type: String }],
 
-    // Hours
+    // Hours (⚠️ keep old one for backward compatibility)
     openingHours: {
       monday: { open: String, close: String },
       tuesday: { open: String, close: String },
@@ -60,6 +84,18 @@ const restaurantSchema = new mongoose.Schema(
     rating: { type: Number, default: 0 },
     totalReviews: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+
+    // ------------------------
+    // 🔥 New Availability Fields
+    // ------------------------
+
+    isOnline: { type: Boolean, default: true }, // toggle online/offline
+    autoAvailabilityEnabled: { type: Boolean, default: false }, // auto toggle based on schedule
+    autoAcceptOrders: { type: Boolean, default: true }, // auto accept orders
+
+    weeklyAvailability: [availabilitySchema], // detailed weekly rules
+    holidays: [{ type: Date }], // recurring holidays
+    overrides: [overrideSchema], // one-off special rules
   },
   { timestamps: true }
 );

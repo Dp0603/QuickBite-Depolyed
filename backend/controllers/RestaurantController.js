@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/UserModel");
 const Restaurant = require("../models/RestaurantModel");
+const { isValidTime } = require("../utils/validateTime");
 
 // 🔑 helper → generate token
 const generateToken = (user) => {
@@ -171,6 +172,116 @@ const deleteRestaurant = async (req, res) => {
   }
 };
 
+// 🟢 Get Availability
+const getAvailability = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOne({ owner: req.user._id });
+    if (!restaurant)
+      return res.status(404).json({ message: "Profile not found" });
+
+    res.status(200).json({
+      data: {
+        isOnline: restaurant.isOnline,
+        autoAvailabilityEnabled: restaurant.autoAvailabilityEnabled,
+        autoAcceptOrders: restaurant.autoAcceptOrders,
+        weeklyAvailability: restaurant.weeklyAvailability,
+        holidays: restaurant.holidays,
+        overrides: restaurant.overrides,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🟢 Update Availability (with partial + validation)
+const updateAvailability = async (req, res) => {
+  try {
+    const updates = {};
+    const {
+      isOnline,
+      autoAvailabilityEnabled,
+      autoAcceptOrders,
+      weeklyAvailability,
+      holidays,
+      overrides,
+    } = req.body;
+
+    // ✅ Top-level fields
+    if (typeof isOnline === "boolean") updates.isOnline = isOnline;
+    if (typeof autoAvailabilityEnabled === "boolean")
+      updates.autoAvailabilityEnabled = autoAvailabilityEnabled;
+    if (typeof autoAcceptOrders === "boolean")
+      updates.autoAcceptOrders = autoAcceptOrders;
+
+    // ✅ Weekly Availability (partial update allowed)
+    if (weeklyAvailability && Array.isArray(weeklyAvailability)) {
+      for (let dayObj of weeklyAvailability) {
+        const { day, open, close, shifts } = dayObj;
+
+        if (!day) return res.status(400).json({ message: "Day is required" });
+
+        // Validate open/close
+        if (open && !isValidTime(open)) {
+          return res
+            .status(400)
+            .json({ message: `Invalid open time for ${day}` });
+        }
+        if (close && !isValidTime(close)) {
+          return res
+            .status(400)
+            .json({ message: `Invalid close time for ${day}` });
+        }
+
+        // Validate shifts
+        if (shifts && Array.isArray(shifts)) {
+          for (let shift of shifts) {
+            if (shift.start && !isValidTime(shift.start)) {
+              return res
+                .status(400)
+                .json({ message: `Invalid shift start time for ${day}` });
+            }
+            if (shift.end && !isValidTime(shift.end)) {
+              return res
+                .status(400)
+                .json({ message: `Invalid shift end time for ${day}` });
+            }
+          }
+        }
+
+        // Build partial update path
+        updates[`weeklyAvailability.${day}`] = {};
+        if (open) updates[`weeklyAvailability.${day}.open`] = open;
+        if (close) updates[`weeklyAvailability.${day}.close`] = close;
+        if (shifts) updates[`weeklyAvailability.${day}.shifts`] = shifts;
+      }
+    }
+
+    // ✅ Holidays
+    if (holidays && Array.isArray(holidays)) {
+      updates.holidays = holidays;
+    }
+
+    // ✅ Overrides
+    if (overrides && Array.isArray(overrides)) {
+      updates.overrides = overrides;
+    }
+
+    const restaurant = await Restaurant.findOneAndUpdate(
+      { owner: req.user._id },
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
+
+    if (!restaurant)
+      return res.status(404).json({ message: "Profile not found" });
+
+    res.status(200).json({ message: "Availability updated", data: restaurant });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   createProfile,
   updateProfile,
@@ -179,6 +290,8 @@ module.exports = {
   getRestaurantById,
   changeStatus,
   deleteRestaurant,
+  getAvailability,
+  updateAvailability,
 };
 
 //OLD
