@@ -34,6 +34,49 @@ const overrideSchema = new mongoose.Schema({
   isClosed: { type: Boolean, default: false },
 });
 
+// 🆕 Settings Schemas
+const orderSettingsSchema = new mongoose.Schema({
+  minOrderValue: { type: Number, default: 0 },
+  maxOrdersPerSlot: { type: Number, default: 0 },
+  prepTimeMinutes: { type: Number, default: 15 },
+  cancelWindowMinutes: { type: Number, default: 15 },
+});
+
+const deliverySettingsSchema = new mongoose.Schema({
+  deliveryRadiusKm: { type: Number, default: 5 },
+  deliveryChargeFlat: { type: Number, default: 0 },
+  chargePerKm: { type: Number, default: 0 },
+  selfDelivery: { type: Boolean, default: false },
+});
+
+const payoutSettingsSchema = new mongoose.Schema({
+  payoutFrequency: {
+    type: String,
+    enum: ["manual", "weekly", "biweekly"],
+    default: "weekly",
+  },
+  preferredMethod: {
+    type: String,
+    enum: ["bank", "upi"],
+    default: "bank",
+  },
+  bankAccount: { type: String, default: "" },
+  ifsc: { type: String, default: "" },
+  upiId: { type: String, default: "" },
+  gstin: { type: String, default: "" },
+});
+
+const notificationSettingsSchema = new mongoose.Schema({
+  emailAlerts: { type: Boolean, default: true },
+  smsAlerts: { type: Boolean, default: true },
+  pushNotifications: { type: Boolean, default: true },
+});
+
+const securitySettingsSchema = new mongoose.Schema({
+  twoFactorEnabled: { type: Boolean, default: false },
+});
+
+// ✅ Main Restaurant Schema
 const restaurantSchema = new mongoose.Schema(
   {
     owner: {
@@ -50,7 +93,7 @@ const restaurantSchema = new mongoose.Schema(
     longitude: Number,
     cuisines: [{ type: String }],
 
-    // Hours (⚠️ keep old one for backward compatibility)
+    // Hours (⚠️ old format for backward compatibility)
     openingHours: {
       monday: { open: String, close: String },
       tuesday: { open: String, close: String },
@@ -86,16 +129,23 @@ const restaurantSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
 
     // ------------------------
-    // 🔥 New Availability Fields
+    // 🔥 Availability Fields
     // ------------------------
+    isOnline: { type: Boolean, default: true },
+    autoAvailabilityEnabled: { type: Boolean, default: false },
+    autoAcceptOrders: { type: Boolean, default: true },
+    weeklyAvailability: [availabilitySchema],
+    holidays: [{ type: Date }],
+    overrides: [overrideSchema],
 
-    isOnline: { type: Boolean, default: true }, // toggle online/offline
-    autoAvailabilityEnabled: { type: Boolean, default: false }, // auto toggle based on schedule
-    autoAcceptOrders: { type: Boolean, default: true }, // auto accept orders
-
-    weeklyAvailability: [availabilitySchema], // detailed weekly rules
-    holidays: [{ type: Date }], // recurring holidays
-    overrides: [overrideSchema], // one-off special rules
+    // ------------------------
+    // 🆕 Extended Settings
+    // ------------------------
+    orderSettings: orderSettingsSchema,
+    deliverySettings: deliverySettingsSchema,
+    payoutSettings: payoutSettingsSchema,
+    notificationSettings: notificationSettingsSchema,
+    securitySettings: securitySettingsSchema,
   },
   { timestamps: true }
 );

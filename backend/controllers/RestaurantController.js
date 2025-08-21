@@ -282,11 +282,136 @@ const updateAvailability = async (req, res) => {
   }
 };
 
+// Get current restaurant settings
+const getRestaurantSettings = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOne({ owner: req.user._id }).select(
+      "orderSettings deliverySettings payoutSettings notificationSettings securitySettings"
+    );
+
+    if (!restaurant) {
+      return res.status(404).json({ message: "Restaurant not found" });
+    }
+
+    res.json({
+      orderSettings: restaurant.orderSettings || {},
+      deliverySettings: restaurant.deliverySettings || {},
+      financeSettings: restaurant.payoutSettings || {},
+      notificationSettings: restaurant.notificationSettings || {},
+      securitySettings: restaurant.securitySettings || {},
+    });
+  } catch (err) {
+    console.error("Error fetching restaurant settings:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// 🆕 Update Order Settings
+const updateOrderSettings = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOneAndUpdate(
+      { owner: req.user._id },
+      { orderSettings: req.body },
+      { new: true, runValidators: true }
+    );
+    if (!restaurant)
+      return res.status(404).json({ message: "Restaurant not found" });
+    res.json({
+      message: "Order settings updated",
+      data: restaurant.orderSettings,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🆕 Update Delivery Settings
+const updateDeliverySettings = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOneAndUpdate(
+      { owner: req.user._id },
+      { deliverySettings: req.body },
+      { new: true, runValidators: true }
+    );
+    if (!restaurant)
+      return res.status(404).json({ message: "Restaurant not found" });
+    res.json({
+      message: "Delivery settings updated",
+      data: restaurant.deliverySettings,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🆕 Update Payout Settings (finance)
+const updatePayoutSettings = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOneAndUpdate(
+      { owner: req.user._id },
+      { payoutSettings: req.body },
+      { new: true, runValidators: true }
+    );
+    if (!restaurant)
+      return res.status(404).json({ message: "Restaurant not found" });
+    res.json({
+      message: "Payout settings updated",
+      data: restaurant.payoutSettings,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🆕 Update Notification Settings
+const updateNotificationSettings = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOneAndUpdate(
+      { owner: req.user._id },
+      { notificationSettings: req.body },
+      { new: true, runValidators: true }
+    );
+    if (!restaurant)
+      return res.status(404).json({ message: "Restaurant not found" });
+    res.json({
+      message: "Notification settings updated",
+      data: restaurant.notificationSettings,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🆕 Update Security Settings
+const updateSecuritySettings = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOneAndUpdate(
+      { owner: req.user._id },
+      { securitySettings: req.body },
+      { new: true, runValidators: true }
+    );
+    if (!restaurant)
+      return res.status(404).json({ message: "Restaurant not found" });
+    res.json({
+      message: "Security settings updated",
+      data: restaurant.securitySettings,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 module.exports = {
   createProfile,
   updateProfile,
   getMyProfile,
   getAllRestaurants,
+  getRestaurantSettings,
+  updateOrderSettings,
+  updateDeliverySettings,
+  updatePayoutSettings,
+  updateNotificationSettings,
+  updateSecuritySettings,
   getRestaurantById,
   changeStatus,
   deleteRestaurant,
