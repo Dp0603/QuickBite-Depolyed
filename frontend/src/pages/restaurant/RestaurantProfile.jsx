@@ -2,6 +2,29 @@ import React, { useState, useEffect, useContext } from "react";
 import API from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 
+// 🔧 Helpers
+const buildPayload = (profile) => {
+  return {
+    name: profile.restaurantName,
+    phoneNumber: profile.phone,
+    address: `${profile.address.street}, ${profile.address.city}, ${profile.address.state} - ${profile.address.zip}`,
+    cuisines: profile.cuisine ? [profile.cuisine] : [],
+    logo: profile.logoUrl,
+    coverImage: profile.bannerUrl,
+  };
+};
+
+const parseAddress = (addressStr = "") => {
+  const [street = "", city = "", stateZip = ""] = addressStr.split(",");
+  const [state = "", zip = ""] = stateZip.trim().split(" - ");
+  return {
+    street: street.trim(),
+    city: city.trim(),
+    state: state.trim(),
+    zip: zip.trim(),
+  };
+};
+
 const RestaurantProfile = () => {
   const { user } = useContext(AuthContext);
 
@@ -9,12 +32,7 @@ const RestaurantProfile = () => {
     restaurantName: "",
     email: "",
     phone: "",
-    address: {
-      street: "",
-      city: "",
-      state: "",
-      zip: "",
-    },
+    address: { street: "", city: "", state: "", zip: "" },
     cuisine: "",
     logoUrl: "",
     bannerUrl: "",
@@ -27,26 +45,24 @@ const RestaurantProfile = () => {
 
   const fetchProfile = async () => {
     try {
-      const res = await API.get("/restaurant/profile");
-      const data = res.data.data;
+      const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+      const emailFromStorage = storedUser.email || "";
+
+      const res = await API.get("/restaurants/restaurants/me");
+      const data = res.data.restaurant;
 
       setProfile({
-        restaurantName: data.restaurantName || "",
-        email: data.email || "",
-        phone: data.phone || "",
-        address: {
-          street: data.address?.street || "",
-          city: data.address?.city || "",
-          state: data.address?.state || "",
-          zip: data.address?.zip || "",
-        },
-        cuisine: data.cuisine || "",
-        logoUrl: data.logoUrl || "",
-        bannerUrl: data.bannerUrl || "",
+        restaurantName: data.name || "",
+        email: emailFromStorage, // read-only
+        phone: data.phoneNumber || "",
+        address: parseAddress(data.address),
+        cuisine: data.cuisines?.[0] || "",
+        logoUrl: data.logo || "",
+        bannerUrl: data.coverImage || "",
       });
 
-      setLogoPreview(data.logoUrl || "/QuickBite.png");
-      setBannerPreview(data.bannerUrl || "/default-banner.jpg");
+      setLogoPreview(data.logo || "/QuickBite.png");
+      setBannerPreview(data.coverImage || "/default-banner.jpg");
     } catch (err) {
       console.error("Failed to load profile:", err);
     } finally {
@@ -83,7 +99,7 @@ const RestaurantProfile = () => {
     if (field === "logoUrl") setLogoPreview(fileUrl);
     else setBannerPreview(fileUrl);
 
-    // ⬆️ optionally: you can upload the file to cloudinary/s3 here and get real URL
+    // TODO: replace with real upload (e.g., Cloudinary/S3)
   };
 
   const handleSubmit = async (e) => {
@@ -91,7 +107,8 @@ const RestaurantProfile = () => {
     setUpdating(true);
 
     try {
-      await API.put("/restaurant/profile", profile);
+      const payload = buildPayload(profile);
+      await API.put("/restaurants/restaurants/update", payload);
       alert("✅ Profile updated successfully");
     } catch (err) {
       console.error("Update failed", err);
@@ -144,7 +161,6 @@ const RestaurantProfile = () => {
           <h2 className="text-2xl font-bold">✏️ Edit Restaurant Profile</h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Basic fields */}
             <Input
               label="Restaurant Name"
               name="restaurantName"
@@ -157,13 +173,13 @@ const RestaurantProfile = () => {
               value={profile.cuisine}
               onChange={handleChange}
             />
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              value={profile.email}
-              onChange={handleChange}
-            />
+            {/* Read-only Email */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Email</label>
+              <p className="text-gray-600 dark:text-gray-300">
+                {profile.email}
+              </p>
+            </div>
             <Input
               label="Phone"
               name="phone"
@@ -171,7 +187,6 @@ const RestaurantProfile = () => {
               onChange={handleChange}
             />
 
-            {/* Address fields */}
             <Input
               label="Street"
               name="street"
@@ -197,7 +212,6 @@ const RestaurantProfile = () => {
               onChange={handleChange}
             />
 
-            {/* Image URLs */}
             <Input
               label="Logo URL"
               name="logoUrl"
@@ -211,7 +225,6 @@ const RestaurantProfile = () => {
               onChange={handleChange}
             />
 
-            {/* Uploads */}
             <div>
               <label className="block text-sm font-medium mb-1">
                 Upload Logo

@@ -9,6 +9,12 @@ const {
   deleteRestaurant,
   getAvailability,
   updateAvailability,
+  getRestaurantSettings,
+  updateOrderSettings,
+  updateDeliverySettings,
+  updatePayoutSettings,
+  updateNotificationSettings,
+  updateSecuritySettings,
 } = require("../controllers/RestaurantController");
 
 // ✅ Import protect & authorize correctly
@@ -63,6 +69,44 @@ router.put(
   protect,
   authorize("restaurant"),
   updateAvailability
+);
+
+router.get(
+  "/restaurants/settings/me",
+  protect,
+  authorize("restaurant"),
+  getRestaurantSettings
+);
+// 🆕 Restaurant Settings Routes
+router.put(
+  "/restaurants/settings/order",
+  protect,
+  authorize("restaurant"),
+  updateOrderSettings
+);
+router.put(
+  "/restaurants/settings/delivery",
+  protect,
+  authorize("restaurant"),
+  updateDeliverySettings
+);
+router.put(
+  "/restaurants/settings/finance",
+  protect,
+  authorize("restaurant"),
+  updatePayoutSettings
+);
+router.put(
+  "/restaurants/settings/notifications",
+  protect,
+  authorize("restaurant"),
+  updateNotificationSettings
+);
+router.put(
+  "/restaurants/settings/security",
+  protect,
+  authorize("restaurant"),
+  updateSecuritySettings
 );
 
 module.exports = router;

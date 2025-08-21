@@ -31,9 +31,6 @@ const ReviewRoutes = require("./routes/ReviewRoutes");
 const HelpSupportRoutes = require("./routes/HelpSupportRoutes");
 const testOfferRoutes = require("./routes/TestOfferRoutes");
 
-
-
-
 // 📦 Load environment variables
 dotenv.config();
 
@@ -91,10 +88,6 @@ app.use("/api/support", SupportRoutes);
 app.use("/api/reviews", ReviewRoutes);
 app.use("/api/helpsupport", HelpSupportRoutes);
 app.use("/api", testOfferRoutes);
-
-
-
-
 
 // 🏠 Root route
 app.get("/", (req, res) => {
