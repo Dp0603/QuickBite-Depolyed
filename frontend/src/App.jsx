@@ -1,4 +1,5 @@
 //Private routed
+// src/App.js
 import React from "react";
 import { Routes, Route } from "react-router-dom";
 
@@ -17,10 +18,8 @@ import RestaurantLayout from "./layouts/RestaurantLayout";
 import DeliveryLayout from "./layouts/DeliveryLayout";
 
 import { adminRoutes } from "./routes/AdminRoutes";
-import { restaurantRoutes } from "./routes/RestaurantRoutes";
 import { customerRoutes } from "./routes/CustomerRoutes";
 import { deliveryRoutes } from "./routes/DeliveryRoutes";
-// import CustomerRestaurantMenu from "./pages/customer/CustomerRestaurantMenu";
 
 import PrivateRoute from "./routes/PrivateRoute";
 
@@ -34,34 +33,36 @@ function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
-      <Route path="/unauthorized" element={<Unauthorized />} />{" "}
-      {/* <Route path="/menu/menu/restaurant/:id" element={<CustomerRestaurantMenu />} /> */}
-      {/* ⛔ Unauthorized */}
-      {/* 🔐 Admin Routes - Only accessible to 'admin' */}
+      <Route path="/unauthorized" element={<Unauthorized />} />
+
+      {/* 🔐 Admin Routes */}
       <Route element={<PrivateRoute allowedRoles={["admin"]} />}>
         <Route path="/admin" element={<AdminLayout />}>
           {adminRoutes}
         </Route>
       </Route>
-      {/* 🔐 Customer Routes - Only accessible to 'customer' */}
+
+      {/* 🔐 Customer Routes */}
       <Route element={<PrivateRoute allowedRoles={["customer"]} />}>
         <Route path="/customer" element={<CustomerLayout />}>
           {customerRoutes}
         </Route>
       </Route>
-      {/* 🔐 Restaurant Routes - Only accessible to 'restaurant' */}
+
+      {/* 🔐 Restaurant Routes */}
       <Route element={<PrivateRoute allowedRoles={["restaurant"]} />}>
-        <Route path="/restaurant" element={<RestaurantLayout />}>
-          {restaurantRoutes}
-        </Route>
+        {/* 👇 restaurantRoutes removed, RestaurantLayout handles them itself */}
+        <Route path="/restaurant/*" element={<RestaurantLayout />} />
       </Route>
-      {/* 🔐 Delivery Routes - Only accessible to 'delivery' */}
+
+      {/* 🔐 Delivery Routes */}
       <Route element={<PrivateRoute allowedRoles={["delivery"]} />}>
         <Route path="/delivery" element={<DeliveryLayout />}>
           {deliveryRoutes}
         </Route>
       </Route>
-      {/* ⚠️ Catch-All: 404 Not Found */}
+
+      {/* ⚠️ Catch-All: 404 */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -1,177 +1,259 @@
-import React, { useEffect, useState, useRef } from "react";
-import {
-  FaClock,
-  FaTruck,
-  FaCheckCircle,
-  FaUtensils,
-  FaArrowRight,
-  FaSearch,
-} from "react-icons/fa";
+import React, { useEffect, useState, useContext } from "react";
+import { AuthContext } from "../../context/AuthContext";
 import API from "../../api/axios";
+import {
+  FaCheckCircle,
+  FaTimesCircle,
+  FaTruck,
+  FaUtensils,
+  FaBox,
+} from "react-icons/fa";
 
-const statusColors = {
-  Preparing: "text-yellow-600 bg-yellow-100",
-  Ready: "text-blue-600 bg-blue-100",
-  "Out for Delivery": "text-purple-600 bg-purple-100",
-  Delivered: "text-green-600 bg-green-100",
-};
-
-const nextStatus = {
-  Preparing: "Ready",
-  Ready: "Out for Delivery",
-  "Out for Delivery": "Delivered",
-  Delivered: "Delivered",
+const getStatusColor = (status) => {
+  switch (status) {
+    case "Pending":
+      return "bg-slate-200 text-slate-800 border border-slate-300";
+    case "Preparing":
+      return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+    case "Ready":
+      return "bg-orange-100 text-orange-800 border border-orange-300";
+    case "Out for Delivery":
+      return "bg-sky-100 text-sky-800 border border-sky-300";
+    case "Delivered":
+      return "bg-green-100 text-green-800 border border-green-300";
+    case "Cancelled":
+      return "bg-rose-100 text-rose-800 border border-rose-300";
+    default:
+      return "bg-gray-100 text-gray-700 border border-gray-300";
+  }
 };
 
 const RestaurantOrders = () => {
+  const { user } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
-  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const audioRef = useRef(null);
 
-  const fetchOrders = async () => {
-    try {
-      const res = await API.get("/restaurant/orders");
-      setOrders(res.data.data || []);
-    } catch (err) {
-      console.error("Failed to fetch orders:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateStatus = async (orderId, currentStatus) => {
-    const newStatus = nextStatus[currentStatus];
-    try {
-      await API.put(`/restaurant/orders/${orderId}`, { status: newStatus });
-      setOrders((prev) =>
-        prev.map((o) => (o._id === orderId ? { ...o, status: newStatus } : o))
-      );
-      // 🔊 Play success sound
-      audioRef.current?.play();
-    } catch (err) {
-      console.error("Failed to update order status:", err);
-    }
-  };
-
+  // Fetch restaurant orders
   useEffect(() => {
-    fetchOrders();
-  }, []);
+    if (user?._id) {
+      console.log("📡 Fetching orders for restaurant:", user._id);
+      API.get(`/orders/orders/restaurant/${user._id}`)
+        .then((res) => {
+          console.log("✅ Orders fetched:", res.data.orders);
+          setOrders(res.data.orders);
+        })
+        .catch((err) => {
+          console.error("❌ Error fetching restaurant orders:", err);
+        })
+        .finally(() => {
+          console.log("⏳ Finished fetching orders");
+          setLoading(false);
+        });
+    } else {
+      console.warn("⚠️ No restaurant user found in AuthContext");
+    }
+  }, [user]);
 
-  // 🧠 Grouping orders
-  const groupedOrders = {
-    Preparing: [],
-    Ready: [],
-    "Out for Delivery": [],
-    Delivered: [],
-  };
-
-  orders
-    .filter((o) =>
-      o.customerId?.name?.toLowerCase().includes(search.toLowerCase())
-    )
-    .forEach((order) => {
-      if (groupedOrders[order.status]) {
-        groupedOrders[order.status].push(order);
-      }
-    });
-
-  const renderSection = (status, icon) => (
-    <div className="mb-10">
-      <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        {icon}
-        {status} Orders
-      </h3>
-
-      {groupedOrders[status].length === 0 ? (
-        <p className="text-gray-500 text-sm">No orders in this status.</p>
-      ) : (
-        <div className="grid gap-4">
-          {groupedOrders[status].map((order) => (
-            <div
-              key={order._id}
-              className="bg-white dark:bg-secondary rounded-lg p-4 shadow hover:shadow-md transition"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-semibold">
-                    #{order._id.slice(-5)} •{" "}
-                    {new Date(order.createdAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 italic">
-                    👤 {order.customerId?.name || "Customer"}
-                  </p>
-                  <ul className="text-sm text-gray-600 dark:text-gray-300 list-disc ml-4 mt-1">
-                    {order.items.map((item, idx) => (
-                      <li key={idx}>
-                        {item.menuItemId?.name || "Item"} x {item.quantity}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Total: <strong>₹{order.totalAmount}</strong>
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full font-medium ${
-                      statusColors[order.status]
-                    }`}
-                  >
-                    {order.status}
-                  </span>
-
-                  {order.status !== "Delivered" && (
-                    <button
-                      onClick={() => updateStatus(order._id, order.status)}
-                      className="mt-2 flex items-center gap-1 bg-primary text-white text-xs px-3 py-1 rounded hover:bg-orange-600 transition"
-                    >
-                      <FaArrowRight />
-                      Mark as {nextStatus[order.status]}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+  // Split active vs past orders
+  const activeOrders = orders.filter(
+    (order) =>
+      order.orderStatus !== "Delivered" && order.orderStatus !== "Cancelled"
+  );
+  const pastOrders = orders.filter(
+    (order) =>
+      order.orderStatus === "Delivered" || order.orderStatus === "Cancelled"
   );
 
+  console.log("📊 Active Orders:", activeOrders);
+  console.log("📦 Past Orders:", pastOrders);
+
+  // Update order status
+  const updateStatus = async (orderId, status) => {
+    console.log(`🔄 Updating order ${orderId} to status:`, status);
+    try {
+      const res = await API.put(`/orders/orders/status/${orderId}`, {
+        orderStatus: status,
+      });
+      console.log("✅ Status updated successfully:", res.data.order);
+
+      setOrders((prev) => {
+        const updated = prev.map((o) =>
+          o._id === orderId ? res.data.order : o
+        );
+        console.log("📋 Updated orders state:", updated);
+        return updated;
+      });
+    } catch (err) {
+      console.error("❌ Failed to update status:", err);
+      alert("Failed to update order status");
+    }
+  };
+
+  if (loading) {
+    console.log("⏳ Loading state active");
+    return <p className="px-4 py-6">⏳ Loading orders...</p>;
+  }
+
+  console.log("🎨 Rendering RestaurantOrders component");
+
   return (
-    <div className="p-6 text-gray-800 dark:text-white">
-      <h2 className="text-2xl font-bold mb-6">📦 Manage Orders</h2>
+    <div className="px-4 md:px-10 py-8 text-gray-800 dark:text-white">
+      <h1 className="text-3xl font-bold mb-6">📦 Restaurant Orders</h1>
 
-      {/* 🔍 Search by Customer */}
-      <div className="mb-6 flex items-center gap-2 max-w-md">
-        <FaSearch />
-        <input
-          type="text"
-          placeholder="Search by customer name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded dark:bg-gray-800 dark:border-gray-600"
-        />
-      </div>
+      {/* Active Orders */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold mb-4">🟢 Active Orders</h2>
+        {activeOrders.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">
+            No active orders right now.
+          </p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {activeOrders.map((order) => {
+              console.log("🟢 Rendering active order:", order);
+              return (
+                <div
+                  key={order._id}
+                  className="rounded-xl border dark:border-gray-700 shadow-sm hover:shadow-md transition p-5 bg-white dark:bg-secondary"
+                >
+                  {/* Header */}
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-semibold">
+                      Order #{order._id.slice(-5)}
+                    </h3>
+                    <span className="text-sm text-gray-500">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </span>
+                  </div>
 
-      {loading ? (
-        <p className="text-sm text-gray-500">Loading orders...</p>
-      ) : (
-        <>
-          {renderSection("Preparing", <FaUtensils />)}
-          {renderSection("Ready", <FaCheckCircle />)}
-          {renderSection("Out for Delivery", <FaTruck />)}
-          {renderSection("Delivered", <FaClock />)}
-        </>
-      )}
+                  {/* Customer Info */}
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    👤 <strong>{order.customerId?.name || "Customer"}</strong>
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    📍 {order.deliveryAddress?.addressLine},{" "}
+                    {order.deliveryAddress?.city}
+                  </p>
 
-      {/* 🔊 Hidden Audio Element */}
-      <audio ref={audioRef} src="/sounds/update.mp3" preload="auto" />
+                  {/* Items */}
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">
+                    <strong>Items:</strong>{" "}
+                    {order.items
+                      .map(
+                        (i) => `${i.menuItemId?.name || i.name} × ${i.quantity}`
+                      )
+                      .join(", ")}
+                  </p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                    Total: ₹{order.totalAmount}
+                  </p>
+
+                  {/* Status */}
+                  <span
+                    className={`inline-block text-xs px-3 py-1 rounded-full font-medium mb-3 ${getStatusColor(
+                      order.orderStatus
+                    )}`}
+                  >
+                    {order.orderStatus}
+                  </span>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap gap-2">
+                    {order.orderStatus === "Pending" && (
+                      <>
+                        <button
+                          onClick={() => updateStatus(order._id, "Preparing")}
+                          className="flex items-center gap-2 text-sm font-medium bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition"
+                        >
+                          <FaCheckCircle /> Accept
+                        </button>
+                        <button
+                          onClick={() => updateStatus(order._id, "Cancelled")}
+                          className="flex items-center gap-2 text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-md transition"
+                        >
+                          <FaTimesCircle /> Reject
+                        </button>
+                      </>
+                    )}
+
+                    {order.orderStatus === "Preparing" && (
+                      <button
+                        onClick={() => updateStatus(order._id, "Ready")}
+                        className="flex items-center gap-2 text-sm font-medium bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-md transition"
+                      >
+                        <FaUtensils /> Mark Ready
+                      </button>
+                    )}
+
+                    {order.orderStatus === "Ready" && (
+                      <button
+                        onClick={() =>
+                          updateStatus(order._id, "Out for Delivery")
+                        }
+                        className="flex items-center gap-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition"
+                      >
+                        <FaTruck /> Out for Delivery
+                      </button>
+                    )}
+
+                    {order.orderStatus === "Out for Delivery" && (
+                      <button
+                        onClick={() => updateStatus(order._id, "Delivered")}
+                        className="flex items-center gap-2 text-sm font-medium bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-md transition"
+                      >
+                        <FaBox /> Mark Delivered
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Past Orders */}
+      <section>
+        <h2 className="text-2xl font-semibold mb-4">📦 Past Orders</h2>
+        {pastOrders.length === 0 ? (
+          <p className="text-gray-500 dark:text-gray-400">No past orders.</p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {pastOrders.map((order) => {
+              console.log("📦 Rendering past order:", order);
+              return (
+                <div
+                  key={order._id}
+                  className="rounded-xl border dark:border-gray-700 shadow-sm hover:shadow-md transition p-5 bg-white dark:bg-secondary"
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-semibold">
+                      Order #{order._id.slice(-5)}
+                    </h3>
+                    <span className="text-sm text-gray-500">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
+                    👤 {order.customerId?.name || "Customer"}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                    📍 {order.deliveryAddress?.addressLine},{" "}
+                    {order.deliveryAddress?.city}
+                  </p>
+                  <span
+                    className={`inline-block text-xs px-3 py-1 rounded-full font-medium capitalize ${getStatusColor(
+                      order.orderStatus
+                    )}`}
+                  >
+                    {order.orderStatus}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

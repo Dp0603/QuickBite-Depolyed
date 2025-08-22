@@ -4,17 +4,16 @@ import { useNavigate } from "react-router-dom";
 import Lottie from "lottie-react";
 
 import NotificationLottie from "../assets/lottie icons/Notification.json";
-import CloseLottie from "../assets/lottie icons/Hamburger menu.json";
-import { AuthContext } from "../context/AuthContext"; // ✅ Add this
+import { AuthContext } from "../context/AuthContext";
 
-const RestaurantNavbar = ({ toggleSidebar }) => {
+const RestaurantNavbar = ({ toggleSidebar, isOwnerMode, setIsOwnerMode }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
 
   const profileRef = useRef(null);
   const notifRef = useRef(null);
   const navigate = useNavigate();
-  const { logout } = useContext(AuthContext); // ✅ Access logout from context
+  const { logout } = useContext(AuthContext);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -45,8 +44,13 @@ const RestaurantNavbar = ({ toggleSidebar }) => {
         >
           ☰
         </button>
-        <h1 className="text-xl font-bold text-primary tracking-wide">
-          🍽 QuickBite <span className="text-sm font-normal">/ Restaurant</span>
+        <h1 className="text-xl font-bold text-primary tracking-wide flex items-center gap-2">
+          🍽 QuickBite / Restaurant
+          {isOwnerMode && (
+            <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-semibold">
+              Owner Mode
+            </span>
+          )}
         </h1>
       </div>
 
@@ -99,7 +103,7 @@ const RestaurantNavbar = ({ toggleSidebar }) => {
             />
           </button>
           {showProfileMenu && (
-            <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded shadow-md text-sm z-50 border dark:border-gray-700 overflow-hidden transition-all duration-200 animate-fade-in">
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded shadow-md text-sm z-50 border dark:border-gray-700 overflow-hidden transition-all duration-200 animate-fade-in">
               <a
                 href="/restaurant/profile"
                 className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
@@ -112,6 +116,18 @@ const RestaurantNavbar = ({ toggleSidebar }) => {
               >
                 Settings
               </a>
+
+              {/* Owner Mode Toggle */}
+              <button
+                onClick={() => setIsOwnerMode((prev) => !prev)}
+                className={`w-full text-left px-4 py-2 transition font-medium ${
+                  isOwnerMode
+                    ? "text-red-600 hover:bg-red-100 dark:hover:bg-gray-700"
+                    : "text-green-600 hover:bg-green-100 dark:hover:bg-gray-700"
+                }`}
+              >
+                {isOwnerMode ? "Exit Owner Mode" : "Switch to Owner Mode"}
+              </button>
             </div>
           )}
         </div>
