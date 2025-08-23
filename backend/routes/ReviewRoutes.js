@@ -6,6 +6,7 @@ const {
   getMyReviews,
   updateReview,
   deleteReview,
+  replyToReview,
 } = require("../controllers/ReviewController");
 const { protect } = require("../middlewares/authMiddleware");
 
@@ -23,5 +24,8 @@ router.delete("/review/delete/:id", protect, deleteReview);
 
 // 🍽 Get all reviews for a specific restaurant (public)
 router.get("/:id", getReviews);
+
+// Reply to a review (restaurant owner only)
+router.post("/review/:id/reply", protect, replyToReview);
 
 module.exports = router;
