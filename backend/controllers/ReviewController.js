@@ -154,10 +154,48 @@ const deleteReview = async (req, res) => {
   }
 };
 
+const replyToReview = async (req, res) => {
+  try {
+    const { id } = req.params; // reviewId
+    const { reply } = req.body;
+
+    if (!reply || reply.trim().length < 2) {
+      return res
+        .status(400)
+        .json({ message: "Reply must be at least 2 characters" });
+    }
+
+    const review = await Review.findById(id).populate(
+      "restaurantId",
+      "ownerId name"
+    );
+
+    if (!review) return res.status(404).json({ message: "Review not found" });
+
+    // Check if current user is the restaurant owner
+    if (review.restaurantId.ownerId.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to reply to this review" });
+    }
+
+    // Save reply
+    review.reply = { text: reply.trim(), repliedAt: new Date() };
+    await review.save();
+
+    res.json({ success: true, message: "Reply added successfully", review });
+  } catch (err) {
+    console.error("Error replying to review:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
 module.exports = {
   createReview,
   getReviews,
   getMyReviews,
   updateReview,
   deleteReview,
+  replyToReview,
 };

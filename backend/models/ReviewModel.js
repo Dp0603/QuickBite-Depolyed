@@ -13,8 +13,14 @@ const reviewSchema = new mongoose.Schema(
       required: true,
     },
     rating: { type: Number, min: 1, max: 5, required: true },
-    comment: { type: String, required: true },
+    comment: { type: String, required: true, trim: true },
     verified: { type: Boolean, default: false },
+
+    // New field: reply from restaurant owner
+    reply: {
+      text: { type: String, trim: true },
+      repliedAt: { type: Date },
+    },
   },
   { timestamps: true }
 );
