@@ -5,30 +5,34 @@ const payoutSchema = new mongoose.Schema(
     payeeId: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
+      refPath: "payeeType",
     },
     payeeType: {
       type: String,
       enum: ["restaurant", "delivery"],
       required: true,
     },
-    amount: {
+    payoutAmount: {
+      // ✅ renamed from amount → payoutAmount
       type: Number,
       required: true,
     },
     status: {
+      // ✅ updated statuses
       type: String,
-      enum: ["Pending", "Processed", "Failed"],
-      default: "Pending",
+      enum: ["pending", "paid", "failed"],
+      default: "pending",
     },
-    method: {
-      type: String,
-      enum: ["Bank", "UPI"],
-      required: true,
+    bankDetails: {
+      // ✅ snapshot of bank/upi details
+      method: String,
+      bankAccount: String,
+      ifsc: String,
+      upiId: String,
     },
-    referenceId: {
-      type: String, // Razorpay/Stripe txn ID
-    },
+    referenceId: String, // Razorpay/Stripe txn ID
     note: String,
+    processedAt: Date,
   },
   { timestamps: true }
 );

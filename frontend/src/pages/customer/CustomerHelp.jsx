@@ -186,7 +186,7 @@ export default function CustomerHelp({ currentUser }) {
     setFaqLoading(true);
     setFaqError(null);
 
-    fetch("/api/helpsupport/faqs")
+    fetch("/api/helpsupport/customer/faqs")
       .then((r) => (r.ok ? r.json() : Promise.reject(r)))
       .then((data) => {
         if (!isMounted) return;
@@ -269,7 +269,7 @@ export default function CustomerHelp({ currentUser }) {
 
       const token = localStorage.getItem("token");
 
-      const res = await fetch("/api/helpsupport/submit", {
+      const res = await fetch("/api/helpsupport/customer/submit", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -312,7 +312,7 @@ export default function CustomerHelp({ currentUser }) {
     setTicketsError(null);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch("/api/helpsupport/tickets", {
+      const res = await fetch("/api/helpsupport/customer/tickets", {
         headers: {
           Authorization: `Bearer ${token}`,
         },

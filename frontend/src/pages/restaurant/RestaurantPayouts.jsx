@@ -12,6 +12,7 @@ const getStatusBadge = (status) => {
   const base = "inline-block px-3 py-1 rounded-full text-xs font-semibold";
   if (status === "Paid") return `${base} bg-green-100 text-green-700`;
   if (status === "Pending") return `${base} bg-yellow-100 text-yellow-700`;
+  if (status === "Failed") return `${base} bg-red-100 text-red-700`;
   return `${base} bg-gray-100 text-gray-600`;
 };
 
@@ -20,41 +21,62 @@ const RestaurantPayouts = () => {
   const [payouts, setPayouts] = useState([]);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [bankDetails, setBankDetails] = useState(null);
+  const [nextPayoutDate, setNextPayoutDate] = useState(null);
 
-  // 📦 Fetch user's payouts
+  // 📦 Fetch payouts + bank details
+  const fetchPayouts = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await axios.get(`/api/payouts/payouts/payee/${user._id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        params: {
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+        },
+      });
+
+      setPayouts(res.data.payouts || []);
+      setBankDetails(res.data.bankDetails || null);
+      setNextPayoutDate(res.data.nextPayoutDate || null);
+    } catch (err) {
+      console.error("Failed to fetch payouts", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchPayouts = async () => {
-      if (!user?._id) return;
-      try {
-        const res = await axios.get(`/api/payouts/user/${user._id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        setPayouts(res.data.data);
-      } catch (err) {
-        console.error("Failed to fetch payouts", err);
-      }
-    };
-
     fetchPayouts();
   }, [user, token]);
 
-  const filteredPayouts = payouts.filter((p) => {
-    const payoutDate = new Date(p.createdAt);
-    const from = fromDate ? new Date(fromDate) : null;
-    const to = toDate ? new Date(toDate) : null;
-
-    return (!from || payoutDate >= from) && (!to || payoutDate <= to);
-  });
-
   const totalPaid = payouts
     .filter((p) => p.status === "Paid")
-    .reduce((sum, p) => sum + p.payoutAmount, 0);
+    .reduce((sum, p) => sum + (p.amount || p.payoutAmount || 0), 0);
+
+  const handleDownloadInvoice = async (payoutId) => {
+    try {
+      const res = await axios.get(`/api/payouts/${payoutId}/invoice`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `invoice_${payoutId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Failed to download invoice", err);
+    }
+  };
 
   return (
     <div className="px-6 py-8 min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-white">
       <div className="max-w-7xl mx-auto space-y-8 animate-fade-in">
+        {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-3xl font-bold">💸 Payouts & Settlement</h2>
           <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -62,10 +84,15 @@ const RestaurantPayouts = () => {
           </span>
         </div>
 
+        {/* Info Banner */}
         <div className="bg-accent dark:bg-orange-900/10 border-l-4 border-primary text-primary dark:text-orange-300 p-4 rounded-xl shadow">
-          🔔 Your next payout is scheduled soon. Stay tuned.
+          🔔 Your next payout is scheduled on{" "}
+          {nextPayoutDate
+            ? new Date(nextPayoutDate).toLocaleDateString()
+            : "TBD"}
         </div>
 
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-secondary p-5 rounded-2xl shadow flex items-center gap-4">
             <FaRupeeSign className="text-2xl text-green-600" />
@@ -85,7 +112,13 @@ const RestaurantPayouts = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Bank Account
               </p>
-              <h4 className="text-base font-medium">Axis Bank — ****4321</h4>
+              <h4 className="text-base font-medium">
+                {bankDetails
+                  ? `${
+                      bankDetails.bankName
+                    } — ****${bankDetails.accountNumber?.slice(-4)}`
+                  : "Not Linked"}
+              </h4>
             </div>
           </div>
 
@@ -95,11 +128,16 @@ const RestaurantPayouts = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Next Payout
               </p>
-              <h4 className="text-base font-medium">July 20, 2025</h4>
+              <h4 className="text-base font-medium">
+                {nextPayoutDate
+                  ? new Date(nextPayoutDate).toLocaleDateString()
+                  : "Pending"}
+              </h4>
             </div>
           </div>
         </div>
 
+        {/* Filters */}
         <div className="flex flex-wrap gap-4 items-end">
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-600 dark:text-gray-300">
@@ -123,11 +161,15 @@ const RestaurantPayouts = () => {
               className="px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm"
             />
           </div>
-          <button className="bg-primary text-white px-5 py-2 rounded-xl text-sm hover:bg-orange-600 transition">
+          <button
+            onClick={fetchPayouts}
+            className="bg-primary text-white px-5 py-2 rounded-xl text-sm hover:bg-orange-600 transition"
+          >
             Apply Filter
           </button>
         </div>
 
+        {/* Table */}
         <div className="rounded-xl shadow overflow-x-auto bg-white dark:bg-secondary">
           <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-gray-100 dark:bg-gray-700 sticky top-0 z-10">
@@ -139,32 +181,44 @@ const RestaurantPayouts = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredPayouts.map((p, i) => (
-                <tr
-                  key={p._id}
-                  className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {new Date(p.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 font-medium">
-                    ₹{p.payoutAmount.toLocaleString("en-IN")}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={getStatusBadge(p.status)}>{p.status}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="flex items-center gap-2 text-primary hover:underline text-sm">
-                      <FaFileDownload />
-                      Invoice
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredPayouts.length === 0 && (
+              {payouts.length > 0 ? (
+                payouts.map((p) => (
+                  <tr
+                    key={p._id}
+                    className="border-t dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {new Date(p.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-6 py-4 font-medium">
+                      ₹
+                      {(p.amount || p.payoutAmount || 0).toLocaleString(
+                        "en-IN"
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={getStatusBadge(p.status)}>
+                        {p.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => handleDownloadInvoice(p._id)}
+                        className="flex items-center gap-2 text-primary hover:underline text-sm"
+                      >
+                        <FaFileDownload />
+                        Invoice
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
                 <tr>
-                  <td colSpan="4" className="text-center py-6 text-gray-400">
-                    No payouts found for selected dates.
+                  <td
+                    colSpan="4"
+                    className="text-center py-6 text-gray-400 dark:text-gray-500"
+                  >
+                    No payouts found.
                   </td>
                 </tr>
               )}
