@@ -8,6 +8,13 @@ const faqSchema = new mongoose.Schema(
     category: { type: String, default: "General" }, // e.g., Payments, Orders
     icon: { type: String, default: "FaQuestionCircle" }, // maps to frontend icons
     isActive: { type: Boolean, default: true },
+
+    // Differentiate between customer & restaurant FAQs
+    role: {
+      type: String,
+      enum: ["customer", "restaurant"],
+      required: true,
+    },
   },
   { timestamps: true }
 );
@@ -27,11 +34,22 @@ const ticketSchema = new mongoose.Schema(
       enum: ["pending", "in-progress", "resolved", "closed"],
       default: "pending",
     },
+
+    // Differentiate between customer & restaurant tickets
+    role: {
+      type: String,
+      enum: ["customer", "restaurant"],
+      required: true,
+    },
   },
   { timestamps: true }
 );
 
 const FAQ = mongoose.model("FAQ", faqSchema, "faqs");
-const HelpTicket = mongoose.model("HelpTicket", ticketSchema, "helpsupporttickets");
+const HelpTicket = mongoose.model(
+  "HelpTicket",
+  ticketSchema,
+  "helpsupporttickets"
+);
 
 module.exports = { FAQ, HelpTicket };

@@ -7,6 +7,7 @@ import RestaurantDashboard from "../pages/restaurant/RestaurantDashboard";
 
 // Orders
 import RestaurantOrders from "../pages/restaurant/RestaurantOrders";
+import RestaurantOrderDetails from "../pages/restaurant/RestaurantOrderDetails";
 
 // Menu Management
 import RestaurantMenuManager from "../pages/restaurant/RestaurantMenuManager";
@@ -50,6 +51,7 @@ export const restaurantRoutes = (isOwnerMode) => [
 
   // Orders
   <Route key="restaurant-orders" path="orders" element={<RestaurantOrders />} />,
+  <Route key="restaurant-order-details" path="orders/:orderId" element={<RestaurantOrderDetails />} />,
 
   // Menu Management
   <Route

@@ -6,29 +6,47 @@ const {
   submitTicket,
   getUserTickets,
 } = require("../controllers/HelpSupportController");
-const { protect } = require("../middlewares/authMiddleware");
-const upload = require("../middlewares/upload"); // <-- Cloudinary multer
+const { protect, adminProtect } = require("../middlewares/authMiddleware");
+const upload = require("../middlewares/upload");
 
-// FAQs
-router.get("/faqs", getFaqs);
-router.post("/faqs", addFaq);
+// ========================
+// CUSTOMER HELP ROUTES
+// ========================
+router.get("/customer/faqs", getFaqs("customer"));
+router.post("/customer/faqs", addFaq("customer"));
 
-// Tickets
-// Cloudinary handles attachment upload; the resulting URL is in req.file.path
 router.post(
-  "/submit",
+  "/customer/submit",
   protect,
   (req, res, next) => {
     upload.single("attachment")(req, res, (err) => {
-      if (err) {
-        console.error("Upload error:", err);
-        return res.status(400).json({ message: err.message });
-      }
+      if (err) return res.status(400).json({ message: err.message });
       next();
     });
   },
-  submitTicket
+  submitTicket("customer")
 );
-router.get("/tickets", protect, getUserTickets);
+
+router.get("/customer/tickets", protect, getUserTickets("customer"));
+
+// ========================
+// RESTAURANT HELP ROUTES
+// ========================
+router.get("/restaurant/faqs", getFaqs("restaurant"));
+router.post("/restaurant/faqs", addFaq("restaurant"));
+
+router.post(
+  "/restaurant/submit",
+  protect,
+  (req, res, next) => {
+    upload.single("attachment")(req, res, (err) => {
+      if (err) return res.status(400).json({ message: err.message });
+      next();
+    });
+  },
+  submitTicket("restaurant")
+);
+
+router.get("/restaurant/tickets", protect, getUserTickets("restaurant"));
 
 module.exports = router;

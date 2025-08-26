@@ -1,16 +1,12 @@
-const path = require("path");
 const { FAQ, HelpTicket } = require("../models/HelpSupportModel");
 
 // ====== FAQs ======
-
-// Get all FAQs (grouped by category)
-const getFaqs = async (req, res) => {
+const getFaqs = (role) => async (req, res) => {
   try {
-    const faqs = await FAQ.find({ isActive: true })
+    const faqs = await FAQ.find({ isActive: true, role })
       .sort({ createdAt: -1 })
       .lean();
 
-    // Group by category
     const grouped = faqs.reduce((acc, faq) => {
       let group = acc.find((g) => g.category === faq.category);
       if (!group) {
@@ -28,8 +24,8 @@ const getFaqs = async (req, res) => {
   }
 };
 
-// Add FAQ (Admin use)
-const addFaq = async (req, res) => {
+// Add FAQ
+const addFaq = (role) => async (req, res) => {
   try {
     const { question, answer, category, icon } = req.body;
     if (!question || !answer) {
@@ -38,7 +34,7 @@ const addFaq = async (req, res) => {
         .json({ message: "Question and answer are required" });
     }
 
-    const faq = new FAQ({ question, answer, category, icon });
+    const faq = new FAQ({ question, answer, category, icon, role });
     await faq.save();
 
     res.status(201).json({ message: "FAQ added successfully!", faq });
@@ -49,22 +45,17 @@ const addFaq = async (req, res) => {
 };
 
 // ====== Tickets ======
-
-// Generate Ticket ID
 const generateTicketId = () =>
   `HELP-${Math.floor(100000 + Math.random() * 900000)}`;
 
 // Submit ticket
-// Submit ticket
-const submitTicket = async (req, res) => {
+const submitTicket = (role) => async (req, res) => {
   try {
     const { name, email, issue, message } = req.body;
-
     if (!name || !email || !issue || !message) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Cloudinary URL (if attachment was uploaded)
     const attachmentUrl = req.file ? req.file.path : null;
 
     const ticket = new HelpTicket({
@@ -75,6 +66,7 @@ const submitTicket = async (req, res) => {
       message,
       attachmentUrl,
       ticketId: generateTicketId(),
+      role,
     });
 
     await ticket.save();
@@ -82,7 +74,7 @@ const submitTicket = async (req, res) => {
     res.status(201).json({
       message: "Request submitted successfully!",
       ticketId: ticket.ticketId,
-      attachmentUrl, // return URL to frontend
+      attachmentUrl,
     });
   } catch (error) {
     console.error("Error submitting ticket:", error);
@@ -90,12 +82,14 @@ const submitTicket = async (req, res) => {
   }
 };
 
-// Get logged-in user's tickets
-const getUserTickets = async (req, res) => {
+// Get user's tickets
+const getUserTickets = (role) => async (req, res) => {
   try {
-    const tickets = await HelpTicket.find({ userId: req.user.userId }).sort({
-      createdAt: -1,
-    });
+    const tickets = await HelpTicket.find({
+      userId: req.user.userId,
+      role,
+    }).sort({ createdAt: -1 });
+
     res.json(tickets);
   } catch (error) {
     console.error("Error fetching tickets:", error);
@@ -103,4 +97,51 @@ const getUserTickets = async (req, res) => {
   }
 };
 
-module.exports = { getFaqs, addFaq, submitTicket, getUserTickets };
+// ====== ADMIN ======
+
+// Get all tickets
+const getAllTickets = async (req, res) => {
+  try {
+    const tickets = await HelpTicket.find().sort({ createdAt: -1 });
+    res.json(tickets);
+  } catch (error) {
+    console.error("Error fetching all tickets:", error);
+    res.status(500).json({ message: "Failed to fetch tickets" });
+  }
+};
+
+// Update ticket status
+const updateTicketStatus = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { status } = req.body;
+
+    if (!["pending", "in-progress", "resolved", "closed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const ticket = await HelpTicket.findOneAndUpdate(
+      { ticketId },
+      { status },
+      { new: true }
+    );
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    res.json({ message: "Ticket status updated successfully", ticket });
+  } catch (error) {
+    console.error("Error updating ticket status:", error);
+    res.status(500).json({ message: "Failed to update ticket status" });
+  }
+};
+
+module.exports = {
+  getFaqs,
+  addFaq,
+  submitTicket,
+  getUserTickets,
+  getAllTickets,
+  updateTicketStatus,
+};
