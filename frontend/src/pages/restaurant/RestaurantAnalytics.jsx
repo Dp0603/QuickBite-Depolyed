@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaShoppingCart, FaRupeeSign, FaClock, FaStar } from "react-icons/fa";
+import { FaShoppingCart, FaRupeeSign, FaStar } from "react-icons/fa";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -14,9 +14,9 @@ import API from "../../api/axios";
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const StatCard = ({ icon, value, label }) => (
-  <div className="bg-white dark:bg-secondary p-5 rounded-lg shadow hover:shadow-md transition text-center">
-    <div className="flex justify-center mb-2">{icon}</div>
-    <h4 className="text-xl font-semibold text-gray-800 dark:text-white">
+  <div className="bg-white dark:bg-secondary p-6 rounded-xl shadow hover:shadow-lg transition flex flex-col items-center justify-center text-center">
+    <div className="text-3xl mb-3">{icon}</div>
+    <h4 className="text-2xl font-bold text-gray-800 dark:text-white">
       {value}
     </h4>
     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{label}</p>
@@ -26,18 +26,23 @@ const StatCard = ({ icon, value, label }) => (
 const RestaurantAnalytics = () => {
   const [salesData, setSalesData] = useState([]);
   const [topDishes, setTopDishes] = useState([]);
+  const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // Fetch analytics from backend
   useEffect(() => {
     const fetchAnalytics = async () => {
+      setLoading(true);
       try {
-        const [salesRes, dishesRes] = await Promise.all([
-          API.get("/restaurant/analytics/sales"),
-          API.get("/restaurant/analytics/top-dishes"),
+        const [salesRes, dishesRes, statsRes] = await Promise.all([
+          API.get("/analytics/restaurant/sales-trends"), // ✅ correct
+          API.get("/analytics/restaurant/top-dishes"), // ✅ correct
+          API.get("/analytics/restaurant/overview"), // ✅ correct
         ]);
 
-        setSalesData(salesRes.data.data);
-        setTopDishes(dishesRes.data.data);
+        setStats(statsRes.data.data || {});
+        setSalesData(salesRes.data.data || []);
+        setTopDishes(dishesRes.data.data || []);
       } catch (err) {
         console.error("Failed to fetch analytics", err);
       } finally {
@@ -48,83 +53,105 @@ const RestaurantAnalytics = () => {
     fetchAnalytics();
   }, []);
 
-  const stats = [
-    {
-      label: "Total Orders (7d)",
-      value: salesData.reduce((sum, d) => sum + d.revenue / 150, 0).toFixed(0),
-      icon: <FaShoppingCart className="text-orange-500 text-xl" />,
-    },
-    {
-      label: "Revenue (7d)",
-      value: `₹${salesData
-        .reduce((sum, d) => sum + d.revenue, 0)
-        .toLocaleString()}`,
-      icon: <FaRupeeSign className="text-green-600 text-xl" />,
-    },
-    {
-      label: "Avg. Delivery Time",
-      value: "32 min",
-      icon: <FaClock className="text-blue-500 text-xl" />,
-    },
-    {
-      label: "Customer Rating",
-      value: "4.5 / 5",
-      icon: <FaStar className="text-yellow-500 text-xl" />,
-    },
-  ];
-
-  const chartData = {
-    labels: salesData.map((d) => d.date.slice(5)), // show MM-DD
+  const salesChartData = {
+    labels: salesData.map((d) => d._id), // backend returns _id as date string (YYYY-MM-DD)
     datasets: [
       {
         label: "Revenue (₹)",
         data: salesData.map((d) => d.revenue),
         backgroundColor: "#f97316",
+        borderRadius: 6,
+        barThickness: 20,
       },
     ],
   };
 
-  return (
-    <div className="p-6 text-gray-800 dark:text-white">
-      <h2 className="text-2xl font-bold mb-6">📈 Analytics Overview</h2>
+  const topDishesChartData = {
+    labels: topDishes.map((d) => d.name),
+    datasets: [
+      {
+        label: "Orders",
+        data: topDishes.map((d) => d.totalQuantity),
+        backgroundColor: "#3b82f6",
+        borderRadius: 6,
+        barThickness: 20,
+      },
+    ],
+  };
 
+  const statCards = [
+    {
+      icon: <FaRupeeSign />,
+      value: `₹${stats.totalRevenue || 0}`,
+      label: "Total Revenue",
+    },
+    {
+      icon: <FaShoppingCart />,
+      value: stats.totalOrders || 0,
+      label: "Total Orders",
+    },
+    {
+      icon: <FaRupeeSign />,
+      value: `₹${Math.round(stats.avgOrderValue || 0)}`,
+      label: "Avg Order Value",
+    },
+    {
+      icon: <FaStar />,
+      value: stats.rating || 0,
+      label: "Rating",
+    },
+  ];
+
+  return (
+    <div className="p-6 text-gray-800 dark:text-white max-w-7xl mx-auto">
+      <h2 className="text-3xl font-bold mb-6">📊 Analytics Dashboard</h2>
+
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
-        {stats.map((stat, i) => (
-          <StatCard key={i} {...stat} />
-        ))}
+        {loading
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-gray-100 dark:bg-gray-700 h-32 rounded-xl animate-pulse"
+              />
+            ))
+          : statCards.map((stat, i) => (
+              <StatCard
+                key={i}
+                icon={stat.icon}
+                value={stat.value}
+                label={stat.label}
+              />
+            ))}
       </div>
 
       {/* Revenue Chart */}
-      <div className="bg-white dark:bg-secondary p-6 rounded-lg shadow mb-10">
-        <h3 className="text-lg font-semibold mb-4">Revenue (Last 7 Days)</h3>
+      <div className="bg-white dark:bg-secondary p-6 rounded-xl shadow mb-10">
+        <h3 className="text-xl font-semibold mb-4">Revenue (Last 7 Days)</h3>
         {loading ? (
           <p className="text-gray-400 text-sm">Loading chart...</p>
         ) : (
-          <Bar data={chartData} options={{ responsive: true }} height={300} />
+          <Bar
+            data={salesChartData}
+            options={{ responsive: true }}
+            height={300}
+          />
         )}
       </div>
 
-      {/* Top Dishes */}
-      <div className="bg-white dark:bg-secondary p-6 rounded-lg shadow">
-        <h3 className="text-lg font-semibold mb-4">
+      {/* Top Dishes Chart */}
+      <div className="bg-white dark:bg-secondary p-6 rounded-xl shadow mb-10">
+        <h3 className="text-xl font-semibold mb-4">
           Top 5 Best-Selling Dishes
         </h3>
-        {topDishes.length === 0 ? (
+        {loading || topDishes.length === 0 ? (
           <p className="text-gray-400 text-sm">No data yet.</p>
         ) : (
-          <ul className="space-y-2">
-            {topDishes.map((dish, i) => (
-              <li
-                key={i}
-                className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2"
-              >
-                <span>{dish.name}</span>
-                <span className="text-sm text-gray-500">
-                  {dish.count} orders
-                </span>
-              </li>
-            ))}
-          </ul>
+          <Bar
+            data={topDishesChartData}
+            options={{ indexAxis: "y", responsive: true }}
+            height={300}
+          />
         )}
       </div>
     </div>

@@ -2,33 +2,15 @@ const mongoose = require("mongoose");
 
 const analyticsSchema = new mongoose.Schema(
   {
-    entityType: {
-      type: String,
-      enum: ["restaurant", "menu", "user", "order", "page"],
-      required: true,
-    },
-    entityId: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: false, // For general page views like "/home"
-    },
+    restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: "Restaurant" },
     eventType: {
       type: String,
-      enum: ["view", "click", "search", "order", "favorite"],
-      required: true,
+      enum: ["view", "click", "search", "favorite"],
     },
-    metadata: {
-      type: Object, // optional details like device info, referral, etc.
-    },
-    ipAddress: {
-      type: String,
-    },
-    userAgent: {
-      type: String,
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-    },
+    metadata: { type: Object }, // extra details if needed
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    ipAddress: String,
+    userAgent: String,
   },
   { timestamps: true }
 );

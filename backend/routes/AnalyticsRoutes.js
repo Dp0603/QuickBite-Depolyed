@@ -1,19 +1,50 @@
 const express = require("express");
 const router = express.Router();
+const { protect, authorize } = require("../middlewares/authMiddleware");
 
 const {
-  logAnalyticsEvent,
-  getAllAnalytics,
-  getEntityAnalytics,
+  getRestaurantOverview,
+  getSalesTrends,
+  getTopDishes,
+  getCustomerInsights,
+  getOrderHeatmap, // ✅ new controller
 } = require("../controllers/AnalyticsController");
 
-// 🎯 Log a new analytics event
-router.post("/", logAnalyticsEvent);
+// 📊 Analytics Routes
+router.get(
+  "/restaurant/overview",
+  protect,
+  authorize("restaurant", "admin"),
+  getRestaurantOverview
+);
 
-// 📊 Get all analytics (optional filters: entityType, eventType)
-router.get("/", getAllAnalytics);
+router.get(
+  "/restaurant/sales-trends",
+  protect,
+  authorize("restaurant", "admin"),
+  getSalesTrends
+);
 
-// 📈 Get analytics for a specific entity by ID
-router.get("/entity/:entityId", getEntityAnalytics);
+router.get(
+  "/restaurant/top-dishes",
+  protect,
+  authorize("restaurant", "admin"),
+  getTopDishes
+);
+
+router.get(
+  "/restaurant/customers",
+  protect,
+  authorize("restaurant", "admin"),
+  getCustomerInsights
+);
+
+// 🔥 Heatmap (Orders by Day & Hour)
+router.get(
+  "/restaurant/heatmap",
+  protect,
+  authorize("restaurant", "admin"),
+  getOrderHeatmap
+);
 
 module.exports = router;
