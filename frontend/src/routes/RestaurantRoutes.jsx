@@ -25,7 +25,7 @@ import RestaurantChatInbox from "../pages/restaurant/RestaurantChatInbox";
 
 // Analytics
 import RestaurantAnalytics from "../pages/restaurant/RestaurantAnalytics";
-// import RestaurantHeatmap from "../pages/restaurant/RestaurantHeatmap";
+import RestaurantHeatmap from "../pages/restaurant/RestaurantHeatmap";
 
 // Finance
 import RestaurantPayouts from "../pages/restaurant/RestaurantPayouts";
@@ -77,7 +77,7 @@ export const restaurantRoutes = (isOwnerMode) => [
 
   // Analytics
   <Route key="restaurant-analytics" path="analytics" element={<RestaurantAnalytics />} />,
-  // <Route key="restaurant-heatmap" path="analytics/heatmap" element={<RestaurantHeatmap />} />,
+  <Route key="restaurant-heatmap" path="analytics/heatmap" element={<RestaurantHeatmap />} />,
 
   // Finance (owner only)
   ...(isOwnerMode

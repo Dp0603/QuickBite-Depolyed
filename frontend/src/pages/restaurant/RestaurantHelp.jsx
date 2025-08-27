@@ -5,8 +5,9 @@ import {
   FaWhatsapp,
   FaEnvelope,
   FaUtensils,
-  FaClipboardList,
-  FaMoneyBillWave,
+  FaConciergeBell,
+  FaCreditCard,
+  FaGift,
   FaQuestionCircle,
   FaChevronDown,
   FaPaperclip,
@@ -19,8 +20,9 @@ import {
 // ===== Icon Mapping =====
 const iconMap = {
   FaUtensils: <FaUtensils />,
-  FaClipboardList: <FaClipboardList />,
-  FaMoneyBillWave: <FaMoneyBillWave />,
+  FaConciergeBell: <FaConciergeBell />,
+  FaCreditCard: <FaCreditCard />,
+  FaGift: <FaGift />,
 };
 
 // ===== Status Badge =====
@@ -58,19 +60,22 @@ const FAQAccordion = React.memo(({ data = [], searchTerm = "" }) => {
     return <p className="text-sm text-gray-500">No FAQs available.</p>;
   }
 
-  const highlight = (text) => {
-    if (!searchTerm) return text;
-    const regex = new RegExp(`(${searchTerm})`, "gi");
-    return text.split(regex).map((part, i) =>
-      regex.test(part) ? (
-        <span key={i} className="bg-yellow-200">
-          {part}
-        </span>
-      ) : (
-        part
-      )
-    );
-  };
+  const highlight = useCallback(
+    (text) => {
+      if (!searchTerm) return text;
+      const regex = new RegExp(`(${searchTerm})`, "gi");
+      return text.split(regex).map((part, i) =>
+        regex.test(part) ? (
+          <span key={i} className="bg-yellow-200">
+            {part}
+          </span>
+        ) : (
+          part
+        )
+      );
+    },
+    [searchTerm]
+  );
 
   return (
     <div className="space-y-4">
@@ -136,10 +141,8 @@ function useDebounce(value, delay = 300) {
 }
 
 // ===== Restaurant Help Component =====
-export default function RestaurantHelp({ currentRestaurant }) {
-  const storedRestaurant = JSON.parse(
-    localStorage.getItem("restaurant") || "{}"
-  );
+export default function RestaurantHelp({ currentUser }) {
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
@@ -150,11 +153,12 @@ export default function RestaurantHelp({ currentRestaurant }) {
   const [activeTab, setActiveTab] = useState("faqs");
 
   const [form, setForm] = useState({
-    name: storedRestaurant.name || currentRestaurant?.name || "",
-    email: storedRestaurant.email || currentRestaurant?.email || "",
+    name: storedUser.name || currentUser?.name || "",
+    email: storedUser.email || currentUser?.email || "",
     issueType: "",
     message: "",
   });
+
   const [attachment, setAttachment] = useState(null);
   const [preview, setPreview] = useState(null);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -166,53 +170,28 @@ export default function RestaurantHelp({ currentRestaurant }) {
 
   const MAX_FILE_SIZE_MB = 5;
 
-  // Auto-update form if localStorage changes
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const updatedRestaurant = JSON.parse(
-        localStorage.getItem("restaurant") || "{}"
-      );
-      setForm((prev) => ({
-        ...prev,
-        name: updatedRestaurant.name || currentRestaurant?.name || "",
-        email: updatedRestaurant.email || currentRestaurant?.email || "",
-      }));
-    };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, [currentRestaurant]);
-
-  // Fetch FAQs
+  // Fetch FAQs (restaurant-specific)
   useEffect(() => {
     let isMounted = true;
     setFaqLoading(true);
-    setFaqError(null);
-
-    fetch("/api/help-support/restaurant/faqs") // updated endpoint
+    fetch("/api/helpsupport/restaurant/faqs")
       .then((r) => (r.ok ? r.json() : Promise.reject(r)))
       .then((data) => {
-        if (!isMounted) return;
-        setFaqs(Array.isArray(data) ? data : []);
+        if (isMounted) setFaqs(Array.isArray(data) ? data : []);
       })
-      .catch(async (err) => {
-        if (!isMounted) return;
-        const msg =
-          (await err.json?.().catch(() => null))?.message ||
-          "Failed to load FAQs.";
-        setFaqError(msg);
-        setFaqs([]);
+      .catch(() => {
+        if (isMounted) {
+          setFaqError("Failed to load FAQs.");
+          setFaqs([]);
+        }
       })
-      .finally(() => {
-        if (!isMounted) return;
-        setFaqLoading(false);
-      });
-
+      .finally(() => isMounted && setFaqLoading(false));
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Filter FAQs with debounced search
+  // Filter FAQs
   const filteredFaqs = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     if (!q) return faqs;
@@ -230,20 +209,18 @@ export default function RestaurantHelp({ currentRestaurant }) {
       .filter(Boolean);
   }, [faqs, debouncedSearch]);
 
-  // ===== File attachment handler =====
+  // File handler
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-      alert(`File size should be less than ${MAX_FILE_SIZE_MB}MB`);
-      setAttachment(null);
-      setPreview(null);
+      setSubmitStatus({
+        type: "error",
+        text: `File size must be under ${MAX_FILE_SIZE_MB}MB.`,
+      });
       return;
     }
-
     setAttachment(file);
-
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onload = (ev) => setPreview(ev.target.result);
@@ -258,12 +235,11 @@ export default function RestaurantHelp({ currentRestaurant }) {
     setPreview(null);
   };
 
-  // ===== Form submission =====
+  // Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitStatus(null);
     setSubmitLoading(true);
-
     try {
       const fd = new FormData();
       fd.append("name", form.name);
@@ -272,29 +248,19 @@ export default function RestaurantHelp({ currentRestaurant }) {
       fd.append("message", form.message);
       if (attachment) fd.append("attachment", attachment);
 
-      const token = localStorage.getItem("restaurantToken");
-
-      const res = await fetch("/api/help-support/restaurant/submit", {
-        // updated endpoint
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/helpsupport/restaurant/submit", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
-
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setSubmitStatus({
           type: "success",
-          text: data.message || "Request submitted successfully!",
+          text: data.message || "Submitted!",
         });
-        setForm({
-          name: storedRestaurant.name || currentRestaurant?.name || "",
-          email: storedRestaurant.email || currentRestaurant?.email || "",
-          issueType: "",
-          message: "",
-        });
+        setForm({ ...form, issueType: "", message: "" });
         removeAttachment();
       } else {
         setSubmitStatus({
@@ -302,36 +268,26 @@ export default function RestaurantHelp({ currentRestaurant }) {
           text: data.message || "Submission failed.",
         });
       }
-    } catch (err) {
-      setSubmitStatus({
-        type: "error",
-        text: "Network error. Please try again.",
-      });
+    } catch {
+      setSubmitStatus({ type: "error", text: "Network error." });
     } finally {
       setSubmitLoading(false);
     }
   };
 
-  // ===== Load Tickets =====
+  // Tickets
   const loadTickets = useCallback(async () => {
     setTicketsLoading(true);
-    setTicketsError(null);
     try {
-      const token = localStorage.getItem("restaurantToken");
-      const res = await fetch("/api/help-support/restaurant/tickets", {
-        // updated endpoint
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const token = localStorage.getItem("token");
+      const res = await fetch("/api/helpsupport/restaurant/tickets", {
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      if (res.ok) {
-        setTickets(Array.isArray(data) ? data : []);
-      } else {
-        setTicketsError(data?.message || "Failed to load tickets.");
-      }
-    } catch (err) {
-      setTicketsError("Network error loading tickets.");
+      if (res.ok) setTickets(Array.isArray(data) ? data : []);
+      else setTicketsError(data?.message || "Failed to load tickets.");
+    } catch {
+      setTicketsError("Network error.");
     } finally {
       setTicketsLoading(false);
     }
@@ -341,22 +297,20 @@ export default function RestaurantHelp({ currentRestaurant }) {
     if (activeTab === "tickets") loadTickets();
   }, [activeTab, loadTickets]);
 
-  // ===== Render =====
   return (
     <div className="p-6 max-w-5xl mx-auto text-gray-800 dark:text-white">
-      {/* Hero */}
       <div className="bg-gradient-to-r from-primary to-primary-dark text-white p-6 rounded-lg mb-6 shadow-lg">
         <h1 className="text-3xl font-bold">Restaurant Help & Support</h1>
         <p className="text-sm text-white/80">
-          Get answers, track your tickets, or reach restaurant support
+          Get assistance with orders, reservations, or feedback
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex gap-2 mb-6">
         {[
           { key: "faqs", label: "FAQs" },
-          { key: "tickets", label: "My Tickets" },
+          { key: "tickets", label: "My Requests" },
         ].map((t) => (
           <button
             key={t.key}
@@ -404,7 +358,7 @@ export default function RestaurantHelp({ currentRestaurant }) {
       {activeTab === "tickets" && (
         <section className="mb-10">
           {ticketsLoading ? (
-            <p className="text-sm text-gray-500">Loading your tickets…</p>
+            <p className="text-sm text-gray-500">Loading your requests…</p>
           ) : ticketsError ? (
             <p className="text-sm text-red-500">{ticketsError}</p>
           ) : tickets.length ? (
@@ -452,7 +406,7 @@ export default function RestaurantHelp({ currentRestaurant }) {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">No tickets yet.</p>
+            <p className="text-sm text-gray-500">No requests yet.</p>
           )}
         </section>
       )}
@@ -477,7 +431,7 @@ export default function RestaurantHelp({ currentRestaurant }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 type="text"
-                placeholder="Restaurant Name"
+                placeholder="Your Name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600"
@@ -485,7 +439,7 @@ export default function RestaurantHelp({ currentRestaurant }) {
               />
               <input
                 type="email"
-                placeholder="Restaurant Email"
+                placeholder="Your Email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600"
@@ -500,11 +454,11 @@ export default function RestaurantHelp({ currentRestaurant }) {
               required
             >
               <option value="">Select Issue Type</option>
-              <option value="menu">Menu Management</option>
-              <option value="orders">Orders</option>
-              <option value="payments">Payments</option>
-              <option value="offers">Offers & Discounts</option>
-              <option value="technical">Technical</option>
+              <option value="reservation">Reservation</option>
+              <option value="order">Order</option>
+              <option value="payment">Payment</option>
+              <option value="menu">Menu</option>
+              <option value="service">Service</option>
               <option value="other">Other</option>
             </select>
 
@@ -534,7 +488,7 @@ export default function RestaurantHelp({ currentRestaurant }) {
               />
               {attachment && (
                 <span className="text-xs text-gray-500 truncate max-w-xs flex items-center gap-1">
-                  {attachment.name}{" "}
+                  {attachment.name}
                   <button
                     type="button"
                     onClick={removeAttachment}
@@ -559,38 +513,41 @@ export default function RestaurantHelp({ currentRestaurant }) {
               disabled={submitLoading}
               className="bg-primary text-white px-4 py-2 rounded shadow disabled:opacity-50"
             >
-              {submitLoading ? "Submitting..." : "Submit"}
-              <FaPaperPlane className="ml-2 inline-block" />
+              {submitLoading ? (
+                "Submitting…"
+              ) : (
+                <>
+                  <FaPaperPlane className="inline mr-2" /> Submit
+                </>
+              )}
             </button>
           </form>
         </div>
       </section>
 
       {/* Contact */}
-      <section className="bg-gray-50 dark:bg-secondary p-4 rounded-lg border dark:border-gray-700">
-        <h2 className="text-xl font-semibold mb-3">
-          Contact Restaurant Support
-        </h2>
+      <section className="bg-white dark:bg-secondary p-4 rounded-lg border dark:border-gray-700 shadow">
+        <h2 className="font-semibold text-lg mb-2">Contact Us Directly</h2>
         <div className="flex flex-wrap gap-4">
           <a
-            href="tel:+18005550123"
-            className="flex items-center gap-2 text-sm hover:underline"
+            href="tel:+15550001111"
+            className="flex items-center gap-2 text-primary hover:underline"
           >
-            <FaPhoneAlt /> +1 800 555 0123
+            <FaPhoneAlt /> +1 555 000 1111
           </a>
           <a
-            href="https://wa.me/18005550123"
+            href="https://wa.me/15550001111"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-sm hover:underline"
+            className="flex items-center gap-2 text-green-500 hover:underline"
           >
             <FaWhatsapp /> WhatsApp
           </a>
           <a
-            href="mailto:restaurant-support@foodyapp.com"
-            className="flex items-center gap-2 text-sm hover:underline"
+            href="mailto:restaurant.support@example.com"
+            className="flex items-center gap-2 text-blue-500 hover:underline"
           >
-            <FaEnvelope /> restaurant-support@foodyapp.com
+            <FaEnvelope /> restaurant.support@example.com
           </a>
         </div>
       </section>
