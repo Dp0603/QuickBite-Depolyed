@@ -26,7 +26,7 @@ const restaurantLinks = [
   { label: "Menu Scheduler", to: "menu-scheduler", icon: <FaCalendarAlt /> },
   { label: "Availability", to: "availability-toggle", icon: <FaToggleOn /> },
   { label: "Offers", to: "offers-manager", icon: <FaGift /> },
-  { label: "Delivery Status", to: "delivery-status", icon: <FaTruck /> },
+  { label: "Delivery", to: "delivery", icon: <FaTruck /> },
   { label: "Reviews", to: "reviews", icon: <FaStar /> },
 
   // Analytics is handled separately with dropdown
@@ -34,6 +34,7 @@ const restaurantLinks = [
 
   // Owner-only routes
   { label: "Payouts", to: "payouts", icon: <FaFileAlt />, ownerOnly: true },
+  { label: "Staff", to: "staff", icon: <FaUser />, ownerOnly: true }, // ✅ added
   {
     label: "Chat Inbox",
     to: "chat-inbox",

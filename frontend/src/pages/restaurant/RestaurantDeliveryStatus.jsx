@@ -1,8 +1,9 @@
+// src/pages/restaurant/RestaurantDeliveryStatus.jsx
 import React, { useEffect, useState, useContext } from "react";
 import { FaMotorcycle, FaMapMarkerAlt } from "react-icons/fa";
-import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
-import MiniMap from "../../components/MiniMap"; // ✅ Make sure this file exists
+import API from "../../api/axios"; // ✅ use global axios instance
+import MiniMap from "../../components/MiniMap";
 
 const statusBadge = {
   Pending: "bg-gray-100 text-gray-600",
@@ -15,41 +16,36 @@ const statusBadge = {
 };
 
 const RestaurantDeliveryStatus = () => {
-  const { user, token } = useContext(AuthContext);
+  const { user } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("All");
   const [visibleMapOrderId, setVisibleMapOrderId] = useState(null);
 
   // 🔄 Fetch restaurant's orders
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await axios.get(`/api/orders/restaurant/${user._id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setOrders(res.data.data);
-      } catch (err) {
-        console.error("Error fetching orders:", err);
-      }
-    };
+  const fetchOrders = async () => {
+    try {
+      const res = await API.get(`/orders/orders/restaurant/${user._id}`); // ✅ matches backend
+      setOrders(res.data.data || []);
+    } catch (err) {
+      console.error(
+        "❌ Error fetching orders:",
+        err.response?.data || err.message
+      );
+    }
+  };
 
+  useEffect(() => {
     if (user?._id) {
       fetchOrders();
       const interval = setInterval(fetchOrders, 30000); // Auto-refresh every 30 sec
       return () => clearInterval(interval);
     }
-  }, [user, token]);
+  }, [user]);
 
   // ✏️ Update order status
   const handleStatusChange = async (orderId, newStatus) => {
     try {
-      await axios.put(
-        `/api/orders/${orderId}/status`,
-        { status: newStatus },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await API.put(`/orders/orders/status/${orderId}`, { status: newStatus });
 
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
@@ -57,14 +53,30 @@ const RestaurantDeliveryStatus = () => {
         )
       );
     } catch (err) {
-      console.error("Failed to update order status:", err);
+      console.error(
+        "❌ Failed to update order status:",
+        err.response?.data || err.message
+      );
     }
   };
 
+  // Filtered orders
   const filteredOrders =
     filter === "All"
       ? orders
       : orders.filter((order) => order.status === filter);
+
+  // 📌 Format dish summary nicely
+  const getDishSummary = (items) => {
+    if (!items?.length) return "No items";
+    const mapped = items.map(
+      (item) => `${item.menuItemId?.name || "Item"} x${item.quantity}`
+    );
+    if (mapped.length > 3) {
+      return mapped.slice(0, 3).join(", ") + `, +${mapped.length - 3} more`;
+    }
+    return mapped.join(", ");
+  };
 
   return (
     <div className="p-6 text-gray-800 dark:text-white">
@@ -99,11 +111,7 @@ const RestaurantDeliveryStatus = () => {
           {filteredOrders.map((order) => {
             const badgeStyle =
               statusBadge[order.status] || statusBadge["default"];
-            const dishSummary = order.items
-              .map(
-                (item) => `${item.menuItemId?.name || "Item"} x${item.quantity}`
-              )
-              .join(", ");
+            const dishSummary = getDishSummary(order.items);
 
             return (
               <div
@@ -142,7 +150,7 @@ const RestaurantDeliveryStatus = () => {
                     {order.status}
                   </span>
 
-                  {/* Preparing → Ready for Pickup */}
+                  {/* Status actions */}
                   {order.status === "Preparing" && (
                     <button
                       onClick={() =>
@@ -151,6 +159,26 @@ const RestaurantDeliveryStatus = () => {
                       className="mt-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
                     >
                       Mark as Ready for Pickup
+                    </button>
+                  )}
+
+                  {order.status === "Ready for Pickup" && (
+                    <button
+                      onClick={() =>
+                        handleStatusChange(order._id, "Out for Delivery")
+                      }
+                      className="mt-2 bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
+                    >
+                      Mark as Out for Delivery
+                    </button>
+                  )}
+
+                  {order.status === "Out for Delivery" && (
+                    <button
+                      onClick={() => handleStatusChange(order._id, "Delivered")}
+                      className="mt-2 bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                    >
+                      Mark as Delivered
                     </button>
                   )}
 
@@ -177,34 +205,43 @@ const RestaurantDeliveryStatus = () => {
                   )}
 
                   {/* 🗺️ Track Order */}
-                  {order.status === "Out for Delivery" &&
-                    order.riderId?.location?.lat &&
-                    order.riderId?.location?.lng && (
-                      <div className="mt-3">
-                        <button
-                          onClick={() =>
-                            setVisibleMapOrderId(
-                              visibleMapOrderId === order._id ? null : order._id
-                            )
-                          }
-                          className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
-                        >
-                          {visibleMapOrderId === order._id
-                            ? "Hide Map"
-                            : "Track Order"}
-                        </button>
+                  {order.status === "Out for Delivery" && (
+                    <div className="mt-3">
+                      {order.riderId?.location?.lat &&
+                      order.riderId?.location?.lng ? (
+                        <>
+                          <button
+                            onClick={() =>
+                              setVisibleMapOrderId(
+                                visibleMapOrderId === order._id
+                                  ? null
+                                  : order._id
+                              )
+                            }
+                            className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm"
+                          >
+                            {visibleMapOrderId === order._id
+                              ? "Hide Map"
+                              : "Track Order"}
+                          </button>
 
-                        {visibleMapOrderId === order._id && (
-                          <div className="mt-2">
-                            <MiniMap
-                              lat={order.riderId.location.lat}
-                              lng={order.riderId.location.lng}
-                              riderName={order.riderId.name}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
+                          {visibleMapOrderId === order._id && (
+                            <div className="mt-2">
+                              <MiniMap
+                                lat={order.riderId.location.lat}
+                                lng={order.riderId.location.lng}
+                                riderName={order.riderId.name}
+                              />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-gray-400 italic">
+                          Rider location not available
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );

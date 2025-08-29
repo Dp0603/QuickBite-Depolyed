@@ -12,7 +12,7 @@ export default function Partner() {
         <title>QuickBite | Partner with Us</title>
         <meta
           name="description"
-          content="Join QuickBite as a restaurant partner and grow your business."
+          content="Join QuickBite as a restaurant partner or staff member and grow your business."
         />
       </Helmet>
 
@@ -32,13 +32,24 @@ export default function Partner() {
               thousands of customers daily. Full control over your menu and
               orders.
             </p>
-            <Link
-              to="/partner/join"
-              className="bg-accent text-primary px-6 py-3 rounded-full font-semibold shadow-brand hover:shadow-brand-lg transition"
-            >
-              Get Started
-            </Link>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link
+                to="/partner/join"
+                className="bg-accent text-primary px-6 py-3 rounded-full font-semibold shadow-brand hover:shadow-brand-lg transition"
+              >
+                Restaurant Owner Registration
+              </Link>
+
+              <Link
+                to="/partner/staff-join"
+                className="bg-secondary text-white px-6 py-3 rounded-full font-semibold shadow-brand hover:shadow-brand-lg transition"
+              >
+                Staff Registration
+              </Link>
+            </div>
           </div>
+
           <div className="lg:w-1/2">
             <img
               src="https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=800&q=80"
@@ -101,17 +112,17 @@ export default function Partner() {
               {
                 icon: "📝",
                 title: "Sign Up",
-                desc: "Provide your restaurant and owner details.",
+                desc: "Provide your details as an owner or staff member.",
               },
               {
                 icon: "📄",
                 title: "Verify",
-                desc: "Upload licenses, FSSAI, PAN, and bank details.",
+                desc: "Upload licenses, ID, or certifications for approval.",
               },
               {
                 icon: "🚀",
                 title: "Start Receiving Orders",
-                desc: "Get approved and go live on QuickBite.",
+                desc: "Get approved and start managing or serving your restaurant.",
               },
             ].map((step, i) => (
               <div
@@ -132,14 +143,22 @@ export default function Partner() {
       {/* CTA */}
       <section className="w-full bg-primary text-white py-16 px-4 sm:px-6 lg:px-12 text-center">
         <h2 className="text-3xl font-bold mb-6">
-          Ready to Grow Your Restaurant?
+          Ready to Grow Your Restaurant or Join as Staff?
         </h2>
-        <Link
-          to="/partner/join"
-          className="bg-accent text-primary px-8 py-4 rounded-full font-semibold shadow-brand hover:shadow-brand-lg transition"
-        >
-          Get Started Now
-        </Link>
+        <div className="flex justify-center gap-4 flex-wrap">
+          <Link
+            to="/partner/join"
+            className="bg-accent text-primary px-8 py-4 rounded-full font-semibold shadow-brand hover:shadow-brand-lg transition"
+          >
+            Restaurant Owner
+          </Link>
+          <Link
+            to="/partner/staff-join"
+            className="bg-secondary text-white px-8 py-4 rounded-full font-semibold shadow-brand hover:shadow-brand-lg transition"
+          >
+            Staff
+          </Link>
+        </div>
       </section>
 
       {/* Footer */}
