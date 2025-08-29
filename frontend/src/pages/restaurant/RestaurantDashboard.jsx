@@ -26,7 +26,9 @@ const RestaurantDashboard = () => {
 
         // only fetch orders if approved
         if (profileRes.data.restaurant?.status === "approved") {
-          const orderRes = await API.get("/restaurant/orders");
+          const orderRes = await API.get(
+            `/orders/orders/restaurant/${profileRes.data.restaurant._id}`
+          );
           setOrders(orderRes.data.data || []);
         }
       } catch (err) {
