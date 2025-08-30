@@ -10,7 +10,7 @@ export default function RestaurantRegistration() {
   const [polling, setPolling] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [token, setToken] = useState("");
-  const [user, setUser] = useState(null); // store logged-in user
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -55,7 +55,7 @@ export default function RestaurantRegistration() {
         name: formData.ownerName,
         email: formData.email,
         password: formData.password,
-        role: "restaurant",
+        role: "restaurant", // register as restaurant
       });
 
       toast.success("Verification email sent! Check your inbox.");
@@ -104,7 +104,6 @@ export default function RestaurantRegistration() {
         }
       }, 5000);
 
-      // Timeout after 5 minutes
       timeout = setTimeout(() => {
         clearInterval(interval);
         setPolling(false);
@@ -118,10 +117,11 @@ export default function RestaurantRegistration() {
     };
   }, [polling, userEmail]);
 
-  // ---------------- Attach token to API requests ----------------
+  // ---------------- Attach token globally ----------------
   useEffect(() => {
-    if (token) {
-      API.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      API.defaults.headers.common["Authorization"] = `Bearer ${storedToken}`;
     }
   }, [token]);
 
@@ -130,11 +130,7 @@ export default function RestaurantRegistration() {
     e.preventDefault();
     try {
       setLoading(true);
-      const ownerId =
-        user?._id || JSON.parse(localStorage.getItem("user"))?._id;
-
       await API.post("/restaurants/restaurants/create", {
-        ownerId, // link restaurant to user
         name: formData.restaurantName,
         phoneNumber: formData.phoneNumber,
         address: formData.address,
@@ -163,11 +159,7 @@ export default function RestaurantRegistration() {
     e.preventDefault();
     try {
       setLoading(true);
-      const ownerId =
-        user?._id || JSON.parse(localStorage.getItem("user"))?._id;
-
       const { data } = await API.put("/restaurants/restaurants/update", {
-        ownerId,
         licenseNumber: formData.licenseNumber,
         gstNumber: formData.gstNumber,
         logo: formData.logo,
@@ -264,7 +256,7 @@ export default function RestaurantRegistration() {
           </form>
         )}
 
-        {/* Waiting for Verification */}
+        {/* Waiting */}
         {step === "waiting" && (
           <div className="text-center p-6">
             <p className="mb-4 font-semibold text-lg">

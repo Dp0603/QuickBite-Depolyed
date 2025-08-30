@@ -21,22 +21,20 @@ const CustomerRestaurantMenu = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [cart, setCart] = useState({});
   const [loading, setLoading] = useState(true);
-  const [menuLoaded, setMenuLoaded] = useState(false);
-  const [cartLoaded, setCartLoaded] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
-  const [favoriteMenuItems, setFavoriteMenuItems] = useState([]); // 🍽️ Menu item favorites
+  const [favoriteMenuItems, setFavoriteMenuItems] = useState([]);
 
   // 🍴 Fetch Restaurant & Menu
   useEffect(() => {
     const fetchRestaurantAndMenu = async () => {
       try {
         const [resRestaurant, resMenu] = await Promise.all([
-          API.get(`/restaurants/restaurant/public/${restaurantId}`),
-          API.get(`/menu/restaurant/${restaurantId}`),
+          API.get(`/restaurants/restaurants/${restaurantId}`),
+          API.get(`/menu/restaurant/${restaurantId}/menu`),
         ]);
+
         setRestaurant(resRestaurant.data.restaurant);
         setMenuItems(resMenu.data.menu || []);
-        setMenuLoaded(true);
       } catch (err) {
         console.error("❌ Failed to fetch restaurant or menu:", err);
       } finally {
@@ -47,46 +45,118 @@ const CustomerRestaurantMenu = () => {
     if (restaurantId) fetchRestaurantAndMenu();
   }, [restaurantId]);
 
-  // 📥 Check if restaurant is in user's favorites
+  // 📥 Fetch favorites
   useEffect(() => {
-    const checkIfFavorite = async () => {
+    const fetchFavorites = async () => {
       if (!user?._id) return;
-
       try {
-        const res = await API.get(`/favorites/favorites/${user._id}`);
-        const favoriteIds = res.data.favorites.map((r) => r._id);
-        setIsFavorite(favoriteIds.includes(restaurantId));
+        const [resRestaurants, resMenuItems] = await Promise.all([
+          API.get(`/favorites/favorites/${user._id}`),
+          API.get(`/favorites/favorites/menu/${user._id}`),
+        ]);
+
+        const favoriteRestaurantIds = resRestaurants.data.favorites.map(
+          (r) => r._id
+        );
+        setIsFavorite(favoriteRestaurantIds.includes(restaurantId));
+
+        const menuItemIds = resMenuItems.data.favorites.map((m) => m._id);
+        setFavoriteMenuItems(menuItemIds);
       } catch (err) {
         console.error("❌ Error fetching favorites:", err);
       }
     };
 
-    checkIfFavorite();
+    fetchFavorites();
   }, [user?._id, restaurantId]);
 
-  // 🍽️ Fetch user's favorite menu items
+  // 🛒 Fetch Cart
+  const fetchCart = async () => {
+    if (!user?._id) return;
+
+    try {
+      const res = await API.get(`/cart/${user._id}/${restaurantId}`);
+      const cartItems = res.data.cart.items || [];
+      const newCart = {};
+
+      cartItems.forEach((item) => {
+        newCart[item.menuItem._id] = {
+          quantity: item.quantity,
+          item: item.menuItem,
+        };
+      });
+
+      setCart(newCart);
+    } catch (err) {
+      console.error("❌ Failed to fetch cart:", err.response?.data || err);
+    }
+  };
+
   useEffect(() => {
-    const fetchFavoriteMenuItems = async () => {
-      if (!user?._id) return;
-      try {
-        const res = await API.get(`/favorites/favorites/menu/${user._id}`);
-        const menuItemIds = res.data.favorites.map((m) => m._id);
-        setFavoriteMenuItems(menuItemIds);
-      } catch (err) {
-        console.error("❌ Error fetching favorite menu items:", err);
+    fetchCart();
+  }, [user?._id, restaurantId]);
+
+  // ✅ Handle Add to Cart with restaurant switch check
+  const handleAdd = async (itemId) => {
+    if (!user?._id) return alert("Please login to add to cart.");
+
+    // Check if cart has items from another restaurant
+    const cartRestaurants = Object.values(cart).map((c) => c.item.restaurantId);
+    if (cartRestaurants.length && !cartRestaurants.includes(restaurantId)) {
+      if (
+        !window.confirm(
+          "Switching restaurants will clear your current cart. Proceed?"
+        )
+      ) {
+        return;
       }
-    };
-
-    fetchFavoriteMenuItems();
-  }, [user?._id]);
-
-  // ❤️ Toggle favorite for restaurant
-  const toggleFavorite = async () => {
-    if (!user?._id) {
-      alert("Please login to use favorites.");
-      return;
+      // Clear previous cart
+      try {
+        await API.delete(`/cart/${user._id}/${cartRestaurants[0]}`);
+        setCart({});
+      } catch (err) {
+        console.error(
+          "❌ Failed to clear old cart:",
+          err.response?.data || err
+        );
+        return;
+      }
     }
 
+    try {
+      const quantity = (cart[itemId]?.quantity || 0) + 1;
+
+      await API.post(`/cart/${user._id}/${restaurantId}/item/${itemId}`, {
+        quantity,
+      });
+      fetchCart();
+    } catch (err) {
+      console.error("❌ Error adding to cart:", err.response?.data || err);
+    }
+  };
+
+  const handleRemove = async (itemId) => {
+    try {
+      const currentQty = cart[itemId]?.quantity || 0;
+      const newQty = currentQty - 1;
+
+      if (newQty > 0) {
+        await API.post(`/cart/${user._id}/${restaurantId}/item/${itemId}`, {
+          quantity: newQty,
+        });
+      } else {
+        await API.delete(`/cart/${user._id}/${restaurantId}/item/${itemId}`);
+      }
+
+      fetchCart();
+    } catch (err) {
+      console.error("❌ Error removing from cart:", err.response?.data || err);
+    }
+  };
+
+  // ❤️ Toggle restaurant favorite
+  const toggleFavorite = async () => {
+    if (!user?._id) return alert("Please login to use favorites.");
     try {
       if (isFavorite) {
         await API.delete("/favorites/favorites", {
@@ -104,16 +174,11 @@ const CustomerRestaurantMenu = () => {
     }
   };
 
-  // ❤️ Toggle favorite for a menu item
+  // ❤️ Toggle menu item favorite
   const toggleMenuItemFavorite = async (menuItemId) => {
-    if (!user?._id) {
-      alert("Please login to use favorites.");
-      return;
-    }
-
+    if (!user?._id) return alert("Please login to use favorites.");
     try {
       const isFav = favoriteMenuItems.includes(menuItemId);
-
       if (isFav) {
         await API.delete("/favorites/favorites/menu", {
           data: { userId: user._id, menuItemId },
@@ -131,102 +196,6 @@ const CustomerRestaurantMenu = () => {
         "❌ Failed to toggle menu item favorite:",
         err.response?.data || err
       );
-    }
-  };
-
-  // 🛒 Fetch Cart AFTER Menu is Loaded
-  useEffect(() => {
-    const fetchCart = async () => {
-      try {
-        const res = await API.get(`/cart/${user._id}`);
-        const cartItems = res.data.cart.items || [];
-
-        const newCart = {};
-        cartItems.forEach((item) => {
-          const matchedItem = menuItems.find((m) => m._id === item.menuItemId);
-          if (matchedItem) {
-            newCart[item.menuItemId] = {
-              quantity: item.quantity,
-              item: matchedItem,
-            };
-          }
-        });
-
-        setCart(newCart);
-        setCartLoaded(true);
-      } catch (err) {
-        console.error("❌ Failed to fetch cart:", err.response?.data || err);
-      }
-    };
-
-    if (user?._id && menuLoaded) {
-      fetchCart();
-    }
-  }, [user?._id, menuLoaded, location.pathname]);
-
-  // ➕ Add to Cart
-  const handleAdd = async (itemId) => {
-    try {
-      const quantity = (cart[itemId]?.quantity || 0) + 1;
-
-      await API.post("/cart", {
-        userId: user._id,
-        restaurantId,
-        menuItemId: itemId,
-        quantity,
-      });
-
-      const item = menuItems.find((m) => m._id === itemId);
-      if (!item) return;
-
-      setCart((prev) => ({
-        ...prev,
-        [itemId]: {
-          quantity,
-          item,
-        },
-      }));
-    } catch (err) {
-      console.error("❌ Error adding to cart:", err.response?.data || err);
-    }
-  };
-
-  // ➖ Remove from Cart
-  const handleRemove = async (itemId) => {
-    try {
-      const currentQty = cart[itemId]?.quantity || 0;
-      const newQty = currentQty - 1;
-
-      if (newQty > 0) {
-        await API.post("/cart", {
-          userId: user._id,
-          restaurantId,
-          menuItemId: itemId,
-          quantity: newQty,
-        });
-      } else {
-        await API.delete("/cart/item", {
-          data: {
-            userId: user._id,
-            menuItemId: itemId,
-          },
-        });
-      }
-
-      setCart((prev) => {
-        const updated = { ...prev };
-        if (newQty > 0) {
-          updated[itemId] = {
-            ...updated[itemId],
-            quantity: newQty,
-          };
-        } else {
-          delete updated[itemId];
-        }
-        return updated;
-      });
-    } catch (err) {
-      console.error("❌ Error removing from cart:", err.response?.data || err);
     }
   };
 
@@ -256,7 +225,6 @@ const CustomerRestaurantMenu = () => {
               </span>
               <span className="text-gray-400">₹40 Delivery Fee</span>
             </div>
-            {/* ❤️ Favorite Toggle Button */}
             <div className="mt-3">
               <button
                 onClick={toggleFavorite}
@@ -289,7 +257,6 @@ const CustomerRestaurantMenu = () => {
                   alt={item.name}
                   className="w-full h-36 object-cover rounded-md mb-3"
                 />
-                {/* ❤️ Menu Item Favorite Icon */}
                 <button
                   onClick={() => toggleMenuItemFavorite(item._id)}
                   className="absolute top-2 right-2 text-xl text-red-500 hover:scale-110 transition"
@@ -348,18 +315,14 @@ const CustomerRestaurantMenu = () => {
       </div>
 
       {/* 🛒 Floating Cart Summary */}
-      {menuLoaded &&
-        cartLoaded &&
-        Object.keys(cart).length > 0 &&
+      {Object.keys(cart).length > 0 &&
         (() => {
           let totalItems = 0;
           let subtotal = 0;
-
           for (const { quantity, item } of Object.values(cart)) {
             totalItems += quantity;
             subtotal += item.price * quantity;
           }
-
           return (
             totalItems > 0 && (
               <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary text-white shadow-lg px-6 py-3 rounded-full flex items-center gap-6 z-50">
