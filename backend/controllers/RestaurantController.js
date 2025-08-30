@@ -3,7 +3,7 @@ const User = require("../models/UserModel");
 const Restaurant = require("../models/RestaurantModel");
 const { isValidTime } = require("../utils/validateTime");
 
-// 🔑 helper → generate token
+// 🔑 Helper: Generate JWT
 const generateToken = (user) => {
   return jwt.sign(
     { userId: user._id, role: user.role },
@@ -12,44 +12,60 @@ const generateToken = (user) => {
   );
 };
 
-// 🟢 Owner: Create Profile
+// 🟢 Final Step: Create Restaurant Profile (linked to user)
 const createProfile = async (req, res) => {
   try {
     const ownerId = req.user._id;
 
+    // Check if restaurant already exists for this owner
     const existing = await Restaurant.findOne({ owner: ownerId });
     if (existing) {
-      return res.status(400).json({ message: "Profile already exists" });
+      return res
+        .status(400)
+        .json({ message: "Restaurant profile already exists" });
     }
 
+    // Create restaurant profile
     const restaurant = await Restaurant.create({
-      ...req.body,
       owner: ownerId,
+      name: req.body.name,
+      phoneNumber: req.body.phoneNumber,
+      address: req.body.address,
+      latitude: req.body.latitude,
+      longitude: req.body.longitude,
+      cuisines: req.body.cuisines,
+      logo: req.body.logo,
+      coverImage: req.body.coverImage,
+      licenseNumber: req.body.licenseNumber,
+      gstNumber: req.body.gstNumber,
+      bankAccount: req.body.bankAccount,
       status: "pending",
       isActive: true,
     });
 
-    // ✅ Ensure role = restaurant
+    // Ensure user role is "restaurant"
     const user = await User.findById(ownerId);
     if (user.role !== "restaurant") {
       user.role = "restaurant";
       await user.save();
     }
 
-    // ✅ Fresh token
+    // Generate fresh token
     const token = generateToken(user);
 
-    res.status(201).json({
-      message: "Restaurant profile created. Pending admin approval.",
+    return res.status(201).json({
+      message:
+        "Restaurant profile created successfully. Pending admin approval.",
       restaurant,
       token,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Error in createProfile:", error);
+    return res.status(500).json({ message: error.message });
   }
 };
 
-// 🟢 Owner: Update Profile
+// 🟢 Update Profile
 const updateProfile = async (req, res) => {
   try {
     const ownerId = req.user._id;
@@ -64,27 +80,17 @@ const updateProfile = async (req, res) => {
       return res.status(404).json({ message: "Restaurant profile not found" });
     }
 
-    // 🔄 Ensure role = restaurant
-    const user = await User.findById(ownerId);
-    if (user.role !== "restaurant") {
-      user.role = "restaurant";
-      await user.save();
-    }
-
-    // 🔑 Only issue new token if role was changed
-    const token = user.role === "restaurant" ? generateToken(user) : null;
-
     res.json({
       message: "Restaurant profile updated successfully",
       restaurant,
-      ...(token && { token }),
     });
   } catch (error) {
+    console.error("Error in updateProfile:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// 🟢 Owner: Get My Profile
+// 🟢 Get My Profile
 const getMyProfile = async (req, res) => {
   try {
     const ownerId = req.user._id;
@@ -96,6 +102,7 @@ const getMyProfile = async (req, res) => {
 
     res.status(200).json({ restaurant });
   } catch (error) {
+    console.error("Error in getMyProfile:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -109,6 +116,7 @@ const getAllRestaurants = async (req, res) => {
     });
     res.status(200).json({ restaurants });
   } catch (error) {
+    console.error("Error in getAllRestaurants:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -127,6 +135,7 @@ const getRestaurantById = async (req, res) => {
 
     res.status(200).json({ restaurant });
   } catch (error) {
+    console.error("Error in getRestaurantById:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -153,6 +162,7 @@ const changeStatus = async (req, res) => {
 
     res.status(200).json({ message: `Restaurant ${status}`, restaurant });
   } catch (error) {
+    console.error("Error in changeStatus:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -168,6 +178,7 @@ const deleteRestaurant = async (req, res) => {
 
     res.status(200).json({ message: "Restaurant deleted successfully" });
   } catch (error) {
+    console.error("Error in deleteRestaurant:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -176,8 +187,9 @@ const deleteRestaurant = async (req, res) => {
 const getAvailability = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOne({ owner: req.user._id });
-    if (!restaurant)
+    if (!restaurant) {
       return res.status(404).json({ message: "Profile not found" });
+    }
 
     res.status(200).json({
       data: {
@@ -190,6 +202,7 @@ const getAvailability = async (req, res) => {
       },
     });
   } catch (err) {
+    console.error("Error in getAvailability:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -207,21 +220,18 @@ const updateAvailability = async (req, res) => {
       overrides,
     } = req.body;
 
-    // ✅ Top-level fields
     if (typeof isOnline === "boolean") updates.isOnline = isOnline;
     if (typeof autoAvailabilityEnabled === "boolean")
       updates.autoAvailabilityEnabled = autoAvailabilityEnabled;
     if (typeof autoAcceptOrders === "boolean")
       updates.autoAcceptOrders = autoAcceptOrders;
 
-    // ✅ Weekly Availability (partial update allowed)
+    // ✅ Weekly availability validation
     if (weeklyAvailability && Array.isArray(weeklyAvailability)) {
       for (let dayObj of weeklyAvailability) {
         const { day, open, close, shifts } = dayObj;
-
         if (!day) return res.status(400).json({ message: "Day is required" });
 
-        // Validate open/close
         if (open && !isValidTime(open)) {
           return res
             .status(400)
@@ -233,7 +243,6 @@ const updateAvailability = async (req, res) => {
             .json({ message: `Invalid close time for ${day}` });
         }
 
-        // Validate shifts
         if (shifts && Array.isArray(shifts)) {
           for (let shift of shifts) {
             if (shift.start && !isValidTime(shift.start)) {
@@ -249,7 +258,6 @@ const updateAvailability = async (req, res) => {
           }
         }
 
-        // Build partial update path
         updates[`weeklyAvailability.${day}`] = {};
         if (open) updates[`weeklyAvailability.${day}.open`] = open;
         if (close) updates[`weeklyAvailability.${day}.close`] = close;
@@ -257,12 +265,9 @@ const updateAvailability = async (req, res) => {
       }
     }
 
-    // ✅ Holidays
     if (holidays && Array.isArray(holidays)) {
       updates.holidays = holidays;
     }
-
-    // ✅ Overrides
     if (overrides && Array.isArray(overrides)) {
       updates.overrides = overrides;
     }
@@ -273,16 +278,18 @@ const updateAvailability = async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    if (!restaurant)
+    if (!restaurant) {
       return res.status(404).json({ message: "Profile not found" });
+    }
 
     res.status(200).json({ message: "Availability updated", data: restaurant });
   } catch (err) {
+    console.error("Error in updateAvailability:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get current restaurant settings
+// 🟢 Get Restaurant Settings
 const getRestaurantSettings = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOne({ owner: req.user._id }).select(
@@ -306,7 +313,7 @@ const getRestaurantSettings = async (req, res) => {
   }
 };
 
-// 🆕 Update Order Settings
+// 🆕 Settings Update Handlers
 const updateOrderSettings = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOneAndUpdate(
@@ -325,7 +332,6 @@ const updateOrderSettings = async (req, res) => {
   }
 };
 
-// 🆕 Update Delivery Settings
 const updateDeliverySettings = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOneAndUpdate(
@@ -344,7 +350,6 @@ const updateDeliverySettings = async (req, res) => {
   }
 };
 
-// 🆕 Update Payout Settings (finance)
 const updatePayoutSettings = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOneAndUpdate(
@@ -363,7 +368,6 @@ const updatePayoutSettings = async (req, res) => {
   }
 };
 
-// 🆕 Update Notification Settings
 const updateNotificationSettings = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOneAndUpdate(
@@ -382,7 +386,6 @@ const updateNotificationSettings = async (req, res) => {
   }
 };
 
-// 🆕 Update Security Settings
 const updateSecuritySettings = async (req, res) => {
   try {
     const restaurant = await Restaurant.findOneAndUpdate(
@@ -406,17 +409,17 @@ module.exports = {
   updateProfile,
   getMyProfile,
   getAllRestaurants,
+  getRestaurantById,
+  changeStatus,
+  deleteRestaurant,
+  getAvailability,
+  updateAvailability,
   getRestaurantSettings,
   updateOrderSettings,
   updateDeliverySettings,
   updatePayoutSettings,
   updateNotificationSettings,
   updateSecuritySettings,
-  getRestaurantById,
-  changeStatus,
-  deleteRestaurant,
-  getAvailability,
-  updateAvailability,
 };
 
 //OLD

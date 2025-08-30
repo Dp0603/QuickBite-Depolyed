@@ -1,17 +1,26 @@
 const Cart = require("../models/CartModel");
 
-// ➕ Add or update cart item
+/**
+ * ➕ Add or update cart item
+ * URL:  /api/cart/:userId/:restaurantId/item/:menuItemId
+ * Body: { quantity, note }
+ */
 const addOrUpdateCartItem = async (req, res) => {
   try {
-    const { userId, restaurantId, menuItemId, quantity, note } = req.body;
+    const { userId, restaurantId, menuItemId } = req.params;
+    const { quantity, note } = req.body;
 
-    if (!userId || !restaurantId || !menuItemId || !quantity) {
-      return res.status(400).json({ message: "Missing required fields" });
+    if (!quantity || quantity < 1) {
+      return res.status(400).json({ message: "Quantity must be at least 1" });
     }
 
+    // Ensure cart exists for this user + restaurant
     let cart = await Cart.findOne({ userId, restaurantId });
 
     if (!cart) {
+      // Delete any carts for other restaurants
+      await Cart.deleteMany({ userId, restaurantId: { $ne: restaurantId } });
+
       cart = new Cart({
         userId,
         restaurantId,
@@ -47,14 +56,29 @@ const addOrUpdateCartItem = async (req, res) => {
   }
 };
 
-// 🛒 Get cart for a user
+/**
+ * 🛒 Get (or create) cart for a user + restaurant
+ * URL: /api/cart/:userId/:restaurantId
+ */
 const getUserCart = async (req, res) => {
   try {
-    const cart = await Cart.findOne({ userId: req.params.userId })
+    const { userId, restaurantId } = req.params;
+
+    // Delete other carts for different restaurants
+    await Cart.deleteMany({ userId, restaurantId: { $ne: restaurantId } });
+
+    let cart = await Cart.findOne({ userId, restaurantId })
       .populate("items.menuItem")
       .populate("restaurantId", "name logo");
 
-    if (!cart) return res.status(404).json({ message: "Cart not found" });
+    if (!cart) {
+      cart = new Cart({ userId, restaurantId, items: [] });
+      await cart.save();
+
+      cart = await Cart.findById(cart._id)
+        .populate("items.menuItem")
+        .populate("restaurantId", "name logo");
+    }
 
     res.status(200).json({
       message: "Cart fetched successfully",
@@ -67,12 +91,15 @@ const getUserCart = async (req, res) => {
   }
 };
 
-// ❌ Remove a specific item
+/**
+ * ❌ Remove a specific item
+ * URL: /api/cart/:userId/:restaurantId/item/:menuItemId
+ */
 const removeCartItem = async (req, res) => {
   try {
-    const { userId, menuItemId } = req.body;
+    const { userId, restaurantId, menuItemId } = req.params;
 
-    const cart = await Cart.findOne({ userId });
+    const cart = await Cart.findOne({ userId, restaurantId });
     if (!cart) return res.status(404).json({ message: "Cart not found" });
 
     cart.items = cart.items.filter(
@@ -96,10 +123,15 @@ const removeCartItem = async (req, res) => {
   }
 };
 
-// 🧹 Clear entire cart
+/**
+ * 🧹 Clear entire cart (for a restaurant)
+ * URL: /api/cart/:userId/:restaurantId
+ */
 const clearCart = async (req, res) => {
   try {
-    const cart = await Cart.findOne({ userId: req.params.userId });
+    const { userId, restaurantId } = req.params;
+
+    const cart = await Cart.findOne({ userId, restaurantId });
     if (!cart) return res.status(404).json({ message: "Cart not found" });
 
     cart.items = [];
