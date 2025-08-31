@@ -11,12 +11,12 @@ const cartItemSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1,
-      default: 1, // 👈 ensures if frontend forgets, defaults to 1
+      default: 1,
     },
     note: {
       type: String,
       maxlength: 200,
-      trim: true, // 👈 removes accidental whitespace
+      trim: true,
     },
   },
   { _id: false }
@@ -28,13 +28,13 @@ const cartSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true, // 👈 helps queries like findOne({ userId })
+      index: true,
     },
     restaurantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Restaurant",
       required: true,
-      index: true, // 👈 helps when filtering by restaurant
+      index: true,
     },
     items: {
       type: [cartItemSchema],

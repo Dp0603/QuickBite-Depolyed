@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   FaStar,
   FaClock,
@@ -15,16 +15,20 @@ const CustomerRestaurantMenu = () => {
   const { id: restaurantId } = useParams();
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
   const [cart, setCart] = useState({});
+  const [globalCart, setGlobalCart] = useState({});
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteMenuItems, setFavoriteMenuItems] = useState([]);
 
-  // 🍴 Fetch Restaurant & Menu
+  // Modal state
+  const [showClearCartModal, setShowClearCartModal] = useState(false);
+  const [pendingItem, setPendingItem] = useState(null);
+
+  // Fetch restaurant & menu
   useEffect(() => {
     const fetchRestaurantAndMenu = async () => {
       try {
@@ -32,7 +36,6 @@ const CustomerRestaurantMenu = () => {
           API.get(`/restaurants/restaurants/${restaurantId}`),
           API.get(`/menu/restaurant/${restaurantId}/menu`),
         ]);
-
         setRestaurant(resRestaurant.data.restaurant);
         setMenuItems(resMenu.data.menu || []);
       } catch (err) {
@@ -41,11 +44,10 @@ const CustomerRestaurantMenu = () => {
         setLoading(false);
       }
     };
-
     if (restaurantId) fetchRestaurantAndMenu();
   }, [restaurantId]);
 
-  // 📥 Fetch favorites
+  // Fetch favorites
   useEffect(() => {
     const fetchFavorites = async () => {
       if (!user?._id) return;
@@ -54,41 +56,35 @@ const CustomerRestaurantMenu = () => {
           API.get(`/favorites/favorites/${user._id}`),
           API.get(`/favorites/favorites/menu/${user._id}`),
         ]);
-
-        const favoriteRestaurantIds = resRestaurants.data.favorites.map(
-          (r) => r._id
+        setIsFavorite(
+          resRestaurants.data.favorites.some((r) => r._id === restaurantId)
         );
-        setIsFavorite(favoriteRestaurantIds.includes(restaurantId));
-
-        const menuItemIds = resMenuItems.data.favorites.map((m) => m._id);
-        setFavoriteMenuItems(menuItemIds);
+        setFavoriteMenuItems(resMenuItems.data.favorites.map((m) => m._id));
       } catch (err) {
         console.error("❌ Error fetching favorites:", err);
       }
     };
-
     fetchFavorites();
   }, [user?._id, restaurantId]);
 
-  // 🛒 Fetch Cart
+  // Fetch cart
   const fetchCart = async () => {
     if (!user?._id) return;
-
     try {
       const res = await API.get(`/cart/${user._id}/${restaurantId}`);
-      const cartItems = res.data.cart.items || [];
+      const cartItems = res.data.cart?.items || [];
       const newCart = {};
-
       cartItems.forEach((item) => {
         newCart[item.menuItem._id] = {
           quantity: item.quantity,
           item: item.menuItem,
         };
       });
-
       setCart(newCart);
-    } catch (err) {
-      console.error("❌ Failed to fetch cart:", err.response?.data || err);
+      setGlobalCart((prev) => ({ ...prev, [restaurantId]: newCart }));
+    } catch {
+      setCart({});
+      setGlobalCart((prev) => ({ ...prev, [restaurantId]: {} }));
     }
   };
 
@@ -96,65 +92,66 @@ const CustomerRestaurantMenu = () => {
     fetchCart();
   }, [user?._id, restaurantId]);
 
-  // ✅ Handle Add to Cart with restaurant switch check
-  const handleAdd = async (itemId) => {
+  // Add item
+  const handleAdd = (itemId) => {
     if (!user?._id) return alert("Please login to add to cart.");
+    addItemToCart(itemId, false);
+  };
 
-    // Check if cart has items from another restaurant
-    const cartRestaurants = Object.values(cart).map((c) => c.item.restaurantId);
-    if (cartRestaurants.length && !cartRestaurants.includes(restaurantId)) {
-      if (
-        !window.confirm(
-          "Switching restaurants will clear your current cart. Proceed?"
-        )
-      ) {
-        return;
-      }
-      // Clear previous cart
-      try {
-        await API.delete(`/cart/${user._id}/${cartRestaurants[0]}`);
-        setCart({});
-      } catch (err) {
-        console.error(
-          "❌ Failed to clear old cart:",
-          err.response?.data || err
-        );
-        return;
-      }
-    }
-
+  const addItemToCart = async (itemId, clearOldCart) => {
     try {
       const quantity = (cart[itemId]?.quantity || 0) + 1;
-
       await API.post(`/cart/${user._id}/${restaurantId}/item/${itemId}`, {
         quantity,
+        clearOldCart,
       });
       fetchCart();
     } catch (err) {
-      console.error("❌ Error adding to cart:", err.response?.data || err);
+      // Ignore the 400 error since we handle it with a modal
+      if (
+        err.response?.status === 400 &&
+        err.response?.data?.message?.includes("another restaurant")
+      ) {
+        setPendingItem(itemId);
+        setShowClearCartModal(true);
+      } else {
+        console.error("❌ Error adding to cart:", err.response?.data || err);
+      }
     }
   };
 
-  const handleRemove = async (itemId) => {
-    try {
-      const currentQty = cart[itemId]?.quantity || 0;
-      const newQty = currentQty - 1;
+  const confirmClearCart = async () => {
+    if (!pendingItem) return;
+    await addItemToCart(pendingItem, true); // force clear & add
+    setPendingItem(null);
+    setShowClearCartModal(false);
+  };
 
-      if (newQty > 0) {
+  const cancelClearCart = () => {
+    setPendingItem(null);
+    setShowClearCartModal(false);
+  };
+
+  // Remove item
+  const handleRemove = async (itemId) => {
+    const currentQty = cart[itemId]?.quantity || 0;
+    if (currentQty <= 0) return;
+
+    try {
+      if (currentQty > 1) {
         await API.post(`/cart/${user._id}/${restaurantId}/item/${itemId}`, {
-          quantity: newQty,
+          quantity: currentQty - 1,
         });
       } else {
         await API.delete(`/cart/${user._id}/${restaurantId}/item/${itemId}`);
       }
-
       fetchCart();
-    } catch (err) {
-      console.error("❌ Error removing from cart:", err.response?.data || err);
+    } catch {
+      fetchCart();
     }
   };
 
-  // ❤️ Toggle restaurant favorite
+  // Toggle favorites
   const toggleFavorite = async () => {
     if (!user?._id) return alert("Please login to use favorites.");
     try {
@@ -169,12 +166,9 @@ const CustomerRestaurantMenu = () => {
         });
       }
       setIsFavorite((prev) => !prev);
-    } catch (err) {
-      console.error("❌ Failed to toggle favorite:", err.response?.data || err);
-    }
+    } catch {}
   };
 
-  // ❤️ Toggle menu item favorite
   const toggleMenuItemFavorite = async (menuItemId) => {
     if (!user?._id) return alert("Please login to use favorites.");
     try {
@@ -191,19 +185,24 @@ const CustomerRestaurantMenu = () => {
         });
         setFavoriteMenuItems((prev) => [...prev, menuItemId]);
       }
-    } catch (err) {
-      console.error(
-        "❌ Failed to toggle menu item favorite:",
-        err.response?.data || err
-      );
-    }
+    } catch {}
   };
 
   if (loading) return <div className="p-6 text-center">Loading...</div>;
 
+  // Calculate global cart totals
+  let totalItems = 0;
+  let subtotal = 0;
+  Object.values(globalCart).forEach((restCart) =>
+    Object.values(restCart).forEach(({ quantity, item }) => {
+      totalItems += quantity;
+      subtotal += item.price * quantity;
+    })
+  );
+
   return (
     <div className="p-6 text-gray-800 dark:text-white max-w-6xl mx-auto">
-      {/* 🍽️ Restaurant Info */}
+      {/* Restaurant Info */}
       {restaurant && (
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-10">
           <img
@@ -243,7 +242,7 @@ const CustomerRestaurantMenu = () => {
         </div>
       )}
 
-      {/* 🧾 Menu Items */}
+      {/* Menu Items */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {menuItems.length ? (
           menuItems.map((item) => (
@@ -314,32 +313,47 @@ const CustomerRestaurantMenu = () => {
         )}
       </div>
 
-      {/* 🛒 Floating Cart Summary */}
-      {Object.keys(cart).length > 0 &&
-        (() => {
-          let totalItems = 0;
-          let subtotal = 0;
-          for (const { quantity, item } of Object.values(cart)) {
-            totalItems += quantity;
-            subtotal += item.price * quantity;
-          }
-          return (
-            totalItems > 0 && (
-              <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary text-white shadow-lg px-6 py-3 rounded-full flex items-center gap-6 z-50">
-                <span>
-                  🛒 {totalItems} item{totalItems > 1 ? "s" : ""} | ₹
-                  {subtotal.toFixed(2)}
-                </span>
-                <button
-                  onClick={() => navigate("/customer/cart")}
-                  className="bg-white text-primary px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-100 transition"
-                >
-                  View Cart
-                </button>
-              </div>
-            )
-          );
-        })()}
+      {/* Floating Cart */}
+      {totalItems > 0 && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary text-white shadow-lg px-6 py-3 rounded-full flex items-center gap-6 z-50">
+          <span>
+            🛒 {totalItems} item{totalItems > 1 ? "s" : ""} | ₹
+            {subtotal.toFixed(2)}
+          </span>
+          <button
+            onClick={() => navigate("/customer/cart")}
+            className="bg-white text-primary px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-100 transition"
+          >
+            View Cart
+          </button>
+        </div>
+      )}
+
+      {/* Clear Cart Modal */}
+      {showClearCartModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full shadow-lg text-center">
+            <p className="text-gray-800 dark:text-white mb-4">
+              You have items in another restaurant's cart. Do you want to clear
+              it and add this item?
+            </p>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={confirmClearCart}
+                className="bg-primary text-white px-4 py-2 rounded hover:bg-orange-600"
+              >
+                Yes
+              </button>
+              <button
+                onClick={cancelClearCart}
+                className="bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-white px-4 py-2 rounded hover:bg-gray-400"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -10,7 +10,9 @@ const CustomerCart = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState([]);
-  const [restaurantId, setRestaurantId] = useState(null);
+  const [restaurantId, setRestaurantId] = useState(
+    localStorage.getItem("activeRestaurantId") || null
+  );
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoError, setPromoError] = useState("");
   const [availableOffers, setAvailableOffers] = useState([]);
@@ -18,31 +20,49 @@ const CustomerCart = () => {
 
   // 🛒 Fetch Cart Data
   useEffect(() => {
-    if (user?._id) {
-      API.get(`/cart/${user._id}`)
+    if (user?._id && restaurantId) {
+      console.log("📡 Fetching cart for:", {
+        userId: user._id,
+        restaurantId,
+      });
+
+      API.get(`/cart/${user._id}/${restaurantId}`)
         .then((res) => {
+          console.log("✅ Cart API Response:", res.data);
+
           const items = res.data.cart?.items || [];
           setCartItems(items);
-          setRestaurantId(res.data.cart?.restaurantId?._id);
-          console.log(
-            "Fetched Restaurant ID:",
-            res.data.cart?.restaurantId?._id
-          );
+
+          const restId = res.data.cart?.restaurantId?._id;
+          console.log("🍽 Restaurant from cart:", restId);
+
+          setRestaurantId(restId);
+          localStorage.setItem("activeRestaurantId", restId || "");
         })
         .catch((err) => {
+          console.error("❌ Error fetching cart:", err.response?.data || err);
           if (err.response?.status === 404) setCartItems([]);
-          else console.error("Error fetching cart:", err);
         });
+    } else {
+      console.log("⚠️ Missing userId or restaurantId, cannot fetch cart", {
+        user,
+        restaurantId,
+      });
     }
-  }, [user]);
+  }, [user, restaurantId]);
 
   // 🎁 Fetch Offers
   useEffect(() => {
     if (restaurantId) {
+      console.log("📡 Fetching offers for restaurant:", restaurantId);
+
       API.get(`/offers/offers/valid/${restaurantId}`)
-        .then((res) => setAvailableOffers(res.data.offers))
+        .then((res) => {
+          console.log("✅ Offers API Response:", res.data);
+          setAvailableOffers(res.data.offers);
+        })
         .catch((err) => {
-          console.error("Error fetching offers:", err);
+          console.error("❌ Error fetching offers:", err.response?.data || err);
           setAvailableOffers([]);
         });
     }
@@ -50,10 +70,8 @@ const CustomerCart = () => {
 
   // ➕ Increment
   const increment = async (id, currentQty, note = "") => {
-    await API.post("/cart", {
-      userId: user._id,
-      restaurantId,
-      menuItemId: id,
+    console.log("➕ Increment item:", { id, currentQty, note });
+    await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
       quantity: currentQty + 1,
       note,
     });
@@ -66,11 +84,9 @@ const CustomerCart = () => {
 
   // ➖ Decrement
   const decrement = async (id, currentQty, note = "") => {
+    console.log("➖ Decrement item:", { id, currentQty, note });
     if (currentQty === 1) return;
-    await API.post("/cart", {
-      userId: user._id,
-      restaurantId,
-      menuItemId: id,
+    await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
       quantity: currentQty - 1,
       note,
     });
@@ -83,9 +99,8 @@ const CustomerCart = () => {
 
   // ❌ Remove
   const removeItem = async (id) => {
-    await API.delete("/cart/item", {
-      data: { userId: user._id, menuItemId: id },
-    });
+    console.log("🗑 Removing item:", id);
+    await API.delete(`/cart/${user._id}/${restaurantId}/item/${id}`);
     setCartItems((prev) => prev.filter((i) => i.menuItem._id !== id));
   };
 
@@ -103,10 +118,8 @@ const CustomerCart = () => {
 
   // 🎯 Apply Offer
   const applySelectedOffer = () => {
-    console.log("Trying to apply offer:", selectedOfferId);
-
     const offer = availableOffers.find((o) => o._id === selectedOfferId);
-    console.log("Matched offer:", offer);
+    console.log("🎯 Applying offer:", offer);
 
     if (!offer) {
       setPromoError("Please select a valid offer.");
@@ -138,11 +151,9 @@ const CustomerCart = () => {
         break;
       default:
         discount = 0;
-        break;
     }
 
-    console.log("Discount Calculated:", discount);
-
+    console.log("✅ Discount applied:", discount);
     setAppliedDiscount(discount);
     setPromoError("");
   };
@@ -272,7 +283,20 @@ const CustomerCart = () => {
             </div>
 
             <button
-              onClick={() =>
+              onClick={() => {
+                console.log("🚀 Proceeding to checkout with:", {
+                  cartItems,
+                  subtotal,
+                  tax,
+                  deliveryFee,
+                  appliedDiscount,
+                  totalPayable,
+                  selectedOfferId,
+                  offer:
+                    availableOffers.find((o) => o._id === selectedOfferId) ||
+                    null,
+                  restaurantId,
+                });
                 navigate("/customer/checkout", {
                   state: {
                     cartItems: cartItems.map((item) => ({
@@ -293,9 +317,9 @@ const CustomerCart = () => {
                       null,
                     restaurantId, // ✅ included
                   },
-                })
-              }
-              disabled={!restaurantId} // ⛔ prevent click if not ready
+                });
+              }}
+              disabled={!restaurantId}
               className={`w-full py-3 rounded-lg font-semibold mt-4 transition ${
                 restaurantId
                   ? "bg-primary text-white hover:bg-orange-600"
