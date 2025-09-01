@@ -20,34 +20,43 @@ const CustomerCart = () => {
 
   // 🛒 Fetch Cart Data
   useEffect(() => {
-    if (user?._id && restaurantId) {
-      console.log("📡 Fetching cart for:", {
-        userId: user._id,
-        restaurantId,
-      });
+    if (user?._id) {
+      if (restaurantId) {
+        API.get(`/cart/${user._id}/${restaurantId}`)
+          .then((res) => {
+            const items = res.data.cart?.items || [];
+            setCartItems(items);
 
-      API.get(`/cart/${user._id}/${restaurantId}`)
-        .then((res) => {
-          console.log("✅ Cart API Response:", res.data);
+            const restId = res.data.cart?.restaurantId?._id;
+            if (restId) {
+              setRestaurantId(restId);
+              localStorage.setItem("activeRestaurantId", restId);
+            }
+          })
+          .catch((err) => {
+            console.error("❌ Error fetching cart:", err.response?.data || err);
+            if (err.response?.status === 404) setCartItems([]);
+          });
+      } else {
+        API.get(`/cart/${user._id}`)
+          .then((res) => {
+            const items = res.data.cart?.items || [];
+            setCartItems(items);
 
-          const items = res.data.cart?.items || [];
-          setCartItems(items);
-
-          const restId = res.data.cart?.restaurantId?._id;
-          console.log("🍽 Restaurant from cart:", restId);
-
-          setRestaurantId(restId);
-          localStorage.setItem("activeRestaurantId", restId || "");
-        })
-        .catch((err) => {
-          console.error("❌ Error fetching cart:", err.response?.data || err);
-          if (err.response?.status === 404) setCartItems([]);
-        });
-    } else {
-      console.log("⚠️ Missing userId or restaurantId, cannot fetch cart", {
-        user,
-        restaurantId,
-      });
+            const restId = res.data.cart?.restaurantId?._id;
+            if (restId) {
+              setRestaurantId(restId);
+              localStorage.setItem("activeRestaurantId", restId);
+            }
+          })
+          .catch((err) => {
+            console.error(
+              "❌ Error fetching active cart:",
+              err.response?.data || err
+            );
+            setCartItems([]);
+          });
+      }
     }
   }, [user, restaurantId]);
 
@@ -58,7 +67,22 @@ const CustomerCart = () => {
 
       API.get(`/offers/offers/valid/${restaurantId}`)
         .then((res) => {
-          console.log("✅ Offers API Response:", res.data);
+          console.log("✅ Offers API Response:", res.data); // full API response
+          console.log("📋 Offers Array:", res.data.offers); // only offers array
+          res.data.offers.forEach((offer, idx) => {
+            console.log(`➡️ Offer[${idx}]`, {
+              id: offer._id,
+              title: offer.title,
+              discountType: offer.discountType,
+              discountValue: offer.discountValue,
+              maxDiscountAmount: offer.maxDiscountAmount,
+              minOrderAmount: offer.minOrderAmount,
+              validFrom: offer.validFrom,
+              validTill: offer.validTill,
+              isActive: offer.isActive,
+            });
+          });
+
           setAvailableOffers(res.data.offers);
         })
         .catch((err) => {
@@ -70,7 +94,6 @@ const CustomerCart = () => {
 
   // ➕ Increment
   const increment = async (id, currentQty, note = "") => {
-    console.log("➕ Increment item:", { id, currentQty, note });
     await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
       quantity: currentQty + 1,
       note,
@@ -84,7 +107,6 @@ const CustomerCart = () => {
 
   // ➖ Decrement
   const decrement = async (id, currentQty, note = "") => {
-    console.log("➖ Decrement item:", { id, currentQty, note });
     if (currentQty === 1) return;
     await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
       quantity: currentQty - 1,
@@ -99,7 +121,6 @@ const CustomerCart = () => {
 
   // ❌ Remove
   const removeItem = async (id) => {
-    console.log("🗑 Removing item:", id);
     await API.delete(`/cart/${user._id}/${restaurantId}/item/${id}`);
     setCartItems((prev) => prev.filter((i) => i.menuItem._id !== id));
   };
@@ -119,41 +140,52 @@ const CustomerCart = () => {
   // 🎯 Apply Offer
   const applySelectedOffer = () => {
     const offer = availableOffers.find((o) => o._id === selectedOfferId);
-    console.log("🎯 Applying offer:", offer);
+    console.log("🎯 Selected Offer:", offer);
 
     if (!offer) {
+      console.warn("⚠️ No offer selected or offer not found");
       setPromoError("Please select a valid offer.");
       return;
     }
 
+    console.log("💰 Subtotal:", subtotal);
+    console.log("📊 Offer conditions:", {
+      minOrderAmount: offer.minOrderAmount,
+      discountType: offer.discountType,
+      discountValue: offer.discountValue,
+      maxDiscountAmount: offer.maxDiscountAmount,
+    });
+
     if (subtotal < offer.minOrderAmount) {
+      console.warn("🚫 Subtotal too low for this offer");
       setPromoError(`Minimum order ₹${offer.minOrderAmount} required.`);
       return;
     }
 
     let discount = 0;
+    const type = offer.discountType.toUpperCase();
 
-    switch (offer.discountType.toLowerCase()) {
-      case "flat":
+    switch (type) {
+      case "FLAT":
         discount = offer.discountValue;
         break;
-      case "percent":
-        discount = Math.floor((subtotal * offer.discountValue) / 100);
-        break;
-      case "upto":
-        discount = Math.min(offer.discountValue, subtotal);
-        break;
-      case "upto_percent":
-        discount = Math.min(
-          Math.floor((subtotal * offer.discountValue) / 100),
-          offer.maxDiscountAmount || 0
+      case "PERCENT": {
+        const percentDiscount = Math.floor(
+          (subtotal * offer.discountValue) / 100
         );
+        discount = offer.maxDiscountAmount
+          ? Math.min(percentDiscount, offer.maxDiscountAmount)
+          : percentDiscount;
+        break;
+      }
+      case "UPTO":
+        discount = Math.min(offer.discountValue, subtotal);
         break;
       default:
         discount = 0;
     }
 
-    console.log("✅ Discount applied:", discount);
+    console.log("✅ Final Discount Applied:", discount);
     setAppliedDiscount(discount);
     setPromoError("");
   };
@@ -223,7 +255,7 @@ const CustomerCart = () => {
                 {availableOffers.map((offer) => (
                   <option key={offer._id} value={offer._id}>
                     {offer.title} ({offer.discountType}) -{" "}
-                    {offer.discountType.toLowerCase().includes("percent")
+                    {offer.discountType.toUpperCase() === "PERCENT"
                       ? `${offer.discountValue}%`
                       : `₹${offer.discountValue}`}
                   </option>
@@ -253,7 +285,7 @@ const CustomerCart = () => {
             <div className="space-y-2 text-sm pt-2">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>₹{subtotal.toFixed(2)}</span>{" "}
+                <span>₹{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Tax (8%)</span>
@@ -279,24 +311,11 @@ const CustomerCart = () => {
             <hr className="border-gray-200 dark:border-gray-600" />
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span>₹{totalPayable.toFixed(2)}</span>{" "}
+              <span>₹{totalPayable.toFixed(2)}</span>
             </div>
 
             <button
               onClick={() => {
-                console.log("🚀 Proceeding to checkout with:", {
-                  cartItems,
-                  subtotal,
-                  tax,
-                  deliveryFee,
-                  appliedDiscount,
-                  totalPayable,
-                  selectedOfferId,
-                  offer:
-                    availableOffers.find((o) => o._id === selectedOfferId) ||
-                    null,
-                  restaurantId,
-                });
                 navigate("/customer/checkout", {
                   state: {
                     cartItems: cartItems.map((item) => ({
@@ -315,7 +334,7 @@ const CustomerCart = () => {
                     offer:
                       availableOffers.find((o) => o._id === selectedOfferId) ||
                       null,
-                    restaurantId, // ✅ included
+                    restaurantId,
                   },
                 });
               }}
