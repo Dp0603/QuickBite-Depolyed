@@ -23,8 +23,6 @@ const CustomerRestaurantMenu = () => {
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteMenuItems, setFavoriteMenuItems] = useState([]);
-
-  // Modal state
   const [showClearCartModal, setShowClearCartModal] = useState(false);
   const [pendingItem, setPendingItem] = useState(null);
 
@@ -67,7 +65,7 @@ const CustomerRestaurantMenu = () => {
     fetchFavorites();
   }, [user?._id, restaurantId]);
 
-  // Fetch cart
+  // Fetch cart for current restaurant
   const fetchCart = async () => {
     if (!user?._id) return;
     try {
@@ -88,8 +86,33 @@ const CustomerRestaurantMenu = () => {
     }
   };
 
+  // Fetch global active cart for floating total
+  const fetchActiveCart = async () => {
+    if (!user?._id) return;
+    try {
+      const res = await API.get(`/cart/${user._id}`);
+      const activeCart = res.data.cart?.items || [];
+      const newGlobalCart = {};
+      if (activeCart.length > 0) {
+        const restId = res.data.cart.restaurantId._id;
+        const cartMap = {};
+        activeCart.forEach((item) => {
+          cartMap[item.menuItem._id] = {
+            quantity: item.quantity,
+            item: item.menuItem,
+          };
+        });
+        newGlobalCart[restId] = cartMap;
+      }
+      setGlobalCart(newGlobalCart);
+    } catch {
+      setGlobalCart({});
+    }
+  };
+
   useEffect(() => {
     fetchCart();
+    fetchActiveCart();
   }, [user?._id, restaurantId]);
 
   // Add item
@@ -106,8 +129,8 @@ const CustomerRestaurantMenu = () => {
         clearOldCart,
       });
       fetchCart();
+      fetchActiveCart();
     } catch (err) {
-      // Ignore the 400 error since we handle it with a modal
       if (
         err.response?.status === 400 &&
         err.response?.data?.message?.includes("another restaurant")
@@ -122,7 +145,7 @@ const CustomerRestaurantMenu = () => {
 
   const confirmClearCart = async () => {
     if (!pendingItem) return;
-    await addItemToCart(pendingItem, true); // force clear & add
+    await addItemToCart(pendingItem, true);
     setPendingItem(null);
     setShowClearCartModal(false);
   };
@@ -146,8 +169,10 @@ const CustomerRestaurantMenu = () => {
         await API.delete(`/cart/${user._id}/${restaurantId}/item/${itemId}`);
       }
       fetchCart();
+      fetchActiveCart();
     } catch {
       fetchCart();
+      fetchActiveCart();
     }
   };
 
@@ -313,7 +338,7 @@ const CustomerRestaurantMenu = () => {
         )}
       </div>
 
-      {/* Floating Cart */}
+      {/* Floating Cart (always shows if global cart has items) */}
       {totalItems > 0 && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary text-white shadow-lg px-6 py-3 rounded-full flex items-center gap-6 z-50">
           <span>

@@ -4,6 +4,7 @@ const {
   getUserCart,
   removeCartItem,
   clearCart,
+  getActiveCart,
 } = require("../controllers/CartController");
 
 const router = express.Router();
@@ -28,5 +29,9 @@ router.delete("/:userId/:restaurantId/item/:menuItemId", removeCartItem);
 // 🧹 Clear entire cart for a restaurant
 // URL:  /api/cart/:userId/:restaurantId
 router.delete("/:userId/:restaurantId", clearCart);
+
+// 🟢 Get active cart for a user (any restaurant, latest non-empty)
+// URL:  /api/cart/:userId
+router.get("/:userId", getActiveCart);
 
 module.exports = router;

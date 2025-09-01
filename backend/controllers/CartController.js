@@ -157,6 +157,12 @@ const removeCartItem = async (req, res) => {
       (item) => item.menuItem.toString() !== menuItemObjId.toString()
     );
 
+    if (cart.items.length === 0) {
+      // ✅ If no items left, delete the whole cart
+      await Cart.deleteOne({ _id: cart._id });
+      return res.status(200).json({ message: "Cart deleted", cart: null });
+    }
+
     await cart.save();
 
     const updatedCart = await Cart.findById(cart._id)
@@ -192,14 +198,10 @@ const clearCart = async (req, res) => {
 
     if (!cart) return res.status(404).json({ message: "Cart not found" });
 
-    cart.items = [];
-    await cart.save();
+    // ✅ Instead of saving empty items, delete the cart
+    await Cart.deleteOne({ _id: cart._id });
 
-    const clearedCart = await Cart.findById(cart._id)
-      .populate("items.menuItem")
-      .populate("restaurantId", "name logo");
-
-    res.status(200).json({ message: "Cart cleared", cart: clearedCart });
+    res.status(200).json({ message: "Cart deleted", cart: null });
   } catch (err) {
     console.error("❌ clearCart error:", err);
     res
@@ -208,9 +210,44 @@ const clearCart = async (req, res) => {
   }
 };
 
+/**
+ * Optional: Get active cart regardless of restaurant
+ * GET /api/cart/:userId
+ */
+const getActiveCart = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "Invalid userId" });
+    }
+
+    const userObjId = new mongoose.Types.ObjectId(userId);
+
+    const cart = await Cart.findOne({
+      userId: userObjId,
+      "items.0": { $exists: true },
+    })
+      .populate("items.menuItem")
+      .populate("restaurantId", "name logo")
+      .sort({ updatedAt: -1 });
+
+    if (!cart) {
+      return res.status(200).json({ message: "No active cart", cart: null });
+    }
+
+    res.status(200).json({ message: "Active cart fetched", cart });
+  } catch (err) {
+    console.error("❌ getActiveCart error:", err);
+    res
+      .status(500)
+      .json({ message: "Error fetching cart", error: err.message });
+  }
+};
+
 module.exports = {
   addOrUpdateCartItem,
   getUserCart,
   removeCartItem,
   clearCart,
+  getActiveCart,
 };
