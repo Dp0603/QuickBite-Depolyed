@@ -9,86 +9,53 @@ import { useNavigate } from "react-router-dom";
 const CustomerCart = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+
   const [cartItems, setCartItems] = useState([]);
-  const [restaurantId, setRestaurantId] = useState(
-    localStorage.getItem("activeRestaurantId") || null
-  );
+  const [restaurantId, setRestaurantId] = useState(null);
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoError, setPromoError] = useState("");
   const [availableOffers, setAvailableOffers] = useState([]);
   const [selectedOfferId, setSelectedOfferId] = useState("");
 
-  // 🛒 Fetch Cart Data
-  useEffect(() => {
-    if (user?._id) {
-      if (restaurantId) {
-        API.get(`/cart/${user._id}/${restaurantId}`)
-          .then((res) => {
-            const items = res.data.cart?.items || [];
-            setCartItems(items);
+  // 🔄 Helper: Fetch latest active cart
+  const fetchCart = async () => {
+    if (!user?._id) return;
 
-            const restId = res.data.cart?.restaurantId?._id;
-            if (restId) {
-              setRestaurantId(restId);
-              localStorage.setItem("activeRestaurantId", restId);
-            }
-          })
-          .catch((err) => {
-            console.error("❌ Error fetching cart:", err.response?.data || err);
-            if (err.response?.status === 404) setCartItems([]);
-          });
-      } else {
-        API.get(`/cart/${user._id}`)
-          .then((res) => {
-            const items = res.data.cart?.items || [];
-            setCartItems(items);
+    try {
+      const res = await API.get(`/cart/${user._id}`);
+      const items = res.data.cart?.items || [];
+      setCartItems(items);
 
-            const restId = res.data.cart?.restaurantId?._id;
-            if (restId) {
-              setRestaurantId(restId);
-              localStorage.setItem("activeRestaurantId", restId);
-            }
-          })
-          .catch((err) => {
-            console.error(
-              "❌ Error fetching active cart:",
-              err.response?.data || err
-            );
-            setCartItems([]);
-          });
-      }
+      const restId = res.data.cart?.restaurantId?._id || null;
+      setRestaurantId(restId);
+    } catch (err) {
+      console.error(
+        "❌ Error fetching active cart:",
+        err.response?.data || err
+      );
+      setCartItems([]);
+      setRestaurantId(null);
     }
-  }, [user, restaurantId]);
+  };
 
-  // 🎁 Fetch Offers
+  // 🛒 Fetch Cart on mount & user change
+  useEffect(() => {
+    fetchCart();
+  }, [user]);
+
+  // 🎁 Fetch Offers whenever restaurant changes
   useEffect(() => {
     if (restaurantId) {
-      console.log("📡 Fetching offers for restaurant:", restaurantId);
-
       API.get(`/offers/offers/valid/${restaurantId}`)
         .then((res) => {
-          console.log("✅ Offers API Response:", res.data); // full API response
-          console.log("📋 Offers Array:", res.data.offers); // only offers array
-          res.data.offers.forEach((offer, idx) => {
-            console.log(`➡️ Offer[${idx}]`, {
-              id: offer._id,
-              title: offer.title,
-              discountType: offer.discountType,
-              discountValue: offer.discountValue,
-              maxDiscountAmount: offer.maxDiscountAmount,
-              minOrderAmount: offer.minOrderAmount,
-              validFrom: offer.validFrom,
-              validTill: offer.validTill,
-              isActive: offer.isActive,
-            });
-          });
-
-          setAvailableOffers(res.data.offers);
+          setAvailableOffers(res.data.offers || []);
         })
         .catch((err) => {
           console.error("❌ Error fetching offers:", err.response?.data || err);
           setAvailableOffers([]);
         });
+    } else {
+      setAvailableOffers([]);
     }
   }, [restaurantId]);
 
@@ -98,11 +65,7 @@ const CustomerCart = () => {
       quantity: currentQty + 1,
       note,
     });
-    setCartItems((prev) =>
-      prev.map((i) =>
-        i.menuItem._id === id ? { ...i, quantity: i.quantity + 1 } : i
-      )
-    );
+    fetchCart();
   };
 
   // ➖ Decrement
@@ -112,17 +75,13 @@ const CustomerCart = () => {
       quantity: currentQty - 1,
       note,
     });
-    setCartItems((prev) =>
-      prev.map((i) =>
-        i.menuItem._id === id ? { ...i, quantity: i.quantity - 1 } : i
-      )
-    );
+    fetchCart();
   };
 
   // ❌ Remove
   const removeItem = async (id) => {
     await API.delete(`/cart/${user._id}/${restaurantId}/item/${id}`);
-    setCartItems((prev) => prev.filter((i) => i.menuItem._id !== id));
+    fetchCart();
   };
 
   // 🧾 Pricing
@@ -140,24 +99,12 @@ const CustomerCart = () => {
   // 🎯 Apply Offer
   const applySelectedOffer = () => {
     const offer = availableOffers.find((o) => o._id === selectedOfferId);
-    console.log("🎯 Selected Offer:", offer);
-
     if (!offer) {
-      console.warn("⚠️ No offer selected or offer not found");
       setPromoError("Please select a valid offer.");
       return;
     }
 
-    console.log("💰 Subtotal:", subtotal);
-    console.log("📊 Offer conditions:", {
-      minOrderAmount: offer.minOrderAmount,
-      discountType: offer.discountType,
-      discountValue: offer.discountValue,
-      maxDiscountAmount: offer.maxDiscountAmount,
-    });
-
     if (subtotal < offer.minOrderAmount) {
-      console.warn("🚫 Subtotal too low for this offer");
       setPromoError(`Minimum order ₹${offer.minOrderAmount} required.`);
       return;
     }
@@ -185,7 +132,6 @@ const CustomerCart = () => {
         discount = 0;
     }
 
-    console.log("✅ Final Discount Applied:", discount);
     setAppliedDiscount(discount);
     setPromoError("");
   };
