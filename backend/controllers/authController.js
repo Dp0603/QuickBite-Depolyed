@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/UserModel");
+const Restaurant = require("../models/RestaurantModel"); // ✅ added
 const generateToken = require("../utils/generateToken");
 const sendEmail = require("../utils/sendEmail");
 const generateOTP = require("../utils/generateOTP");
@@ -61,7 +62,7 @@ const verifyEmail = async (req, res) => {
 
     res.status(200).json({
       message: "Email verified successfully!",
-      token, // JWT
+      token,
       user: {
         _id: user._id,
         name: user.name,
@@ -115,13 +116,23 @@ const login = async (req, res) => {
     if (!user.isVerified)
       return res.status(401).json({ message: "Verify your email first" });
 
+    const token = generateToken(user._id);
+
+    // ✅ Attach restaurantId if user is a restaurant
+    let restaurantId = null;
+    if (user.role === "restaurant") {
+      const restaurant = await Restaurant.findOne({ owner: user._id });
+      if (restaurant) restaurantId = restaurant._id;
+    }
+
     res.status(200).json({
-      token: generateToken(user._id),
+      token,
       user: {
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
+        restaurantId,
       },
     });
   } catch (error) {
@@ -137,10 +148,24 @@ const verifyToken = async (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId).select("-password");
-
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ user });
+    // ✅ Attach restaurantId if user is a restaurant
+    let restaurantId = null;
+    if (user.role === "restaurant") {
+      const restaurant = await Restaurant.findOne({ owner: user._id });
+      if (restaurant) restaurantId = restaurant._id;
+    }
+
+    res.status(200).json({
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        restaurantId,
+      },
+    });
   } catch (error) {
     res.status(401).json({ message: "Invalid token" });
   }
@@ -149,7 +174,7 @@ const verifyToken = async (req, res) => {
 // 📲 Send OTP (Login via mobile/email)
 const sendOTP = async (req, res) => {
   try {
-    const { contact } = req.body; // email or phone
+    const { contact } = req.body;
     const user = await User.findOne({
       $or: [{ email: contact }, { phone: contact }],
     });
@@ -157,7 +182,7 @@ const sendOTP = async (req, res) => {
 
     const otp = generateOTP();
     user.otp = otp;
-    user.otpExpiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
+    user.otpExpiresAt = Date.now() + 5 * 60 * 1000;
     await user.save();
 
     await sendEmail({
@@ -193,13 +218,23 @@ const verifyOTP = async (req, res) => {
     if (!user.isVerified) user.isVerified = true;
     await user.save();
 
+    const token = generateToken(user._id);
+
+    // ✅ Attach restaurantId if user is a restaurant
+    let restaurantId = null;
+    if (user.role === "restaurant") {
+      const restaurant = await Restaurant.findOne({ owner: user._id });
+      if (restaurant) restaurantId = restaurant._id;
+    }
+
     res.status(200).json({
-      token: generateToken(user._id),
+      token,
       user: {
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
+        restaurantId,
       },
     });
   } catch (error) {
@@ -216,7 +251,7 @@ const forgotPassword = async (req, res) => {
 
     const resetToken = crypto.randomBytes(32).toString("hex");
     user.resetToken = resetToken;
-    user.resetTokenExpires = Date.now() + 30 * 60 * 1000; // 30 minutes
+    user.resetTokenExpires = Date.now() + 30 * 60 * 1000;
     await user.save();
 
     const resetLink = `${FRONTEND_URL}/reset-password/${resetToken}`;
@@ -252,7 +287,6 @@ const resetPassword = async (req, res) => {
     if (!user)
       return res.status(400).json({ message: "Invalid or expired token" });
 
-    // Hash the new password before saving
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
 
@@ -268,7 +302,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
-// 🔁 Change password (authenticated user)
+// 🔁 Change password
 const changePassword = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -281,13 +315,11 @@ const changePassword = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Compare current password with hashed password in DB
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Incorrect current password" });
     }
 
-    // Hash the new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
 
@@ -300,7 +332,7 @@ const changePassword = async (req, res) => {
   }
 };
 
-// GET /auth/check-verification?email=<email>
+// GET /auth/check-verification
 const checkVerification = async (req, res) => {
   try {
     const { email } = req.query;
@@ -312,12 +344,20 @@ const checkVerification = async (req, res) => {
     if (user.isVerified) {
       const token = generateToken(user._id);
 
+      // ✅ Attach restaurantId if user is a restaurant
+      let restaurantId = null;
+      if (user.role === "restaurant") {
+        const restaurant = await Restaurant.findOne({ owner: user._id });
+        if (restaurant) restaurantId = restaurant._id;
+      }
+
       response.token = token;
       response.user = {
         _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
+        restaurantId,
       };
     }
 

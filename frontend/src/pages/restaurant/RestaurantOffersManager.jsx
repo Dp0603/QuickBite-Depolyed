@@ -8,8 +8,7 @@ const RestaurantOffersManager = () => {
 
   // ✅ Fallback to localStorage if context is empty
   const storedUser = JSON.parse(localStorage.getItem("user"));
-  const restaurantId =
-    user?.restaurantId || storedUser?.restaurantId || storedUser?._id;
+  const restaurantId = user?.restaurantId || storedUser?.restaurantId;
 
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,14 +60,26 @@ const RestaurantOffersManager = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!restaurantId) return setError("Restaurant ID not found.");
+
+    if (!restaurantId) {
+      setError("Restaurant ID missing. Please log in again.");
+      return;
+    }
 
     try {
+      const payload = {
+        ...formData,
+        restaurantId,
+        validFrom: new Date(formData.validFrom),
+        validTill: new Date(formData.validTill),
+      };
+
       if (editingOffer) {
-        await API.put(`/offers/offers/${editingOffer._id}`, formData);
+        await API.put(`/offers/offers/${editingOffer._id}`, payload);
       } else {
-        await API.post("/offers/offers", { ...formData, restaurantId });
+        await API.post("/offers/offers", payload);
       }
+
       resetForm();
       fetchOffers();
     } catch (err) {
