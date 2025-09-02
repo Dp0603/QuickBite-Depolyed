@@ -3,11 +3,21 @@ const Offer = require("../models/OfferModel");
 // 🎁 Create new offer
 const createOffer = async (req, res) => {
   try {
+    const { restaurantId } = req.body;
+
+    if (!restaurantId) {
+      return res.status(400).json({ message: "Restaurant ID is required" });
+    }
+
+    // Normalize promo code
     if (req.body.promoCode) {
       req.body.promoCode = req.body.promoCode.toUpperCase().trim();
     }
 
-    const offer = await Offer.create(req.body);
+    const offer = await Offer.create({
+      ...req.body,
+      restaurantId, // ✅ store restaurantId, not ownerId
+    });
 
     res.status(201).json({
       message: "Offer created successfully",
@@ -62,8 +72,9 @@ const updateOffer = async (req, res) => {
       { new: true }
     );
 
-    if (!updatedOffer)
+    if (!updatedOffer) {
       return res.status(404).json({ message: "Offer not found" });
+    }
 
     res.status(200).json({
       message: "Offer updated successfully",
@@ -141,8 +152,9 @@ const getOfferByPromoCode = async (req, res) => {
       validTill: { $gte: now },
     });
 
-    if (!offer)
+    if (!offer) {
       return res.status(404).json({ message: "Invalid or expired promo code" });
+    }
 
     res.status(200).json({
       message: "Promo code applied successfully",
