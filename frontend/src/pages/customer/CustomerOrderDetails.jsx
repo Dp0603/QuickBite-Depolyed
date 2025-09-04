@@ -54,7 +54,7 @@ const CustomerOrderDetails = () => {
 
           <div>
             <p className="text-sm text-gray-500">Status:</p>
-            <p className="font-medium">{order.orderStatus || "Pending"}</p>
+            <p className="font-medium">{order.orderStatus}</p>
           </div>
 
           <div>
@@ -138,9 +138,7 @@ const CustomerOrderDetails = () => {
         <h2 className="text-xl font-semibold mb-4">🚚 Delivery</h2>
         <p>
           <span className="text-sm text-gray-500">Status: </span>
-          <span className="font-medium">
-            {order.deliveryDetails?.deliveryStatus || "Pending"}
-          </span>
+          <span className="font-medium">{order.orderStatus}</span>
         </p>
       </div>
 

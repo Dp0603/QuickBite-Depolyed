@@ -83,7 +83,7 @@ const CustomerReviews = () => {
     }
 
     try {
-      const res = await API.put(`/reviews/review/edit/${id}`, {
+      await API.put(`/reviews/review/edit/${id}`, {
         rating: editRating,
         comment: editComment.trim(),
       });
@@ -193,6 +193,20 @@ const CustomerReviews = () => {
                 <p className="mt-3 text-gray-700 whitespace-pre-line leading-relaxed">
                   {r.comment}
                 </p>
+
+                {/* Owner Reply */}
+                {r.reply?.text && (
+                  <div className="bg-gray-50 p-2 rounded mt-2 text-sm">
+                    <strong className="text-gray-800">Owner Reply:</strong>{" "}
+                    <span className="text-gray-600">{r.reply.text}</span>
+                    {r.reply.repliedAt && (
+                      <small className="text-gray-400 block">
+                        Replied on{" "}
+                        {new Date(r.reply.repliedAt).toLocaleDateString()}
+                      </small>
+                    )}
+                  </div>
+                )}
 
                 <small className="text-gray-400 block mt-3">
                   Reviewed on{" "}

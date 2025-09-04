@@ -102,7 +102,6 @@ const ReviewSummary = ({ reviews }) => {
 
   const avgRating =
     reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
-
   const distribution = [5, 4, 3, 2, 1].map((star) => ({
     star,
     count: reviews.filter((r) => r.rating === star).length,
@@ -123,9 +122,7 @@ const ReviewSummary = ({ reviews }) => {
             <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded">
               <div
                 className="h-2 bg-yellow-400 rounded"
-                style={{
-                  width: `${(d.count / reviews.length) * 100 || 0}%`,
-                }}
+                style={{ width: `${(d.count / reviews.length) * 100 || 0}%` }}
               ></div>
             </div>
             <span>{d.count}</span>
@@ -144,8 +141,7 @@ const RestaurantReviews = () => {
   const [error, setError] = useState("");
   const [sort, setSort] = useState("newest");
 
-  // You need the restaurant ID, not the user ID
-  const restaurantId = user?.restaurantId; // Make sure your user context has this
+  const restaurantId = user?.restaurantId;
 
   // Fetch reviews
   const fetchReviews = async () => {
@@ -153,7 +149,7 @@ const RestaurantReviews = () => {
     try {
       setLoading(true);
       setError("");
-      const res = await API.get(`/review/${restaurantId}`);
+      const res = await API.get(`/reviews/${restaurantId}`);
       setReviews(res.data.reviews || []);
     } catch (err) {
       console.error("Failed to fetch reviews", err);
@@ -166,7 +162,7 @@ const RestaurantReviews = () => {
   // Handle owner reply
   const handleReply = async (reviewId, replyText) => {
     try {
-      await API.post(`/review/${reviewId}/reply`, { reply: replyText });
+      await API.post(`/reviews/review/${reviewId}/reply`, { reply: replyText });
       setReviews((prev) =>
         prev.map((r) =>
           r._id === reviewId
@@ -190,7 +186,7 @@ const RestaurantReviews = () => {
   });
 
   useEffect(() => {
-    fetchReviews();
+    if (restaurantId) fetchReviews();
   }, [restaurantId]);
 
   return (

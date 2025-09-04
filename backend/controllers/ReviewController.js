@@ -156,7 +156,7 @@ const deleteReview = async (req, res) => {
 
 const replyToReview = async (req, res) => {
   try {
-    const { id } = req.params; // reviewId
+    const { id } = req.params;
     const { reply } = req.body;
 
     if (!reply || reply.trim().length < 2) {
@@ -165,31 +165,37 @@ const replyToReview = async (req, res) => {
         .json({ message: "Reply must be at least 2 characters" });
     }
 
+    // ✅ Populate 'owner' instead of 'ownerId'
     const review = await Review.findById(id).populate(
       "restaurantId",
-      "ownerId name"
+      "owner name"
     );
 
     if (!review) return res.status(404).json({ message: "Review not found" });
+    if (!review.restaurantId || !review.restaurantId.owner) {
+      return res
+        .status(400)
+        .json({ message: "Invalid review or restaurant data" });
+    }
 
-    // Check if current user is the restaurant owner
-    if (review.restaurantId.ownerId.toString() !== req.user._id.toString()) {
+    // ✅ Check against 'owner' field
+    if (review.restaurantId.owner.toString() !== req.user._id.toString()) {
       return res
         .status(403)
         .json({ message: "You are not authorized to reply to this review" });
     }
 
-    // Save reply
     review.reply = { text: reply.trim(), repliedAt: new Date() };
     await review.save();
 
-    res.json({ success: true, message: "Reply added successfully", review });
+    res
+      .status(200)
+      .json({ success: true, message: "Reply added successfully", review });
   } catch (err) {
     console.error("Error replying to review:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 module.exports = {
   createReview,
