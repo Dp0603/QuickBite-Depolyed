@@ -1,11 +1,25 @@
 const Order = require("../models/OrderModel");
+const Cart = require("../models/CartModel"); // import cart model
 
 // 🧾 Create a new order
 const createOrder = async (req, res) => {
   try {
     const order = await Order.create(req.body);
+
+    // 🟢 If COD → clear cart immediately
+    if (order.paymentMethod === "COD") {
+      await Cart.deleteOne({
+        userId: order.customerId,
+        restaurantId: order.restaurantId,
+      });
+    }
+
+    // 🟡 If Razorpay → cart will be cleared only after payment verification
+    // (in your PaymentController.verifyRazorpayPayment)
+
     res.status(201).json({ message: "Order placed successfully", order });
   } catch (err) {
+    console.error("❌ createOrder error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -132,6 +146,7 @@ const getOrderById = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 // ⭐ Mark order as rated after feedback
 const markOrderAsRated = async (req, res) => {
   try {

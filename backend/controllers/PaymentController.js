@@ -1,5 +1,6 @@
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
+const Cart = require("../models/CartModel");
 const Order = require("../models/OrderModel");
 const Menu = require("../models/MenuModel");
 const Address = require("../models/AddressModel");
@@ -119,9 +120,15 @@ const verifyRazorpaySignature = async (req, res) => {
 
     const createdOrder = await Order.create(orderData);
 
+    // 🟢 Clear cart after successful payment
+    await Cart.deleteOne({
+      userId: req.body.customerId,
+      restaurantId: req.body.restaurantId,
+    });
+
     res.status(201).json({
       success: true,
-      message: "✅ Payment verified and order created",
+      message: "✅ Payment verified, order created & cart cleared",
       order: createdOrder,
     });
   } catch (err) {

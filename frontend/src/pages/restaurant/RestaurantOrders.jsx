@@ -9,10 +9,14 @@ const RestaurantOrders = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = async () => {
-    if (!user?._id) return;
+    if (!user?.restaurantId) return; // 👈 use restaurantId
     setLoading(true);
     try {
-      const res = await API.get(`/orders/orders/restaurant/${user._id}`);
+      console.log("🔎 Logged in user object:", user);
+      const res = await API.get(
+        `/orders/orders/restaurant/${user.restaurantId}`
+      ); // 👈 fixed
+      console.log("📦 Orders API response:", res.data);
       setOrders(res.data.orders);
     } catch (err) {
       console.error("❌ Error fetching restaurant orders:", err);
