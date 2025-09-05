@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const Cart = require("../models/CartModel");
+const Order = require("../models/OrderModel");
+const Menu = require("../models/MenuModel");
 
 /**
  * Helper to validate ObjectIds
@@ -244,10 +246,68 @@ const getActiveCart = async (req, res) => {
   }
 };
 
+/**
+ * 🔁 Reorder from past order
+ * POST /api/cart/reorder/:userId/:orderId
+ */
+const reorderFromOrder = async (req, res) => {
+  try {
+    const { userId, orderId } = req.params;
+
+    const invalid = validateIds({ userId, orderId });
+    if (invalid) return res.status(400).json({ message: invalid });
+
+    const userObjId = new mongoose.Types.ObjectId(userId);
+
+    // 1️⃣ Get the old order
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    // 2️⃣ Check items availability from Menu
+    const validItems = [];
+    for (const item of order.items) {
+      const menuItem = await Menu.findById(item.menuItemId); // ✅ FIXED
+      if (menuItem && menuItem.isAvailable) {
+        validItems.push({
+          menuItem: menuItem._id, // ✅ Cart expects "menuItem"
+          quantity: item.quantity,
+          note: item.note || "",
+        });
+      }
+    }
+
+    if (validItems.length === 0) {
+      return res.status(400).json({ message: "No items available to reorder" });
+    }
+
+    // 3️⃣ Clear any existing cart for this restaurant
+    await Cart.deleteMany({ userId: userObjId });
+
+    // 4️⃣ Create a new cart with valid items
+    const newCart = new Cart({
+      userId: userObjId,
+      restaurantId: order.restaurantId,
+      items: validItems,
+    });
+    await newCart.save();
+
+    const populatedCart = await Cart.findById(newCart._id)
+      .populate("items.menuItem")
+      .populate("restaurantId", "name logo");
+
+    res
+      .status(200)
+      .json({ message: "Reorder successful", cart: populatedCart });
+  } catch (err) {
+    console.error("❌ reorderFromOrder error:", err);
+    res.status(500).json({ message: "Error reordering", error: err.message });
+  }
+};
 module.exports = {
   addOrUpdateCartItem,
   getUserCart,
   removeCartItem,
   clearCart,
   getActiveCart,
+  reorderFromOrder,
 };

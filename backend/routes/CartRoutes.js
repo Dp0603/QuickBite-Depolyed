@@ -5,6 +5,7 @@ const {
   removeCartItem,
   clearCart,
   getActiveCart,
+  reorderFromOrder,
 } = require("../controllers/CartController");
 
 const router = express.Router();
@@ -33,5 +34,9 @@ router.delete("/:userId/:restaurantId", clearCart);
 // 🟢 Get active cart for a user (any restaurant, latest non-empty)
 // URL:  /api/cart/:userId
 router.get("/:userId", getActiveCart);
+
+// 🔁 Reorder from a past order
+// URL: /api/cart/reorder/:userId/:orderId
+router.post("/reorder/:userId/:orderId", reorderFromOrder);
 
 module.exports = router;

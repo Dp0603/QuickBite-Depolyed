@@ -60,19 +60,14 @@ const CustomerOrders = () => {
 
   const handleReorder = async (order) => {
     try {
-      await API.delete(`/cart/${user._id}`);
-      for (const item of order.items) {
-        await API.post("/cart", {
-          userId: user._id,
-          restaurantId: order.restaurantId._id,
-          menuItemId: item.menuItemId._id,
-          quantity: item.quantity,
-          note: item.note || "",
-        });
+      const res = await API.post(`/cart/reorder/${user._id}/${order._id}`);
+      if (res.data?.cart) {
+        navigate("/customer/cart");
+      } else {
+        alert("Some items are not available to reorder.");
       }
-      navigate("/customer/cart");
     } catch (err) {
-      console.error("Error during reorder:", err);
+      console.error("❌ Error during reorder:", err);
       alert("Failed to reorder. Please try again.");
     }
   };
