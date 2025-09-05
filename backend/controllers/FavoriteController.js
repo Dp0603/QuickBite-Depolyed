@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Favorite = require("../models/FavoriteModel");
 const Restaurant = require("../models/RestaurantModel");
 const MenuItem = require("../models/MenuModel");
@@ -5,19 +6,23 @@ const MenuItem = require("../models/MenuModel");
 // ❤️ Add restaurant to user's favorites
 const addToFavorites = async (req, res) => {
   try {
+    console.log("⭐ Incoming body:", req.body);
     const { userId, restaurantId } = req.body;
 
     let favorite = await Favorite.findOne({ userId });
 
     if (!favorite) {
-      favorite = new Favorite({ userId, restaurantIds: [restaurantId] });
+      favorite = new Favorite({
+        userId,
+        restaurantIds: [new mongoose.Types.ObjectId(restaurantId)],
+      });
     } else {
-      if (favorite.restaurantIds.includes(restaurantId)) {
+      if (favorite.restaurantIds.some((id) => id.equals(restaurantId))) {
         return res
           .status(400)
           .json({ message: "Restaurant already in favorites" });
       }
-      favorite.restaurantIds.push(restaurantId);
+      favorite.restaurantIds.push(new mongoose.Types.ObjectId(restaurantId));
     }
 
     await favorite.save();
@@ -43,7 +48,7 @@ const removeFromFavorites = async (req, res) => {
     }
 
     favorite.restaurantIds = favorite.restaurantIds.filter(
-      (id) => id.toString() !== restaurantId
+      (id) => !id.equals(restaurantId)
     );
 
     await favorite.save();
@@ -90,15 +95,18 @@ const addMenuItemToFavorites = async (req, res) => {
     let favorite = await Favorite.findOne({ userId });
 
     if (!favorite) {
-      favorite = new Favorite({ userId, menuItemIds: [menuItemId] });
+      favorite = new Favorite({
+        userId,
+        menuItemIds: [new mongoose.Types.ObjectId(menuItemId)],
+      });
     } else {
-      if (favorite.menuItemIds?.includes(menuItemId)) {
+      if (favorite.menuItemIds?.some((id) => id.equals(menuItemId))) {
         return res
           .status(400)
           .json({ message: "Menu item already in favorites" });
       }
       favorite.menuItemIds = favorite.menuItemIds || [];
-      favorite.menuItemIds.push(menuItemId);
+      favorite.menuItemIds.push(new mongoose.Types.ObjectId(menuItemId));
     }
 
     await favorite.save();
@@ -124,7 +132,7 @@ const removeMenuItemFromFavorites = async (req, res) => {
     }
 
     favorite.menuItemIds = (favorite.menuItemIds || []).filter(
-      (id) => id.toString() !== menuItemId
+      (id) => !id.equals(menuItemId)
     );
 
     await favorite.save();
