@@ -12,7 +12,7 @@ import { AuthContext } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const CustomerSettings = () => {
-  const { user, token, logout } = useContext(AuthContext);
+  const { user, token, logout, setUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const [darkMode, setDarkMode] = useState(false);
@@ -25,12 +25,27 @@ const CustomerSettings = () => {
   const [deleteInput, setDeleteInput] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  // ✅ Fetch the latest user profile on mount
   useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        // Keep double "users" in the path to match your backend
+        const res = await API.get("/users/users/me");
+        const userData = res.data.user;
+
+        setEmail(userData.email || "");
+        setPhone(userData.phone || "");
+        setUser(userData); // Sync AuthContext
+      } catch (err) {
+        console.error("❌ Failed to fetch user profile:", err.message);
+      }
+    };
+
+    fetchProfile();
+
     const storedDarkMode = localStorage.getItem("darkMode");
     if (storedDarkMode !== null) setDarkMode(storedDarkMode === "true");
-
-    setNotifications(user?.preferences?.notifications ?? true);
-  }, [user]);
+  }, [token, setUser]);
 
   const handleSavePreferences = async () => {
     setSaving(true);
@@ -66,7 +81,8 @@ const CustomerSettings = () => {
         return;
       }
 
-      await API.delete(`/users/users/${user._id}`, {
+      // Delete user with correct route
+      await API.delete(`/users/${user._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
