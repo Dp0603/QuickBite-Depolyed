@@ -95,6 +95,21 @@ const getUserById = async (req, res) => {
   }
 };
 
+// 👤 Get currently logged-in user
+const getMe = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password"); // use _id
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({
+      message: "Current user fetched successfully",
+      user,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // ✏️ Update user profile
 const updateUser = async (req, res) => {
   try {
@@ -147,6 +162,7 @@ module.exports = {
   registerUser,
   loginUser,
   getUserById,
+  getMe,
   updateUser,
   deleteUser,
   getAllUsers,

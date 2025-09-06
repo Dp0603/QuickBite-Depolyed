@@ -1,8 +1,10 @@
 const express = require("express");
+const { protect } = require("../middlewares/authMiddleware");
 const {
   registerUser,
   loginUser,
   getUserById,
+  getMe, // ✅ New function
   updateUser,
   deleteUser,
   getAllUsers,
@@ -16,10 +18,13 @@ router.post("/users/register", registerUser);
 // 🔑 Login user
 router.post("/users/login", loginUser);
 
+// 👤 Get currently logged-in user
+router.get("/users/me", protect, getMe); // ✅ New route
+
 // 👤 Get user by ID
 router.get("/users/:id", getUserById);
 
-// ✏️ Update user
+// ✏️ Update user profile
 router.put("/users/:id", updateUser);
 
 // 🗑️ Delete user

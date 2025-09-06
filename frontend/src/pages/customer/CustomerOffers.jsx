@@ -6,19 +6,20 @@ import {
   FaChevronLeft,
   FaChevronRight,
 } from "react-icons/fa";
-import API from "../../api/axios"; // ✅ your axios instance
+import API from "../../api/axios";
 
 const CustomerOffers = () => {
   const [offers, setOffers] = useState([]);
   const [filter, setFilter] = useState("all");
   const [featuredIndex, setFeaturedIndex] = useState(0);
 
-  // Fetch offers from test route
+  // Fetch offers (all, not just valid)
   useEffect(() => {
     const fetchOffers = async () => {
       try {
-        const res = await API.get("/offers/test-mixed");
-        setOffers(res.data.offers);
+        const res = await API.get("/offers/offers/all");
+        const allOffers = [...res.data.activeOffers, ...res.data.expiredOffers];
+        setOffers(allOffers);
       } catch (err) {
         console.error("Failed to fetch offers:", err.message);
         setOffers([]);
@@ -27,13 +28,21 @@ const CustomerOffers = () => {
     fetchOffers();
   }, []);
 
+  // Apply filter logic
   const filteredOffers = offers.filter((o) => {
-    const isExpired = !o.isActive || new Date(o.validTill) < new Date();
-    return filter === "all"
-      ? true
-      : filter === "active"
-      ? !isExpired
-      : isExpired;
+    const now = new Date();
+    const start = new Date(o.validFrom);
+    const end = new Date(o.validTill);
+
+    const isActive = o.isActive && start <= now && end >= now; // currently valid
+    const isExpired = end < now || !o.isActive; // date passed or disabled
+    const isUpcoming = start > now; // future start
+
+    if (filter === "all") return true;
+    if (filter === "active") return isActive;
+    if (filter === "expired") return isExpired;
+    if (filter === "upcoming") return isUpcoming;
+    return true;
   });
 
   const globalOffers = filteredOffers.filter((o) => !o.restaurantId);
@@ -72,7 +81,7 @@ const CustomerOffers = () => {
 
       {/* Filters */}
       <div className="flex gap-3 my-8">
-        {["all", "active", "expired"].map((f) => (
+        {["all", "active", "expired", "upcoming"].map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -186,7 +195,12 @@ const OfferSection = ({ title, offers, type }) => {
 // Single Offer Card Component
 const OfferCard = ({ offer, type }) => {
   const now = new Date();
-  const isExpired = !offer.isActive || new Date(offer.validTill) < now;
+  const start = new Date(offer.validFrom);
+  const end = new Date(offer.validTill);
+
+  const isActive = offer.isActive && start <= now && end >= now;
+  const isExpired = end < now || !offer.isActive;
+  const isUpcoming = start > now;
 
   const handleCopy = () => {
     if (offer.promoCode) {
@@ -230,7 +244,7 @@ const OfferCard = ({ offer, type }) => {
       )}
 
       <div className="flex items-center justify-between mt-4">
-        {offer.promoCode && !isExpired ? (
+        {offer.promoCode && isActive ? (
           <button
             onClick={handleCopy}
             className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium shadow hover:bg-orange-600 transition"
@@ -239,10 +253,14 @@ const OfferCard = ({ offer, type }) => {
           </button>
         ) : isExpired ? (
           <span className="text-sm italic text-gray-500">Expired</span>
+        ) : isUpcoming ? (
+          <span className="text-sm italic text-blue-500">Coming Soon</span>
         ) : null}
 
         <span className="text-sm text-gray-500">
-          Expires: {new Date(offer.validTill).toLocaleDateString()}
+          {isUpcoming
+            ? `Starts: ${start.toLocaleDateString()}`
+            : `Expires: ${end.toLocaleDateString()}`}
         </span>
       </div>
     </div>

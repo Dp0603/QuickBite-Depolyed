@@ -4,7 +4,6 @@ const Offer = require("../models/OfferModel");
 const createOffer = async (req, res) => {
   try {
     const { restaurantId } = req.body;
-
     if (!restaurantId) {
       return res.status(400).json({ message: "Restaurant ID is required" });
     }
@@ -16,7 +15,7 @@ const createOffer = async (req, res) => {
 
     const offer = await Offer.create({
       ...req.body,
-      restaurantId, // ✅ store restaurantId, not ownerId
+      restaurantId,
     });
 
     res.status(201).json({
@@ -27,11 +26,12 @@ const createOffer = async (req, res) => {
     if (err.code === 11000 && err.keyPattern?.promoCode) {
       return res.status(400).json({ message: "Promo code already exists" });
     }
+    console.error("❌ createOffer error:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// 📦 Get all offers for a restaurant
+// 📦 Get all offers for a restaurant (admin/owner)
 const getOffersByRestaurant = async (req, res) => {
   try {
     const offers = await Offer.find({ restaurantId: req.params.restaurantId });
@@ -40,6 +40,7 @@ const getOffersByRestaurant = async (req, res) => {
       offers,
     });
   } catch (err) {
+    console.error("❌ getOffersByRestaurant error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -55,6 +56,7 @@ const getOfferById = async (req, res) => {
       offer,
     });
   } catch (err) {
+    console.error("❌ getOfferById error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -69,12 +71,13 @@ const updateOffer = async (req, res) => {
     const updatedOffer = await Offer.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      {
+        new: true,
+      }
     );
 
-    if (!updatedOffer) {
+    if (!updatedOffer)
       return res.status(404).json({ message: "Offer not found" });
-    }
 
     res.status(200).json({
       message: "Offer updated successfully",
@@ -84,6 +87,7 @@ const updateOffer = async (req, res) => {
     if (err.code === 11000 && err.keyPattern?.promoCode) {
       return res.status(400).json({ message: "Promo code already exists" });
     }
+    console.error("❌ updateOffer error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -96,6 +100,7 @@ const deleteOffer = async (req, res) => {
 
     res.status(200).json({ message: "Offer deleted successfully" });
   } catch (err) {
+    console.error("❌ deleteOffer error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -116,6 +121,7 @@ const getValidOffersForCustomer = async (req, res) => {
       offers,
     });
   } catch (err) {
+    console.error("❌ getValidOffersForCustomer error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -134,6 +140,7 @@ const toggleOfferStatus = async (req, res) => {
       offer,
     });
   } catch (err) {
+    console.error("❌ toggleOfferStatus error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -142,25 +149,54 @@ const toggleOfferStatus = async (req, res) => {
 const getOfferByPromoCode = async (req, res) => {
   try {
     const { promoCode, restaurantId } = req.query;
-    const now = new Date();
+    if (!promoCode)
+      return res.status(400).json({ message: "Promo code is required" });
 
+    const now = new Date();
     const offer = await Offer.findOne({
-      promoCode: promoCode?.toUpperCase(),
+      promoCode: promoCode.toUpperCase().trim(),
       restaurantId,
       isActive: true,
       validFrom: { $lte: now },
       validTill: { $gte: now },
     });
 
-    if (!offer) {
+    if (!offer)
       return res.status(404).json({ message: "Invalid or expired promo code" });
-    }
 
     res.status(200).json({
       message: "Promo code applied successfully",
       offer,
     });
   } catch (err) {
+    console.error("❌ getOfferByPromoCode error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// 🌐 Fetch all offers (global + restaurant), split active vs expired
+const getAllOffersForCustomer = async (req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    const query = restaurantId ? { restaurantId } : {};
+    const now = new Date();
+
+    const offers = await Offer.find(query).populate("restaurantId", "name");
+
+    const activeOffers = offers.filter(
+      (offer) =>
+        offer.isActive && offer.validFrom <= now && offer.validTill >= now
+    );
+
+    const expiredOffers = offers.filter((offer) => offer.validTill < now);
+
+    res.status(200).json({
+      message: "All offers fetched successfully",
+      activeOffers,
+      expiredOffers,
+    });
+  } catch (err) {
+    console.error("❌ getAllOffersForCustomer error:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -174,4 +210,5 @@ module.exports = {
   getValidOffersForCustomer,
   toggleOfferStatus,
   getOfferByPromoCode,
+  getAllOffersForCustomer,
 };
