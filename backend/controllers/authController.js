@@ -303,6 +303,7 @@ const resetPassword = async (req, res) => {
 };
 
 // 🔁 Change password
+// changePassword
 const changePassword = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -320,10 +321,9 @@ const changePassword = async (req, res) => {
       return res.status(401).json({ message: "Incorrect current password" });
     }
 
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
-
-    await user.save();
+    // ❌ remove manual bcrypt.hash
+    user.password = newPassword;
+    await user.save(); // pre-save hook will hash it
 
     res.status(200).json({ message: "Password changed successfully" });
   } catch (error) {
