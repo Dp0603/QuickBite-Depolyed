@@ -31,4 +31,4 @@ const resetUserPassword = async (email, newPassword) => {
 };
 
 // Change email and password here
-resetUserPassword("quickbitetestcustomer@yopmail.com", "QuickBite123");
+resetUserPassword("passwordtester@yopmail.com", "QuickBite123");

@@ -82,7 +82,7 @@ const CustomerSettings = () => {
       }
 
       // Delete user with correct route
-      await API.delete(`/users/${user._id}`, {
+      await API.delete(`/users/users/${user._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
