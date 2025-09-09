@@ -6,6 +6,7 @@ const Menu = require("../models/MenuModel");
 const Address = require("../models/AddressModel");
 const PremiumSubscription = require("../models/PremiumSubscriptionModel");
 const generateInvoice = require("../utils/generateInvoice");
+const SubscriptionHistory = require("../models/SubscriptionHistorymodel");
 
 // 🔐 Initialize Razorpay
 const razorpay = new Razorpay({
@@ -194,6 +195,8 @@ const createPremiumRazorpayOrder = async (req, res) => {
 // ✅ Verify Razorpay Signature for Premium & Save Subscription
 const verifyPremiumPayment = async (req, res) => {
   try {
+    console.log("verifyPremiumPayment received:", req.body);
+
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -201,6 +204,7 @@ const verifyPremiumPayment = async (req, res) => {
       subscriptionData,
     } = req.body;
 
+    // 1️⃣ Verify Razorpay signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -212,25 +216,58 @@ const verifyPremiumPayment = async (req, res) => {
         .json({ success: false, message: "Invalid Razorpay signature" });
     }
 
-    const subscription = await PremiumSubscription.create({
+    // 2️⃣ Check if an active subscription exists
+    let subscription = await PremiumSubscription.findOne({
       subscriberId: subscriptionData.subscriberId,
-      subscriberType: "User",
+    });
+
+    const newStartDate = new Date();
+    const newEndDate = subscriptionData.endDate;
+
+    if (subscription) {
+      // If existing subscription, update it
+      subscription.planName = subscriptionData.planName;
+      subscription.price = subscriptionData.price;
+      subscription.durationInDays = subscriptionData.durationInDays;
+      subscription.startDate = newStartDate;
+      subscription.endDate = newEndDate;
+      subscription.isActive = true;
+      subscription.paymentStatus = "Paid";
+      subscription.paymentId = razorpay_payment_id;
+      await subscription.save();
+    } else {
+      // If no existing subscription, create new
+      subscription = await PremiumSubscription.create({
+        subscriberId: subscriptionData.subscriberId,
+        subscriberType: subscriptionData.subscriberType || "User",
+        planName: subscriptionData.planName,
+        price: subscriptionData.price,
+        durationInDays: subscriptionData.durationInDays,
+        startDate: newStartDate,
+        endDate: newEndDate,
+        isActive: true,
+        paymentStatus: "Paid",
+        paymentId: razorpay_payment_id,
+      });
+    }
+
+    // 3️⃣ Always log to SubscriptionHistory
+    await SubscriptionHistory.create({
+      subscriberId: subscriptionData.subscriberId,
+      subscriberType: subscriptionData.subscriberType || "User",
       planName: subscriptionData.planName,
       price: subscriptionData.price,
       durationInDays: subscriptionData.durationInDays,
-      startDate: new Date(),
-      endDate: subscriptionData.endDate,
+      startDate: newStartDate,
+      endDate: newEndDate,
+      paymentId: razorpay_payment_id,
       paymentStatus: "Paid",
-      paymentDetails: {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-      },
     });
 
     res.status(201).json({
       success: true,
-      message: "✅ Premium payment verified & subscription activated",
+      message:
+        "✅ Premium payment verified, subscription updated, and history logged",
       subscription,
     });
   } catch (err) {

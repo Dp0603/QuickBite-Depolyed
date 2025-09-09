@@ -1,37 +1,65 @@
-// src/components/premium/CustomerPremium.jsx
-import React, { useState, useEffect, useContext, useMemo } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   FaTruck,
   FaTags,
   FaHeadset,
   FaCrown,
-  FaHeart,
-  FaQuestionCircle,
   FaGift,
   FaStar,
+  FaQuestionCircle,
+  FaTimes,
 } from "react-icons/fa";
 import API from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 import moment from "moment";
 
-/**
- * CustomerPremium
- * Full component with:
- * - PremiumMemberView (for active subscribers)
- * - PremiumLandingPage (for non-members)
- * - Testimonials, FAQ, Comparison table, FloatingCTA
- * - Razorpay payment flow
- * - Accessibility tweaks & null-safe date handling
- */
+// ------------------ PLANS ------------------
+const PLANS = [
+  {
+    planName: "Gold Monthly",
+    price: 199,
+    durationInDays: 30,
+    perks: ["Unlimited Free Deliveries", "Exclusive Discounts", "VIP Support"],
+  },
+  {
+    planName: "Gold Yearly",
+    price: 1999,
+    durationInDays: 365,
+    perks: ["Unlimited Free Deliveries", "Exclusive Discounts", "VIP Support"],
+  },
+  {
+    planName: "Platinum",
+    price: 4999,
+    durationInDays: 365,
+    perks: [
+      "Unlimited Free Deliveries",
+      "Exclusive Discounts",
+      "VIP Support",
+      "Free Priority Deliveries",
+    ],
+  },
+  {
+    planName: "Diamond",
+    price: 9999,
+    durationInDays: 365,
+    perks: [
+      "All Platinum Perks",
+      "Dedicated Account Manager",
+      "Early Access to Features",
+    ],
+  },
+];
 
+// ------------------ MAIN COMPONENT ------------------
 const CustomerPremium = () => {
-  const [selectedPlan, setSelectedPlan] = useState("monthly");
   const [planInfo, setPlanInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showUpgradePage, setShowUpgradePage] = useState(false);
   const { token, user } = useContext(AuthContext);
 
+  // Fetch subscription plan
   const fetchPlan = async () => {
-    if (!user?._id) {
+    if (!user?._id || !token) {
       setLoading(false);
       return;
     }
@@ -41,14 +69,12 @@ const CustomerPremium = () => {
         params: { subscriberType: "User", subscriberId: user._id },
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (res.data?.subscriptions?.length > 0) {
         setPlanInfo(res.data.subscriptions[0]);
       } else {
         setPlanInfo(null);
       }
     } catch (err) {
-      console.error("Failed to fetch subscription:", err);
       setPlanInfo(null);
     } finally {
       setLoading(false);
@@ -56,18 +82,13 @@ const CustomerPremium = () => {
   };
 
   useEffect(() => {
-    fetchPlan();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?._id]);
+    if (user?._id && token) fetchPlan();
+    // eslint-disable-next-line
+  }, [user?._id, token]);
 
-  const handleSubscribe = async () => {
-    if (!user?._id) return alert("User not found.");
+  // Razorpay payment handler
+  const handlePayment = async (planDetails) => {
     try {
-      const planDetails =
-        selectedPlan === "monthly"
-          ? { planName: "Gold", price: 199, durationInDays: 30 }
-          : { planName: "Gold", price: 1999, durationInDays: 365 };
-
       const { data } = await API.post(
         "/payment/create-premium-order",
         { amount: planDetails.price },
@@ -77,8 +98,8 @@ const CustomerPremium = () => {
       const { razorpayOrderId, amount, currency } = data;
 
       const options = {
-        key: "rzp_test_GDBH9Rf7wvZ3R6", // unchanged
-        amount: amount * 100, // unchanged
+        key: "rzp_test_GDBH9Rf7wvZ3R6",
+        amount: amount * 100,
         currency,
         name: "QuickBite Premium",
         description: `${planDetails.planName} Plan Subscription`,
@@ -106,14 +127,11 @@ const CustomerPremium = () => {
               },
               { headers: { Authorization: `Bearer ${token}` } }
             );
-
             alert("🎉 Subscription successful!");
             fetchPlan();
-          } catch (err) {
-            console.error("Payment verification failed", err);
-            alert(
-              "Payment verification failed. If the amount was deducted, please contact support with your payment ID."
-            );
+            setShowUpgradePage(false);
+          } catch {
+            alert("Payment verification failed. Please contact support.");
           }
         },
         prefill: {
@@ -125,83 +143,243 @@ const CustomerPremium = () => {
 
       if (!window.Razorpay) {
         alert(
-          "Payment SDK not loaded. Please ensure Razorpay script is added to your index.html."
+          "Payment SDK not loaded. Ensure Razorpay script is included in index.html."
         );
         return;
       }
+
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch (err) {
-      console.error("Subscription initiation failed", err);
-      alert("Subscription failed to start. Please try again.");
+    } catch {
+      alert("Payment failed. Please try again.");
     }
   };
 
   const handleCancelSubscription = async () => {
-    if (!planInfo?._id) return alert("No active subscription found.");
+    if (!planInfo?._id || !token) return alert("No active subscription found.");
     if (!window.confirm("Are you sure you want to cancel your subscription?"))
       return;
-
     try {
       setLoading(true);
       await API.delete(`/premium/subscriptions/${planInfo._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
       alert("Subscription cancelled successfully.");
       setPlanInfo(null);
-    } catch (err) {
-      console.error("Failed to cancel subscription:", err);
+    } catch {
       alert("Failed to cancel subscription. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const isSubscriptionActive = (endDate) =>
+    endDate ? moment().isBefore(moment(endDate).endOf("day")) : false;
+
+  if (loading) return <LoadingSpinner />;
+
+  if (!user?._id)
+    return (
+      <div className="text-center text-red-600 mt-10">
+        ⚠️ User not authenticated. Please login.
+      </div>
+    );
+
+  const subscriptionActive = planInfo && isSubscriptionActive(planInfo.endDate);
+  const subscriptionExpired = planInfo && !subscriptionActive;
+
   return (
     <div className="p-6 text-gray-800 dark:text-white min-h-[80vh]">
-      {loading ? (
-        <LoadingSpinner />
-      ) : planInfo ? (
+      {subscriptionActive ? (
         <PremiumMemberView
           planInfo={planInfo}
           onCancel={handleCancelSubscription}
+          onUpgrade={() => setShowUpgradePage(true)}
           user={user}
+          isExpiredView={false}
+        />
+      ) : subscriptionExpired ? (
+        <PremiumMemberView
+          planInfo={planInfo}
+          onCancel={() => setShowUpgradePage(true)}
+          onUpgrade={() => setShowUpgradePage(true)}
+          user={user}
+          isExpiredView={true}
         />
       ) : (
         <PremiumLandingPage
-          selectedPlan={selectedPlan}
-          setSelectedPlan={setSelectedPlan}
-          onSubscribe={handleSubscribe}
-          user={user}
+          plans={PLANS}
+          onSubscribe={(plan) => handlePayment(plan)}
+        />
+      )}
+
+      {showUpgradePage && (
+        <UpgradePage
+          currentPlan={planInfo}
+          plans={PLANS}
+          onClose={() => setShowUpgradePage(false)}
+          onSelectPlan={(plan) => handlePayment(plan)}
         />
       )}
     </div>
   );
 };
 
-/* ===========================
-   Premium Member View
-   =========================== */
-const PremiumMemberView = ({ planInfo, onCancel, user }) => {
-  const start = planInfo?.startDate ? moment(planInfo.startDate) : moment();
-  const end = planInfo?.endDate
-    ? moment(planInfo.endDate)
-    : moment().add(30, "days");
+// ------------------ UPGRADE PAGE ------------------
+const UpgradePage = ({ currentPlan, plans, onSelectPlan, onClose }) => (
+  <div className="fixed inset-0 z-50 bg-black/60 flex justify-center items-center overflow-auto transition-all">
+    <div className="bg-white dark:bg-secondary rounded-2xl p-8 max-w-4xl w-full shadow-2xl border dark:border-gray-700">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Upgrade Your Plan
+        </h2>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-900 dark:hover:text-white text-xl"
+          aria-label="Close upgrade modal"
+        >
+          <FaTimes />
+        </button>
+      </div>
+      <div className="grid md:grid-cols-2 gap-8">
+        {plans.map((plan) => {
+          const isCurrent =
+            currentPlan?.planName?.toLowerCase() ===
+            plan.planName.toLowerCase();
+
+          return (
+            <div
+              key={plan.planName}
+              className={`relative p-6 border rounded-2xl shadow-md transition-all duration-200 ${
+                isCurrent
+                  ? "border-green-600 bg-green-50 dark:bg-green-900/20"
+                  : "border-gray-200 dark:border-gray-700 dark:bg-secondary"
+              }`}
+            >
+              <div className="absolute top-3 right-3">
+                {isCurrent && (
+                  <span className="bg-green-500 text-white px-3 py-1 text-xs rounded-full font-semibold shadow">
+                    Current Plan
+                  </span>
+                )}
+              </div>
+              <h3 className="text-xl font-bold mb-1 text-primary">
+                {plan.planName}
+              </h3>
+              <div className="text-2xl font-semibold mb-1">₹{plan.price}</div>
+              <p className="text-sm text-gray-500 mb-3">
+                Valid for {plan.durationInDays} days
+              </p>
+              <ul className="mb-4 space-y-1 text-sm">
+                {plan.perks.map((perk, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <span className="text-green-600">✔</span>
+                    <span>{perk}</span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => !isCurrent && onSelectPlan(plan)}
+                disabled={isCurrent}
+                className={`w-full px-4 py-2 rounded-lg font-semibold transition ${
+                  isCurrent
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-primary text-white hover:brightness-95"
+                }`}
+              >
+                {isCurrent ? "Current Plan" : `Upgrade to ${plan.planName}`}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+);
+
+// ------------------ LANDING PAGE ------------------
+const PremiumLandingPage = ({ plans, onSubscribe }) => (
+  <div className="max-w-6xl mx-auto animate-fade-in">
+    <h1 className="text-4xl font-extrabold text-center mb-8">
+      Upgrade to <span className="text-primary">QuickBite Premium</span>
+    </h1>
+    <section className="grid md:grid-cols-3 gap-6 mb-12">
+      <Benefit
+        icon={<FaTruck />}
+        title="Unlimited Free Delivery"
+        desc="Order as often as you like without delivery fees."
+      />
+      <Benefit
+        icon={<FaTags />}
+        title="Exclusive Member Discounts"
+        desc="Special offers and priority deals."
+      />
+      <Benefit
+        icon={<FaHeadset />}
+        title="24×7 VIP Support"
+        desc="Always-on assistance for any need."
+      />
+    </section>
+    <section className="mb-12">
+      <h2 className="text-2xl font-semibold mb-4">Choose Your Plan</h2>
+      <div className="grid md:grid-cols-2 gap-6">
+        {plans.map((plan) => (
+          <div
+            key={plan.planName}
+            className="p-6 border rounded-2xl shadow hover:scale-[1.03] transition cursor-pointer bg-white dark:bg-secondary"
+          >
+            <h3 className="text-xl font-bold text-primary">{plan.planName}</h3>
+            <div className="text-2xl font-semibold">₹{plan.price}</div>
+            <p className="text-sm text-gray-500 mb-3">
+              Valid for {plan.durationInDays} days
+            </p>
+            <ul className="mb-4 space-y-1 text-sm">
+              {plan.perks.map((perk, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <span className="text-green-600">✔</span>
+                  <span>{perk}</span>
+                </li>
+              ))}
+            </ul>
+            <button
+              onClick={() => onSubscribe(plan)}
+              className="w-full px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:brightness-95 transition"
+            >
+              Subscribe
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+    <ComparisonTable />
+    <Testimonials />
+    <FAQ />
+    <FloatingCTA onClick={() => onSubscribe(plans[0])} />
+  </div>
+);
+
+// ------------------ OTHER COMPONENTS ------------------
+const PremiumMemberView = ({
+  planInfo,
+  onCancel,
+  onUpgrade,
+  user,
+  isExpiredView,
+}) => {
+  const start = moment(planInfo?.startDate || moment());
+  const end = moment(planInfo?.endDate || moment().add(30, "days"));
   const now = moment();
 
   const startOfDay = start.clone().startOf("day");
   const endOfDay = end.clone().endOf("day");
 
   const totalMs = Math.max(1, endOfDay.valueOf() - startOfDay.valueOf());
-  const elapsedMs = Math.max(
-    0,
-    Math.min(now.valueOf() - startOfDay.valueOf(), totalMs)
-  );
-
+  const elapsedMs = isExpiredView
+    ? totalMs
+    : Math.max(0, Math.min(now.valueOf() - startOfDay.valueOf(), totalMs));
   const progressPercent = Math.min(
     100,
-    Math.max(0, Math.round((elapsedMs / totalMs) * 100))
+    Math.round((elapsedMs / totalMs) * 100)
   );
 
   const remainingMs = Math.max(0, endOfDay.valueOf() - now.valueOf());
@@ -210,15 +388,20 @@ const PremiumMemberView = ({ planInfo, onCancel, user }) => {
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
-      {/* Membership card */}
-      <div className="bg-gradient-to-r from-yellow-100 to-white dark:from-yellow-800 dark:to-secondary rounded-2xl p-6 shadow-md mb-6 border">
-        <div className="flex items-center gap-4">
-          <div className="rounded-full bg-yellow-200 dark:bg-yellow-700 p-3 text-yellow-800 dark:text-yellow-100 shadow-md ring-4 ring-yellow-200/40">
-            <FaCrown className="text-2xl" />
+      <div
+        className={`bg-gradient-to-r ${
+          isExpiredView
+            ? "from-red-100 to-red-200 dark:from-red-900 dark:to-red-800"
+            : "from-yellow-100 to-white dark:from-yellow-800 dark:to-secondary"
+        } rounded-2xl p-8 shadow-lg mb-6 border dark:border-gray-700 transition-all`}
+      >
+        <div className="flex items-center gap-4 mb-3">
+          <div className="rounded-full bg-yellow-300 dark:bg-yellow-700 p-3 text-yellow-900 dark:text-yellow-100 shadow-md ring-4 ring-yellow-200/40">
+            <FaCrown className="text-3xl" />
           </div>
           <div>
             <h2 className="text-2xl font-extrabold">
-              🎉 You're a{" "}
+              {isExpiredView ? "⚠️ Your plan has expired" : "🎉 You're a"}{" "}
               <span className="text-primary">{planInfo.planName}</span> member
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -227,22 +410,19 @@ const PremiumMemberView = ({ planInfo, onCancel, user }) => {
             </p>
           </div>
         </div>
-
-        {/* Progress */}
-        <div className="mt-6 grid md:grid-cols-2 gap-4 items-center">
+        <div className="mt-5 grid md:grid-cols-2 gap-4 items-center">
           <div>
-            <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+            <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">
               Valid till
             </div>
-            <div className="text-xl font-bold">
-              {planInfo.endDate
-                ? moment(planInfo.endDate).format("MMMM Do, YYYY")
-                : "N/A"}
+            <div className="text-xl font-bold mb-1">
+              {moment(planInfo.endDate).format("MMMM Do, YYYY")}
             </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {remainingDays} day{remainingDays !== 1 ? "s" : ""} left
-            </div>
-
+            {!isExpiredView && (
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                {remainingDays} day{remainingDays !== 1 ? "s" : ""} left
+              </div>
+            )}
             <div className="mt-4">
               <div
                 className="relative h-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
@@ -252,24 +432,24 @@ const PremiumMemberView = ({ planInfo, onCancel, user }) => {
                 aria-valuemax={100}
               >
                 <div
-                  className="absolute inset-0 h-full bg-gradient-to-r from-yellow-400 to-orange-500 transition-all duration-700"
+                  className={`absolute inset-0 h-full ${
+                    isExpiredView
+                      ? "bg-red-400"
+                      : "bg-gradient-to-r from-yellow-400 to-orange-500"
+                  } transition-all duration-700`}
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-
               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
                 <span>{startOfDay.format("Do MMM, YYYY")}</span>
                 <span>{endOfDay.format("Do MMM, YYYY")}</span>
               </div>
-
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {progressPercent}% used — {totalDays} day
                 {totalDays !== 1 ? "s" : ""} total
               </div>
             </div>
           </div>
-
-          {/* Quick actions */}
           <div className="flex flex-col gap-3">
             <QuickPerkButton
               icon={<FaTruck />}
@@ -279,26 +459,33 @@ const PremiumMemberView = ({ planInfo, onCancel, user }) => {
             <QuickPerkButton icon={<FaTags />} label="View Exclusive Offers" />
           </div>
         </div>
-
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-7 flex flex-wrap gap-3">
           <button
             onClick={onCancel}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold shadow"
+            className={`px-4 py-2 rounded-lg font-semibold shadow transition ${
+              isExpiredView
+                ? "bg-green-600 hover:bg-green-700"
+                : "bg-red-600 hover:bg-red-700"
+            } text-white`}
           >
-            Cancel Subscription
+            {isExpiredView ? "Renew Subscription" : "Cancel Subscription"}
+          </button>
+          <button
+            onClick={onUpgrade}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold shadow transition"
+          >
+            Upgrade Plan
           </button>
           <button
             onClick={() =>
               alert("Feature coming soon: Add to cart with premium perks")
             }
-            className="bg-primary hover:brightness-95 text-white px-4 py-2 rounded-lg font-semibold shadow"
+            className="bg-primary hover:brightness-95 text-white px-4 py-2 rounded-lg font-semibold shadow transition"
           >
             Use Your Perks
           </button>
         </div>
       </div>
-
-      {/* Perk cards */}
       <section className="grid md:grid-cols-3 gap-6">
         <PerkCard
           title="Unlimited Free Deliveries"
@@ -320,74 +507,19 @@ const PremiumMemberView = ({ planInfo, onCancel, user }) => {
   );
 };
 
-/* ===========================
-   Landing Page (non-members)
-   =========================== */
-const PremiumLandingPage = ({ selectedPlan, setSelectedPlan, onSubscribe }) => (
-  <div className="max-w-6xl mx-auto animate-fade-in">
-    <h1 className="text-4xl font-bold text-center mb-8">
-      Upgrade to <span className="text-primary">QuickBite Premium</span>
-    </h1>
-
-    <section className="grid md:grid-cols-3 gap-6 mb-12">
-      <Benefit
-        icon={<FaTruck />}
-        title="Unlimited Free Delivery"
-        desc="Order as often as you like without delivery fees."
-      />
-      <Benefit
-        icon={<FaTags />}
-        title="Exclusive Member Discounts"
-        desc="Special offers and priority deals."
-      />
-      <Benefit
-        icon={<FaHeadset />}
-        title="24×7 VIP Support"
-        desc="Always-on assistance for any need."
-      />
-    </section>
-
-    <section className="mb-12">
-      <h2 className="text-2xl font-semibold mb-4">Choose Your Plan</h2>
-      <div className="flex gap-4" role="radiogroup" aria-label="Premium plans">
-        <PlanCard
-          label="Monthly"
-          price="₹199"
-          desc="Billed every month"
-          selected={selectedPlan === "monthly"}
-          onSelect={() => setSelectedPlan("monthly")}
-        />
-        <PlanCard
-          label="Yearly"
-          price="₹1999"
-          desc="Billed once a year"
-          selected={selectedPlan === "yearly"}
-          onSelect={() => setSelectedPlan("yearly")}
-        />
-      </div>
-      <button
-        onClick={onSubscribe}
-        className="mt-6 bg-primary hover:brightness-95 text-white px-6 py-3 rounded-lg font-semibold shadow"
-      >
-        Subscribe Now
-      </button>
-    </section>
-
-    <ComparisonTable />
-    <Testimonials />
-    <FAQ />
-    <FloatingCTA onClick={onSubscribe} />
-  </div>
-);
-
-/* ===========================
-   UI Helpers
-   =========================== */
 const QuickPerkButton = ({ icon, label }) => (
   <button className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-primary/10 rounded-lg border dark:border-gray-700 shadow-sm hover:shadow-md transition">
     <div className="text-primary text-lg">{icon}</div>
     <div className="text-sm font-medium">{label}</div>
   </button>
+);
+
+const Benefit = ({ icon, title, desc }) => (
+  <div className="flex flex-col items-center text-center p-4 bg-white dark:bg-secondary rounded-xl shadow">
+    <div className="text-4xl text-primary mb-3">{icon}</div>
+    <h3 className="font-bold">{title}</h3>
+    <p className="text-sm text-gray-600 dark:text-gray-400">{desc}</p>
+  </div>
 );
 
 const PerkCard = ({ icon, title, desc }) => (
@@ -399,33 +531,6 @@ const PerkCard = ({ icon, title, desc }) => (
         {desc}
       </div>
     </div>
-  </div>
-);
-
-const Benefit = ({ icon, title, desc }) => (
-  <div className="flex flex-col items-center text-center p-4 bg-white dark:bg-secondary rounded-xl shadow">
-    <div className="text-4xl text-primary mb-3">{icon}</div>
-    <h3 className="font-bold">{title}</h3>
-    <p className="text-sm text-gray-600 dark:text-gray-400">{desc}</p>
-  </div>
-);
-
-const PlanCard = ({ label, price, desc, selected, onSelect }) => (
-  <div
-    tabIndex={0}
-    role="radio"
-    aria-checked={selected}
-    className={`flex-1 p-6 border rounded-xl cursor-pointer ${
-      selected
-        ? "border-primary bg-primary/10"
-        : "border-gray-300 dark:border-gray-700"
-    }`}
-    onClick={onSelect}
-    onKeyDown={(e) => e.key === "Enter" && onSelect()}
-  >
-    <h3 className="text-xl font-bold">{label}</h3>
-    <div className="text-2xl">{price}</div>
-    <p className="text-sm text-gray-600 dark:text-gray-400">{desc}</p>
   </div>
 );
 
