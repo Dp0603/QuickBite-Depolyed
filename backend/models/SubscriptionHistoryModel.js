@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const premiumSubscriptionSchema = new mongoose.Schema(
+const subscriptionHistorySchema = new mongoose.Schema(
   {
     subscriberId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -9,12 +9,11 @@ const premiumSubscriptionSchema = new mongoose.Schema(
     },
     subscriberType: {
       type: String,
-      required: true,
       enum: ["User", "Restaurant"],
+      required: true,
     },
     planName: {
       type: String,
-      required: true,
       enum: [
         "Gold",
         "Platinum",
@@ -23,6 +22,7 @@ const premiumSubscriptionSchema = new mongoose.Schema(
         "Gold Monthly",
         "Gold Yearly",
       ],
+      required: true,
     },
 
     price: {
@@ -35,29 +35,28 @@ const premiumSubscriptionSchema = new mongoose.Schema(
     },
     startDate: {
       type: Date,
-      default: Date.now,
+      required: true,
     },
     endDate: {
       type: Date,
       required: true,
     },
-    isActive: {
-      type: Boolean,
-      default: true,
+    paymentId: {
+      type: String,
     },
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "Failed"],
-      default: "Pending",
-    },
-    paymentId: {
-      type: String, // Razorpay/Stripe txn ID
+      default: "Paid",
     },
   },
   { timestamps: true }
 );
 
+// optional index to speed up analytics queries
+subscriptionHistorySchema.index({ subscriberId: 1 });
+
 module.exports = mongoose.model(
-  "PremiumSubscription",
-  premiumSubscriptionSchema
+  "SubscriptionHistory",
+  subscriptionHistorySchema
 );
