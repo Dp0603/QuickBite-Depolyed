@@ -16,20 +16,38 @@ const CustomerCheckout = () => {
     cartItems = [],
     subtotal = 0,
     tax = 0,
-    deliveryFee = 0,
+    deliveryFee: baseDeliveryFee = 0,
     appliedDiscount = 0,
-    totalPayable = 0,
+    totalPayable: baseTotalPayable = 0,
     selectedOfferId = null,
     offer = null,
     restaurantId = null,
+    premiumSummary = {},
   } = location.state || {};
 
+  // Adjust delivery fee & total with premium and offer
+  const deliveryFee = Math.max(
+    baseDeliveryFee - (premiumSummary.freeDelivery || 0),
+    0
+  );
+
+  const totalPayable = Math.max(
+    subtotal +
+      tax +
+      deliveryFee -
+      appliedDiscount -
+      (premiumSummary.extraDiscount || 0),
+    0
+  );
+
+  // Redirect if cart is empty
   useEffect(() => {
     if (!location.state || cartItems.length === 0) {
       navigate("/cart");
     }
   }, [location.state, cartItems, navigate]);
 
+  // Fetch addresses
   useEffect(() => {
     const fetchAddresses = async () => {
       try {
@@ -41,23 +59,24 @@ const CustomerCheckout = () => {
         const def = all.find((a) => a.isDefault) || all[0];
         setDefaultAddress(def || null);
       } catch (err) {
-        console.error("Failed to load address:", err);
+        console.error("Failed to load addresses:", err);
       }
     };
 
     if (user?._id) fetchAddresses();
   }, [user, token]);
 
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
+  // Load Razorpay script
+  const loadRazorpayScript = () =>
+    new Promise((resolve) => {
       const script = document.createElement("script");
       script.src = "https://checkout.razorpay.com/v1/checkout.js";
       script.onload = () => resolve(true);
       script.onerror = () => resolve(false);
       document.body.appendChild(script);
     });
-  };
 
+  // Handle place order
   const handlePlaceOrder = async () => {
     if (placingOrder) return;
     if (!defaultAddress) {
@@ -75,7 +94,7 @@ const CustomerCheckout = () => {
         return;
       }
 
-      const roundedAmount = Math.round(Number(totalPayable) * 100);
+      const roundedAmount = Math.round(totalPayable * 100);
       const razorpayOrderRes = await API.post("/payment/create-order", {
         amount: roundedAmount / 100,
       });
@@ -103,9 +122,10 @@ const CustomerCheckout = () => {
             subtotal,
             tax,
             deliveryFee,
-            discount: appliedDiscount,
+            discount: appliedDiscount + (premiumSummary.extraDiscount || 0),
             totalAmount: totalPayable,
             offerId: selectedOfferId || null,
+            premiumSummary: premiumSummary || {},
             paymentMethod: "Razorpay",
             addressId: defaultAddress._id,
             deliveryAddress: {
@@ -137,29 +157,16 @@ const CustomerCheckout = () => {
         prefill: {
           name: user.name,
           email: user.email,
-          contact: "9999999999",
+          contact: user.phone || "9999999999",
         },
-        notes: {
-          address: "QuickBite - Test Payment",
-        },
-        theme: {
-          color: "#f97316",
-        },
+        notes: { address: "QuickBite - Test Payment" },
+        theme: { color: "#f97316" },
         modal: {
           ondismiss: () => {
             navigate("/customer/payment-failure", {
               state: {
                 reason: "Payment was cancelled or failed.",
                 amount: totalPayable,
-                restaurantId,
-                cartItems,
-                subtotal,
-                tax,
-                deliveryFee,
-                appliedDiscount,
-                totalPayable,
-                selectedOfferId,
-                offer,
               },
             });
           },
@@ -180,10 +187,9 @@ const CustomerCheckout = () => {
     <div className="p-6 text-gray-800 dark:text-white max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">🧾 Checkout</h1>
 
-      {/* 📍 Delivery Address */}
+      {/* Delivery Address */}
       <div className="bg-white dark:bg-secondary p-5 rounded-xl shadow border dark:border-gray-700 mb-6">
         <h2 className="text-xl font-semibold mb-3">📍 Delivery Address</h2>
-
         {!defaultAddress ? (
           <div>
             <p className="text-red-600 text-sm mb-2">
@@ -217,15 +223,42 @@ const CustomerCheckout = () => {
         </div>
       </div>
 
-      {/* 💳 Payment Method */}
+      {/* Payment Method */}
       <div className="bg-white dark:bg-secondary p-5 rounded-xl shadow border dark:border-gray-700 mb-6">
         <h2 className="text-xl font-semibold mb-3">💳 Payment Method</h2>
         <p>Razorpay (UPI / Card / Wallet)</p>
       </div>
 
-      {/* 🧂 Order Summary */}
+      {/* Order Summary */}
       <div className="bg-white dark:bg-secondary p-5 rounded-xl shadow border dark:border-gray-700 mb-6">
         <h2 className="text-xl font-semibold mb-3">🧂 Order Summary</h2>
+
+        {/* Premium Benefits */}
+        {premiumSummary &&
+          (premiumSummary.extraDiscount ||
+            premiumSummary.freeDelivery ||
+            premiumSummary.cashback) && (
+            <div className="mb-2 p-2 bg-green-50 dark:bg-green-900 rounded">
+              <h4 className="font-semibold text-green-800 dark:text-green-300">
+                💎 Premium Benefits Applied:
+              </h4>
+              {premiumSummary.freeDelivery > 0 && (
+                <p className="text-green-600 dark:text-green-300">
+                  Free Delivery: ₹{premiumSummary.freeDelivery.toFixed(0)}
+                </p>
+              )}
+              {premiumSummary.extraDiscount > 0 && (
+                <p className="text-green-600 dark:text-green-300">
+                  Extra Discount: ₹{premiumSummary.extraDiscount.toFixed(0)}
+                </p>
+              )}
+              {premiumSummary.cashback > 0 && (
+                <p className="text-green-600 dark:text-green-300">
+                  Cashback Eligible: ₹{premiumSummary.cashback.toFixed(0)}
+                </p>
+              )}
+            </div>
+          )}
 
         {offer && (
           <div className="text-sm text-green-700 dark:text-green-400 mb-2">
@@ -247,39 +280,74 @@ const CustomerCheckout = () => {
         <div className="space-y-1 text-sm">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>₹{subtotal}</span>
+            <span>₹{subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span>Tax</span>
-            <span>₹{tax}</span>
+            <span>₹{tax.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
             <span>Delivery Fee</span>
-            <span>₹{deliveryFee}</span>
+            <span>
+              ₹{deliveryFee.toFixed(2)}{" "}
+              {deliveryFee === 0 && (
+                <span className="text-green-600 text-xs">(Free)</span>
+              )}
+            </span>
           </div>
-          {appliedDiscount > 0 && (
+          {(appliedDiscount > 0 || premiumSummary.extraDiscount > 0) && (
             <div className="flex justify-between text-green-600">
               <span>Discount</span>
-              <span>–₹{appliedDiscount}</span>
+              <span>
+                –₹
+                {(
+                  appliedDiscount + (premiumSummary.extraDiscount || 0)
+                ).toFixed(2)}
+              </span>
             </div>
           )}
         </div>
 
         <hr className="my-2 border-gray-300 dark:border-gray-600" />
-
         <div className="flex justify-between font-medium text-lg">
           <span>Total Payable</span>
-          <span>₹{totalPayable}</span>
+          <span>₹{totalPayable.toFixed(2)}</span>
         </div>
       </div>
 
-      {/* ✅ Pay Button */}
+      {/* Pay Button */}
       <button
         onClick={handlePlaceOrder}
         disabled={placingOrder || !defaultAddress}
-        className="w-full bg-primary hover:bg-orange-600 text-white py-3 rounded-xl font-semibold transition disabled:opacity-60"
+        className="w-full bg-primary hover:bg-orange-600 text-white py-3 rounded-xl font-semibold transition disabled:opacity-60 flex justify-center items-center gap-2"
       >
-        {placingOrder ? "Placing Order..." : "Proceed to Pay"}
+        {placingOrder ? (
+          <>
+            <svg
+              className="animate-spin h-5 w-5 text-white"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              ></circle>
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4l-3 3 3 3h-4z"
+              ></path>
+            </svg>
+            Placing Order...
+          </>
+        ) : (
+          "Proceed to Pay"
+        )}
       </button>
     </div>
   );

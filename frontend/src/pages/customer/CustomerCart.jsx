@@ -16,11 +16,16 @@ const CustomerCart = () => {
   const [promoError, setPromoError] = useState("");
   const [availableOffers, setAvailableOffers] = useState([]);
   const [selectedOfferId, setSelectedOfferId] = useState("");
+  const [premiumSummary, setPremiumSummary] = useState({
+    freeDelivery: 0,
+    extraDiscount: 0,
+    cashback: 0,
+    totalSavings: 0,
+  });
 
-  // 🔄 Helper: Fetch latest active cart
+  // 🔄 Fetch latest active cart
   const fetchCart = async () => {
     if (!user?._id) return;
-
     try {
       const res = await API.get(`/cart/${user._id}`);
       const items = res.data.cart?.items || [];
@@ -28,6 +33,15 @@ const CustomerCart = () => {
 
       const restId = res.data.cart?.restaurantId?._id || null;
       setRestaurantId(restId);
+
+      // ✅ Premium benefits
+      const premium = res.data.cart?.premiumSummary || {
+        freeDelivery: 0,
+        extraDiscount: 0,
+        cashback: 0,
+        totalSavings: 0,
+      };
+      setPremiumSummary(premium);
     } catch (err) {
       console.error(
         "❌ Error fetching active cart:",
@@ -35,15 +49,20 @@ const CustomerCart = () => {
       );
       setCartItems([]);
       setRestaurantId(null);
+      setPremiumSummary({
+        freeDelivery: 0,
+        extraDiscount: 0,
+        cashback: 0,
+        totalSavings: 0,
+      });
     }
   };
 
-  // 🛒 Fetch Cart on mount & user change
   useEffect(() => {
     fetchCart();
   }, [user]);
 
-  // 🎁 Fetch Offers whenever restaurant changes
+  // 🎁 Fetch Offers
   useEffect(() => {
     if (restaurantId) {
       API.get(`/offers/offers/valid/${restaurantId}`)
@@ -64,6 +83,7 @@ const CustomerCart = () => {
     await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
       quantity: currentQty + 1,
       note,
+      applyPremium: true,
     });
     fetchCart();
   };
@@ -74,6 +94,7 @@ const CustomerCart = () => {
     await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
       quantity: currentQty - 1,
       note,
+      applyPremium: true,
     });
     fetchCart();
   };
@@ -90,11 +111,18 @@ const CustomerCart = () => {
     0
   );
   const tax = Math.round(subtotal * 0.08);
-  const deliveryFee = subtotal >= 500 ? 0 : 40;
-  const totalBeforeDiscount = subtotal + tax + deliveryFee;
-  const totalPayable = Number(
-    Math.max(totalBeforeDiscount - appliedDiscount, 0).toFixed(2)
+
+  const baseDeliveryFee = subtotal >= 500 ? 0 : 40;
+  const deliveryFee = Math.max(
+    baseDeliveryFee - (premiumSummary.freeDelivery || 0),
+    0
   );
+
+  const totalBeforeDiscount = subtotal + tax + deliveryFee;
+  const totalPayable = Math.max(
+    totalBeforeDiscount - appliedDiscount - (premiumSummary.extraDiscount || 0),
+    0
+  ).toFixed(2);
 
   // 🎯 Apply Offer
   const applySelectedOffer = () => {
@@ -186,6 +214,34 @@ const CustomerCart = () => {
               🧾 Order Summary
             </h3>
 
+            {/* Premium Summary */}
+            {premiumSummary &&
+              ((premiumSummary.extraDiscount || 0) > 0 ||
+                ((premiumSummary.freeDelivery || 0) > 0 && subtotal < 500) ||
+                (premiumSummary.cashback || 0) > 0) && (
+                <div className="mb-2 p-2 bg-green-50 dark:bg-green-900 rounded">
+                  <h4 className="font-semibold text-green-800 dark:text-green-300">
+                    💎 Premium Benefits Applied:
+                  </h4>
+                  {(premiumSummary.freeDelivery || 0) > 0 && subtotal < 500 && (
+                    <p className="text-green-600 dark:text-green-300">
+                      Free Delivery: ₹{Math.round(premiumSummary.freeDelivery)}
+                    </p>
+                  )}
+                  {(premiumSummary.extraDiscount || 0) > 0 && (
+                    <p className="text-green-600 dark:text-green-300">
+                      Extra Discount: ₹
+                      {Math.round(premiumSummary.extraDiscount)}
+                    </p>
+                  )}
+                  {(premiumSummary.cashback || 0) > 0 && (
+                    <p className="text-green-600 dark:text-green-300">
+                      Cashback Eligible: ₹{Math.round(premiumSummary.cashback)}
+                    </p>
+                  )}
+                </div>
+              )}
+
             {/* Offers */}
             <div className="flex gap-2">
               <select
@@ -246,10 +302,21 @@ const CustomerCart = () => {
                 </span>
                 <span>₹{deliveryFee}</span>
               </div>
-              {appliedDiscount > 0 && (
+              {(appliedDiscount > 0 ||
+                (premiumSummary.extraDiscount || 0) > 0) && (
                 <div className="flex justify-between">
                   <span>Discount</span>
-                  <span className="text-green-600">–₹{appliedDiscount}</span>
+                  <span className="text-green-600">
+                    –₹{appliedDiscount + (premiumSummary.extraDiscount || 0)}
+                  </span>
+                </div>
+              )}
+              {(premiumSummary.cashback || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span>Cashback (eligible)</span>
+                  <span className="text-green-600">
+                    ₹{Math.round(premiumSummary.cashback)}
+                  </span>
                 </div>
               )}
             </div>
@@ -257,7 +324,7 @@ const CustomerCart = () => {
             <hr className="border-gray-200 dark:border-gray-600" />
             <div className="flex justify-between font-semibold text-lg">
               <span>Total</span>
-              <span>₹{totalPayable.toFixed(2)}</span>
+              <span>₹{totalPayable}</span>
             </div>
 
             <button
@@ -281,6 +348,7 @@ const CustomerCart = () => {
                       availableOffers.find((o) => o._id === selectedOfferId) ||
                       null,
                     restaurantId,
+                    premiumSummary,
                   },
                 });
               }}

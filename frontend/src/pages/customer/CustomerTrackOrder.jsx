@@ -39,6 +39,8 @@ const CustomerTrackOrder = () => {
   const [showSupportModal, setShowSupportModal] = useState(false);
 
   useEffect(() => {
+    if (!orderId || !user) return;
+
     const fetchOrder = async () => {
       try {
         const res = await API.get(`/orders/orders/${orderId}`);
@@ -49,15 +51,15 @@ const CustomerTrackOrder = () => {
         setLoading(false);
       }
     };
-    fetchOrder();
-  }, [orderId]);
 
+    fetchOrder();
+  }, [orderId, user]);
+
+  // Socket.io setup
   useEffect(() => {
     const newSocket = io(
       import.meta.env.VITE_SOCKET_URL || "http://localhost:5000",
-      {
-        transports: ["websocket"],
-      }
+      { transports: ["websocket"] }
     );
     setSocket(newSocket);
     newSocket.emit("joinOrderRoom", orderId);
@@ -68,6 +70,7 @@ const CustomerTrackOrder = () => {
           ...prev,
           orderStatus: updatedOrder.orderStatus,
           eta: updatedOrder.eta,
+          deliveryDetails: updatedOrder.deliveryDetails || prev.deliveryDetails,
         }));
       }
     });
@@ -89,9 +92,7 @@ const CustomerTrackOrder = () => {
       const res = await API.get("/feedback/check", {
         params: { userId: user._id, orderId: order._id },
       });
-      if (!res.data.alreadyGiven) {
-        setShowFeedbackForm(true);
-      }
+      if (!res.data.alreadyGiven) setShowFeedbackForm(true);
     } catch (err) {
       console.error("Error checking feedback:", err);
     }
@@ -99,7 +100,6 @@ const CustomerTrackOrder = () => {
 
   const handleFeedbackSubmit = async () => {
     if (!rating) return alert("Please select a rating!");
-
     try {
       await API.post("/feedback", {
         userId: user._id,
@@ -109,13 +109,28 @@ const CustomerTrackOrder = () => {
         comment,
         feedbackType: "order",
       });
-
       setFeedbackSubmitted(true);
       setShowFeedbackForm(false);
       alert("✅ Thanks for your feedback!");
     } catch (err) {
       console.error("Error submitting feedback:", err);
       alert("Something went wrong. Try again.");
+    }
+  };
+
+  const handleReorder = async () => {
+    if (!order) return;
+    try {
+      const res = await API.post(`/cart/reorder/${user._id}/${order._id}`);
+      if (res.data?.cart) {
+        alert("✅ Items added to cart!");
+        window.location.href = "/customer/cart";
+      } else {
+        alert("Some items are not available to reorder.");
+      }
+    } catch (err) {
+      console.error("❌ Error during reorder:", err);
+      alert("Failed to reorder. Please try again.");
     }
   };
 
@@ -175,6 +190,11 @@ const CustomerTrackOrder = () => {
             <p className="mt-1 font-medium">
               <strong>Total:</strong> ₹{order.totalAmount?.toFixed(2)}
             </p>
+            {order.premiumApplied && order.savings > 0 && (
+              <p className="text-green-600 font-medium">
+                Premium Savings: -₹{order.savings?.toFixed(2)}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -272,7 +292,6 @@ const CustomerTrackOrder = () => {
       {showFeedbackForm && !feedbackSubmitted && (
         <div className="bg-white dark:bg-secondary border dark:border-gray-700 shadow rounded-xl p-6 mb-10">
           <h2 className="text-xl font-semibold mb-4">How was your order?</h2>
-
           <div className="flex gap-1 mb-4">
             {[1, 2, 3, 4, 5].map((s) => (
               <FaStar
@@ -284,14 +303,12 @@ const CustomerTrackOrder = () => {
               />
             ))}
           </div>
-
           <textarea
             placeholder="Write a short review (optional)..."
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             className="w-full p-3 border rounded-md mb-4 dark:bg-gray-800 dark:border-gray-600"
           ></textarea>
-
           <button
             onClick={handleFeedbackSubmit}
             className="bg-primary text-white px-5 py-2 rounded hover:bg-orange-600 transition"
@@ -309,16 +326,14 @@ const CustomerTrackOrder = () => {
         >
           Need Help?
         </button>
-
         {showSupportModal && (
           <CustomerSupportModal
             order={order}
             onClose={() => setShowSupportModal(false)}
           />
         )}
-
         <button
-          onClick={() => alert("Reordering...")}
+          onClick={handleReorder}
           className="w-full md:w-auto bg-primary text-white px-5 py-3 rounded-lg shadow hover:bg-orange-600 transition text-sm font-medium"
         >
           Reorder This Meal

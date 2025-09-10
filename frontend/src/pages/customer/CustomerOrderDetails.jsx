@@ -4,7 +4,7 @@ import API from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 import { FaArrowLeft, FaDownload } from "react-icons/fa";
 
-const formatPrice = (value) => `₹${Number(value).toFixed(2)}`;
+const formatPrice = (value) => `₹${Number(value || 0).toFixed(2)}`;
 
 const CustomerOrderDetails = () => {
   const { orderId } = useParams();
@@ -13,13 +13,18 @@ const CustomerOrderDetails = () => {
   const [order, setOrder] = useState(null);
 
   useEffect(() => {
-    if (user && orderId) {
-      API.get(`/orders/orders/${orderId}`)
-        .then((res) => setOrder(res.data.order))
-        .catch((err) =>
-          console.error("❌ Failed to fetch order details:", err)
-        );
-    }
+    if (!user || !orderId) return;
+
+    const fetchOrder = async () => {
+      try {
+        const res = await API.get(`/orders/orders/${orderId}`);
+        setOrder(res.data.order);
+      } catch (err) {
+        console.error("❌ Failed to fetch order details:", err);
+      }
+    };
+
+    fetchOrder();
   }, [orderId, user]);
 
   const downloadInvoice = () => {
@@ -66,7 +71,7 @@ const CustomerOrderDetails = () => {
 
           <div>
             <p className="text-sm text-gray-500">Restaurant:</p>
-            <p className="font-medium">{order.restaurantId?.name}</p>
+            <p className="font-medium">{order.restaurantId?.name || "N/A"}</p>
           </div>
         </div>
       </div>
@@ -76,7 +81,7 @@ const CustomerOrderDetails = () => {
         <h2 className="text-xl font-semibold mb-4">🍽️ Items Ordered</h2>
         <ul className="divide-y divide-gray-200 dark:divide-gray-600">
           {order.items.map((item) => (
-            <li key={item._id} className="py-3">
+            <li key={item._id || item.menuItemId?._id} className="py-3">
               <div className="flex justify-between items-center">
                 <div>
                   <p className="font-medium">
@@ -101,30 +106,33 @@ const CustomerOrderDetails = () => {
       <div className="bg-white dark:bg-secondary rounded-lg shadow p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">💰 Billing</h2>
         <div className="space-y-2">
-          {order.subtotal && (
-            <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>{formatPrice(order.subtotal)}</span>
-            </div>
-          )}
-          {order.tax && (
-            <div className="flex justify-between">
-              <span>Tax:</span>
-              <span>{formatPrice(order.tax)}</span>
-            </div>
-          )}
-          {order.deliveryFee && (
-            <div className="flex justify-between">
-              <span>Delivery Fee:</span>
-              <span>{formatPrice(order.deliveryFee)}</span>
-            </div>
-          )}
+          <div className="flex justify-between">
+            <span>Subtotal:</span>
+            <span>{formatPrice(order.subtotal)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Tax:</span>
+            <span>{formatPrice(order.tax)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Delivery Fee:</span>
+            <span>{formatPrice(order.deliveryFee)}</span>
+          </div>
           {order.discount > 0 && (
             <div className="flex justify-between text-green-600 font-medium">
               <span>Discount:</span>
               <span>-{formatPrice(order.discount)}</span>
             </div>
           )}
+
+          {/* Premium savings display */}
+          {order.premiumApplied && order.savings > 0 && (
+            <div className="flex justify-between text-yellow-700 dark:text-yellow-400 font-medium">
+              <span>Premium Savings:</span>
+              <span>-{formatPrice(order.savings)}</span>
+            </div>
+          )}
+
           <hr className="border-t dark:border-gray-600 my-2" />
           <div className="flex justify-between font-bold text-lg">
             <span>Total:</span>
@@ -138,8 +146,26 @@ const CustomerOrderDetails = () => {
         <h2 className="text-xl font-semibold mb-4">🚚 Delivery</h2>
         <p>
           <span className="text-sm text-gray-500">Status: </span>
-          <span className="font-medium">{order.orderStatus}</span>
+          <span className="font-medium">
+            {order.deliveryDetails?.deliveryStatus || order.orderStatus}
+          </span>
         </p>
+        {order.deliveryDetails?.deliveryAgentId && (
+          <p>
+            <span className="text-sm text-gray-500">Delivery Agent: </span>
+            <span className="font-medium">
+              {order.deliveryDetails.deliveryAgentId.name || "Assigned"}
+            </span>
+          </p>
+        )}
+        {order.deliveryDetails?.deliveryTime && (
+          <p>
+            <span className="text-sm text-gray-500">Expected Delivery: </span>
+            <span className="font-medium">
+              {new Date(order.deliveryDetails.deliveryTime).toLocaleString()}
+            </span>
+          </p>
+        )}
       </div>
 
       {/* Actions */}

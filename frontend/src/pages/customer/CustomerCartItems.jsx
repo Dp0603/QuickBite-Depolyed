@@ -11,32 +11,54 @@ const CustomerCartItems = ({ item, increment, decrement, removeItem }) => {
 
   const food = item; // item contains { id, name, price, quantity, image, note }
 
+  const handleIncrement = () => {
+    increment();
+    addRef.current?.stop(); // Reset animation
+    addRef.current?.play();
+  };
+
+  const handleDecrement = () => {
+    if (food.quantity > 1) {
+      decrement();
+      removeRef.current?.stop(); // Reset animation
+      removeRef.current?.play();
+    }
+  };
+
+  const handleRemove = () => {
+    deleteRef.current?.stop(); // Reset animation
+    deleteRef.current?.play();
+    // Remove item after animation completes
+    setTimeout(() => removeItem(), 600); // Adjust to match Lottie duration
+  };
+
   return (
     <div className="flex items-center gap-5 p-5 bg-white dark:bg-secondary rounded-2xl shadow hover:shadow-md transition">
+      {/* Food Image */}
       <img
         src={food.image || "/QuickBite.png"}
         alt={food.name}
         className="w-24 h-24 object-cover rounded-xl border dark:border-gray-700"
       />
 
+      {/* Food Details */}
       <div className="flex-1">
         <h4 className="font-semibold text-lg">{food.name}</h4>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          ₹{food.price} x {food.quantity} ={" "}
+          ₹{food.price} × {food.quantity} ={" "}
           <span className="font-semibold text-black dark:text-white">
             ₹{food.price * food.quantity}
           </span>
         </p>
+        {food.note && (
+          <p className="text-xs text-gray-400 mt-1">Note: {food.note}</p>
+        )}
       </div>
 
+      {/* Quantity Controls */}
       <div className="flex items-center gap-2">
         <button
-          onClick={() => {
-            if (food.quantity > 1) {
-              decrement();
-              removeRef.current?.play();
-            }
-          }}
+          onClick={handleDecrement}
           disabled={food.quantity === 1}
           className={`rounded-full ${
             food.quantity === 1
@@ -57,10 +79,7 @@ const CustomerCartItems = ({ item, increment, decrement, removeItem }) => {
         <span className="px-2 font-semibold">{food.quantity}</span>
 
         <button
-          onClick={() => {
-            increment();
-            addRef.current?.play();
-          }}
+          onClick={handleIncrement}
           className="rounded-full hover:scale-110 transition-transform"
           aria-label="Increase quantity"
         >
@@ -74,11 +93,9 @@ const CustomerCartItems = ({ item, increment, decrement, removeItem }) => {
         </button>
       </div>
 
+      {/* Remove Button */}
       <button
-        onClick={() => {
-          deleteRef.current?.play();
-          setTimeout(() => removeItem(), 600);
-        }}
+        onClick={handleRemove}
         className="ml-4 text-red-500 hover:text-red-600 transition rounded-full hover:scale-110"
         aria-label="Remove item"
       >
