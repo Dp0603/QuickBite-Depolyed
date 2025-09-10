@@ -20,7 +20,6 @@ import { AuthContext } from "../../context/AuthContext";
 import API from "../../api/axios";
 
 /* ----------------------------- Small Utilities ---------------------------- */
-
 const useTimeGreeting = () => {
   const h = new Date().getHours();
   if (h < 12) return "Morning";
@@ -48,7 +47,6 @@ const currency = (n) =>
     : n;
 
 /* ------------------------------- Main Screen ------------------------------ */
-
 const CustomerDashboard = () => {
   const { user, token } = useContext(AuthContext);
   const [orders, setOrders] = useState([]);
@@ -357,6 +355,19 @@ const CustomerDashboard = () => {
                       <p className="text-xs text-gray-500 mt-1">
                         {new Date(order.createdAt).toLocaleDateString("en-IN")}
                       </p>
+
+                      {/* Premium Savings per order */}
+                      {order.premiumApplied && order.savings > 0 && (
+                        <p className="text-green-600 text-xs mt-1">
+                          💎 Saved ₹{order.savings}{" "}
+                          {order.premiumBreakdown?.freeDelivery > 0 &&
+                            `(Free Delivery: ₹${order.premiumBreakdown.freeDelivery})`}
+                          {order.premiumBreakdown?.extraDiscount > 0 &&
+                            `(Extra Discount: ₹${order.premiumBreakdown.extraDiscount})`}
+                          {order.premiumBreakdown?.cashback > 0 &&
+                            `(Cashback: ₹${order.premiumBreakdown.cashback})`}
+                        </p>
+                      )}
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-semibold">
@@ -383,7 +394,6 @@ const CustomerDashboard = () => {
 };
 
 /* --------------------------------- Parts --------------------------------- */
-
 const GradientTile = ({ children, onClick }) => (
   <div
     onClick={onClick}

@@ -40,6 +40,12 @@ const cartSchema = new mongoose.Schema(
       type: [cartItemSchema],
       default: [],
     },
+    premiumSummary: {
+      freeDelivery: { type: Number, default: 0 },
+      extraDiscount: { type: Number, default: 0 },
+      cashback: { type: Number, default: 0 },
+      totalSavings: { type: Number, default: 0 },
+    },
   },
   { timestamps: true }
 );

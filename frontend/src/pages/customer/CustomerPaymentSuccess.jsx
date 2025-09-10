@@ -1,5 +1,5 @@
 import React from "react";
-import { FaCheckCircle, FaDownload } from "react-icons/fa";
+import { FaCheckCircle } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const CustomerPaymentSuccess = () => {
@@ -36,7 +36,8 @@ const CustomerPaymentSuccess = () => {
 
         {order && (
           <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 text-sm border dark:border-gray-600">
-            <div className="grid md:grid-cols-2 gap-4">
+            {/* Order Info */}
+            <div className="grid md:grid-cols-2 gap-4 mb-4">
               <div>
                 <p>
                   <strong>Order ID:</strong> {order._id}
@@ -55,9 +56,35 @@ const CustomerPaymentSuccess = () => {
               </div>
             </div>
 
-            <hr className="my-4 border-gray-300 dark:border-gray-700" />
+            {/* Premium Benefits */}
+            {order.premiumApplied && order.premiumBreakdown && (
+              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900 rounded text-sm">
+                <h4 className="font-semibold text-green-800 dark:text-green-300">
+                  💎 Premium Benefits Applied:
+                </h4>
+                {order.premiumBreakdown.freeDelivery > 0 && (
+                  <p className="text-green-600 dark:text-green-300">
+                    Free Delivery: ₹
+                    {order.premiumBreakdown.freeDelivery.toFixed(0)}
+                  </p>
+                )}
+                {order.premiumBreakdown.extraDiscount > 0 && (
+                  <p className="text-green-600 dark:text-green-300">
+                    Extra Discount: ₹
+                    {order.premiumBreakdown.extraDiscount.toFixed(0)}
+                  </p>
+                )}
+                {order.premiumBreakdown.cashback > 0 && (
+                  <p className="text-green-600 dark:text-green-300">
+                    Cashback Eligible: ₹
+                    {order.premiumBreakdown.cashback.toFixed(0)}
+                  </p>
+                )}
+              </div>
+            )}
 
-            <div>
+            {/* Items Ordered */}
+            <div className="mb-4">
               <p className="font-semibold mb-2">Items Ordered:</p>
               {order.items.map((item, index) => (
                 <p key={index} className="text-gray-700 dark:text-gray-300">
@@ -69,6 +96,7 @@ const CustomerPaymentSuccess = () => {
 
             <hr className="my-4 border-gray-300 dark:border-gray-700" />
 
+            {/* Billing */}
             <div className="grid grid-cols-2 text-sm gap-1">
               <span>Subtotal:</span>
               <span className="text-right">
@@ -86,6 +114,17 @@ const CustomerPaymentSuccess = () => {
               <span className="text-right text-green-600">
                 –₹{order.discount?.toFixed(2) || "0.00"}
               </span>
+
+              {/* Premium Savings */}
+              {order.premiumApplied && (
+                <>
+                  <span>Premium Savings:</span>
+                  <span className="text-right text-green-600">
+                    ₹{order.savings?.toFixed(2)}
+                  </span>
+                </>
+              )}
+
               <span className="font-semibold">Total Paid:</span>
               <span className="text-right font-semibold">
                 ₹{order.totalAmount?.toFixed(2)}
@@ -94,6 +133,7 @@ const CustomerPaymentSuccess = () => {
           </div>
         )}
 
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 mt-6">
           <button
             onClick={downloadInvoice}
@@ -108,6 +148,7 @@ const CustomerPaymentSuccess = () => {
           >
             View My Orders
           </button>
+
           <button
             onClick={() => navigate("/customer")}
             className="w-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white py-2 rounded-xl transition font-semibold"

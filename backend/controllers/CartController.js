@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Cart = require("../models/CartModel");
 const Order = require("../models/OrderModel");
 const Menu = require("../models/MenuModel");
+const PremiumSubscription = require("../models/PremiumSubscriptionModel");
 
 /**
  * Helper to validate ObjectIds
@@ -16,24 +17,63 @@ const validateIds = (ids) => {
 };
 
 /**
+ * Helper: Calculate Premium benefits
+ */
+const calculatePremiumBenefits = (cartItems, premiumPlan) => {
+  if (!premiumPlan || !premiumPlan.isActive) return null;
+
+  let subtotal = 0;
+  cartItems.forEach((item) => {
+    subtotal += item.menuItem.price * item.quantity;
+  });
+
+  // Delivery fee logic: only apply free delivery if subtotal < 500 normally
+  const normalDeliveryFee = subtotal >= 500 ? 0 : 40;
+
+  // 🟢 Premium perks
+  const freeDelivery = premiumPlan.perks?.freeDelivery ? normalDeliveryFee : 0;
+  const extraDiscount = premiumPlan.perks?.extraDiscount
+    ? (subtotal * premiumPlan.perks.extraDiscount) / 100
+    : 0;
+  const cashback = premiumPlan.perks?.cashback
+    ? (subtotal * premiumPlan.perks.cashback) / 100
+    : 0;
+
+  const totalSavings = freeDelivery + extraDiscount + cashback;
+
+  return { freeDelivery, extraDiscount, cashback, totalSavings };
+};
+
+/**
+ * Fetch active premium subscription for user
+ */
+const getActivePremiumPlan = async (userId) => {
+  const plan = await PremiumSubscription.findOne({
+    subscriberId: userId,
+    isActive: true,
+    startDate: { $lte: new Date() },
+    endDate: { $gte: new Date() },
+  });
+  return plan;
+};
+
+/**
  * Add or update cart item
- * POST /api/cart/:userId/:restaurantId/item/:menuItemId
- * Body: { quantity, note, clearOldCart: boolean }
  */
 const addOrUpdateCartItem = async (req, res) => {
   try {
     const { userId, restaurantId, menuItemId } = req.params;
-    const { quantity, note, clearOldCart } = req.body;
+    const { quantity, note, clearOldCart, applyPremium } = req.body;
 
     const invalid = validateIds({ userId, restaurantId, menuItemId });
     if (invalid) return res.status(400).json({ message: invalid });
 
+    if (!quantity || quantity < 1)
+      return res.status(400).json({ message: "Quantity must be at least 1" });
+
     const userObjId = new mongoose.Types.ObjectId(userId);
     const restaurantObjId = new mongoose.Types.ObjectId(restaurantId);
     const menuItemObjId = new mongoose.Types.ObjectId(menuItemId);
-
-    if (!quantity || quantity < 1)
-      return res.status(400).json({ message: "Quantity must be at least 1" });
 
     // Check if user has items in another restaurant
     const otherCartWithItems = await Cart.findOne({
@@ -49,7 +89,6 @@ const addOrUpdateCartItem = async (req, res) => {
       });
     }
 
-    // Clear other restaurant carts if requested
     if (clearOldCart) {
       await Cart.deleteMany({
         userId: userObjId,
@@ -64,14 +103,12 @@ const addOrUpdateCartItem = async (req, res) => {
     });
 
     if (!cart) {
-      // Lazy creation: only create cart when first item is added
       cart = new Cart({
         userId: userObjId,
         restaurantId: restaurantObjId,
         items: [{ menuItem: menuItemObjId, quantity, note }],
       });
     } else {
-      // Update existing items or add new one
       const existingItem = cart.items.find(
         (item) => item.menuItem.toString() === menuItemId
       );
@@ -81,6 +118,15 @@ const addOrUpdateCartItem = async (req, res) => {
       } else {
         cart.items.push({ menuItem: menuItemObjId, quantity, note });
       }
+    }
+
+    // Apply Premium if requested
+    if (applyPremium) {
+      const premiumPlan = await getActivePremiumPlan(userObjId);
+      await cart.populate("items.menuItem");
+      cart.premiumSummary = calculatePremiumBenefits(cart.items, premiumPlan);
+    } else {
+      cart.premiumSummary = null;
     }
 
     await cart.save();
@@ -101,8 +147,7 @@ const addOrUpdateCartItem = async (req, res) => {
 };
 
 /**
- * Get user cart for a restaurant (lazy fetch, no creation)
- * GET /api/cart/:userId/:restaurantId
+ * Get user cart for a restaurant
  */
 const getUserCart = async (req, res) => {
   try {
@@ -120,10 +165,11 @@ const getUserCart = async (req, res) => {
       .populate("items.menuItem")
       .populate("restaurantId", "name logo");
 
-    if (!cart) {
-      // Do not create empty cart; return null
+    if (!cart)
       return res.status(200).json({ message: "No cart yet", cart: null });
-    }
+
+    const premiumPlan = await getActivePremiumPlan(userObjId);
+    cart.premiumSummary = calculatePremiumBenefits(cart.items, premiumPlan);
 
     res.status(200).json({ message: "Cart fetched successfully", cart });
   } catch (err) {
@@ -135,8 +181,7 @@ const getUserCart = async (req, res) => {
 };
 
 /**
- * Remove a specific item
- * DELETE /api/cart/:userId/:restaurantId/item/:menuItemId
+ * Remove cart item
  */
 const removeCartItem = async (req, res) => {
   try {
@@ -160,10 +205,13 @@ const removeCartItem = async (req, res) => {
     );
 
     if (cart.items.length === 0) {
-      // ✅ If no items left, delete the whole cart
       await Cart.deleteOne({ _id: cart._id });
       return res.status(200).json({ message: "Cart deleted", cart: null });
     }
+
+    const premiumPlan = await getActivePremiumPlan(userObjId);
+    await cart.populate("items.menuItem");
+    cart.premiumSummary = calculatePremiumBenefits(cart.items, premiumPlan);
 
     await cart.save();
 
@@ -181,8 +229,7 @@ const removeCartItem = async (req, res) => {
 };
 
 /**
- * Clear entire cart
- * DELETE /api/cart/:userId/:restaurantId
+ * Clear cart
  */
 const clearCart = async (req, res) => {
   try {
@@ -200,7 +247,6 @@ const clearCart = async (req, res) => {
 
     if (!cart) return res.status(404).json({ message: "Cart not found" });
 
-    // ✅ Instead of saving empty items, delete the cart
     await Cart.deleteOne({ _id: cart._id });
 
     res.status(200).json({ message: "Cart deleted", cart: null });
@@ -213,8 +259,7 @@ const clearCart = async (req, res) => {
 };
 
 /**
- * Optional: Get active cart regardless of restaurant
- * GET /api/cart/:userId
+ * Get active cart
  */
 const getActiveCart = async (req, res) => {
   try {
@@ -233,9 +278,11 @@ const getActiveCart = async (req, res) => {
       .populate("restaurantId", "name logo")
       .sort({ updatedAt: -1 });
 
-    if (!cart) {
+    if (!cart)
       return res.status(200).json({ message: "No active cart", cart: null });
-    }
+
+    const premiumPlan = await getActivePremiumPlan(userObjId);
+    cart.premiumSummary = calculatePremiumBenefits(cart.items, premiumPlan);
 
     res.status(200).json({ message: "Active cart fetched", cart });
   } catch (err) {
@@ -247,48 +294,49 @@ const getActiveCart = async (req, res) => {
 };
 
 /**
- * 🔁 Reorder from past order
- * POST /api/cart/reorder/:userId/:orderId
+ * Reorder from past order
  */
 const reorderFromOrder = async (req, res) => {
   try {
     const { userId, orderId } = req.params;
-
     const invalid = validateIds({ userId, orderId });
     if (invalid) return res.status(400).json({ message: invalid });
 
     const userObjId = new mongoose.Types.ObjectId(userId);
 
-    // 1️⃣ Get the old order
     const order = await Order.findById(orderId);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // 2️⃣ Check items availability from Menu
     const validItems = [];
     for (const item of order.items) {
-      const menuItem = await Menu.findById(item.menuItemId); // ✅ FIXED
+      const menuItem = await Menu.findById(item.menuItemId);
       if (menuItem && menuItem.isAvailable) {
         validItems.push({
-          menuItem: menuItem._id, // ✅ Cart expects "menuItem"
+          menuItem: menuItem._id,
           quantity: item.quantity,
           note: item.note || "",
         });
       }
     }
 
-    if (validItems.length === 0) {
+    if (validItems.length === 0)
       return res.status(400).json({ message: "No items available to reorder" });
-    }
 
-    // 3️⃣ Clear any existing cart for this restaurant
     await Cart.deleteMany({ userId: userObjId });
 
-    // 4️⃣ Create a new cart with valid items
     const newCart = new Cart({
       userId: userObjId,
       restaurantId: order.restaurantId,
       items: validItems,
     });
+
+    const premiumPlan = await getActivePremiumPlan(userObjId);
+    await newCart.populate("items.menuItem");
+    newCart.premiumSummary = calculatePremiumBenefits(
+      newCart.items,
+      premiumPlan
+    );
+
     await newCart.save();
 
     const populatedCart = await Cart.findById(newCart._id)
@@ -303,6 +351,7 @@ const reorderFromOrder = async (req, res) => {
     res.status(500).json({ message: "Error reordering", error: err.message });
   }
 };
+
 module.exports = {
   addOrUpdateCartItem,
   getUserCart,

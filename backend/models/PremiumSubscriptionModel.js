@@ -24,7 +24,6 @@ const premiumSubscriptionSchema = new mongoose.Schema(
         "Gold Yearly",
       ],
     },
-
     price: {
       type: Number,
       required: true,
@@ -52,6 +51,19 @@ const premiumSubscriptionSchema = new mongoose.Schema(
     },
     paymentId: {
       type: String, // Razorpay/Stripe txn ID
+    },
+
+    // 🆕 Track how much value the subscriber got
+    totalSavings: {
+      type: Number,
+      default: 0,
+    },
+
+    // 🆕 (Optional, for clarity) store perks applied by this plan
+    perks: {
+      freeDelivery: { type: Boolean, default: true },
+      extraDiscount: { type: Number, default: 0 }, // % discount on subtotal
+      cashback: { type: Number, default: 0 }, // flat ₹ cashback per order
     },
   },
   { timestamps: true }
