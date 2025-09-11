@@ -1,4 +1,121 @@
-import React, { useState, useEffect, useContext } from "react";
+// src/pages/customer/CustomerPremium.jsx
+// import React, { useState, useEffect, useContext, useMemo } from "react";
+// import moment from "moment";
+// import { useNavigate } from "react-router-dom";
+// import API from "../../api/axios";
+// import { AuthContext } from "../../context/AuthContext";
+// import CustomerPremiumLanding from "./CustomerPremiumLanding";
+// import CustomerPremiumMember from "./CustomerPremiumMember";
+
+// const PLANS_BASE = [
+//   {
+//     planName: "Gold",
+//     tier: "Gold",
+//     monthlyPrice: 199,
+//     yearlyPrice: 1999,
+//     durationMonthly: 30,
+//     durationYearly: 365,
+//     perks: ["Unlimited Free Deliveries", "Exclusive Discounts", "VIP Support"],
+//   },
+//   {
+//     planName: "Platinum",
+//     tier: "Platinum",
+//     monthlyPrice: 499,
+//     yearlyPrice: 4999,
+//     durationMonthly: 30,
+//     durationYearly: 365,
+//     perks: [
+//       "Unlimited Free Deliveries",
+//       "Exclusive Discounts",
+//       "VIP Support",
+//       "Free Priority Deliveries",
+//     ],
+//   },
+//   {
+//     planName: "Diamond",
+//     tier: "Diamond",
+//     monthlyPrice: 999,
+//     yearlyPrice: 9999,
+//     durationMonthly: 30,
+//     durationYearly: 365,
+//     perks: [
+//       "All Platinum Perks",
+//       "Dedicated Account Manager",
+//       "Early Access to Features",
+//     ],
+//   },
+// ];
+
+// const CustomerPremium = () => {
+//   const { token, user } = useContext(AuthContext);
+//   const [planInfo, setPlanInfo] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   const [billingPeriod, setBillingPeriod] = useState("yearly");
+//   const navigate = useNavigate();
+
+//   const PLANS = useMemo(
+//     () =>
+//       PLANS_BASE.map((p) => ({
+//         ...p,
+//         price: billingPeriod === "yearly" ? p.yearlyPrice : p.monthlyPrice,
+//         durationInDays:
+//           billingPeriod === "yearly" ? p.durationYearly : p.durationMonthly,
+//       })),
+//     [billingPeriod]
+//   );
+
+//   const fetchPlan = async () => {
+//     if (!user?._id || !token) {
+//       setLoading(false);
+//       return;
+//     }
+//     setLoading(true);
+//     try {
+//       const res = await API.get(`/premium/subscriptions`, {
+//         params: { subscriberType: "User", subscriberId: user._id },
+//         headers: { Authorization: `Bearer ${token}` },
+//       });
+//       setPlanInfo(res.data?.subscriptions?.[0] || null);
+//     } catch {
+//       setPlanInfo(null);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (user?._id && token) fetchPlan();
+//   }, [user?._id, token]);
+
+//   // 👇 either blank screen or message instead of spinner
+//   if (loading)
+//     return (
+//       <div className="text-center text-gray-500 py-10">
+//         Loading your Premium data…
+//       </div>
+//     );
+
+//   const subscriptionActive =
+//     planInfo && moment().isBefore(moment(planInfo.endDate).endOf("day"));
+
+//   return (
+//     <div className="p-6 text-gray-800 dark:text-white min-h-[80vh]">
+//       {subscriptionActive ? (
+//         <CustomerPremiumMember planInfo={planInfo} user={user} />
+//       ) : (
+//         <CustomerPremiumLanding
+//           plans={PLANS}
+//           billingPeriod={billingPeriod}
+//           setBillingPeriod={setBillingPeriod}
+//         />
+//       )}
+//     </div>
+//   );
+// };
+
+// export default CustomerPremium;
+
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import {
   FaTruck,
   FaTags,
@@ -9,28 +126,30 @@ import {
   FaQuestionCircle,
   FaTimes,
 } from "react-icons/fa";
+import { motion } from "framer-motion";
+import CountUp from "react-countup";
+import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
 import moment from "moment";
 
-// ------------------ PLANS ------------------
-const PLANS = [
+const PLANS_BASE = [
   {
-    planName: "Gold Monthly",
-    price: 199,
-    durationInDays: 30,
-    perks: ["Unlimited Free Deliveries", "Exclusive Discounts", "VIP Support"],
-  },
-  {
-    planName: "Gold Yearly",
-    price: 1999,
-    durationInDays: 365,
+    planName: "Gold",
+    tier: "Gold",
+    monthlyPrice: 199,
+    yearlyPrice: 1999,
+    durationMonthly: 30,
+    durationYearly: 365,
     perks: ["Unlimited Free Deliveries", "Exclusive Discounts", "VIP Support"],
   },
   {
     planName: "Platinum",
-    price: 4999,
-    durationInDays: 365,
+    tier: "Platinum",
+    monthlyPrice: 499,
+    yearlyPrice: 4999,
+    durationMonthly: 30,
+    durationYearly: 365,
     perks: [
       "Unlimited Free Deliveries",
       "Exclusive Discounts",
@@ -40,8 +159,11 @@ const PLANS = [
   },
   {
     planName: "Diamond",
-    price: 9999,
-    durationInDays: 365,
+    tier: "Diamond",
+    monthlyPrice: 999,
+    yearlyPrice: 9999,
+    durationMonthly: 30,
+    durationYearly: 365,
     perks: [
       "All Platinum Perks",
       "Dedicated Account Manager",
@@ -50,12 +172,29 @@ const PLANS = [
   },
 ];
 
-// ------------------ MAIN COMPONENT ------------------
+const formatCurrency = (v) => `₹${v.toLocaleString("en-IN")}`;
+
+/* ------------------ MAIN COMPONENT ------------------ */
 const CustomerPremium = () => {
   const [planInfo, setPlanInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showUpgradePage, setShowUpgradePage] = useState(false);
   const { token, user } = useContext(AuthContext);
+  const [billingPeriod, setBillingPeriod] = useState("yearly"); // "monthly" | "yearly"
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const navigate = useNavigate();
+
+  // Derived plans data (with price based on billingPeriod)
+  const PLANS = useMemo(
+    () =>
+      PLANS_BASE.map((p) => ({
+        ...p,
+        price: billingPeriod === "yearly" ? p.yearlyPrice : p.monthlyPrice,
+        durationInDays:
+          billingPeriod === "yearly" ? p.durationYearly : p.durationMonthly,
+      })),
+    [billingPeriod]
+  );
 
   // Fetch subscription plan
   const fetchPlan = async () => {
@@ -86,7 +225,7 @@ const CustomerPremium = () => {
     // eslint-disable-next-line
   }, [user?._id, token]);
 
-  // Razorpay payment handler
+  // Razorpay payment handler (keeps your original flow, but uses env key)
   const handlePayment = async (planDetails) => {
     try {
       const { data } = await API.post(
@@ -97,9 +236,12 @@ const CustomerPremium = () => {
 
       const { razorpayOrderId, amount, currency } = data;
 
+      const RAZORPAY_KEY =
+        import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_GDBH9Rf7wvZ3R6";
+
       const options = {
-        key: "rzp_test_GDBH9Rf7wvZ3R6",
-        amount: amount * 100,
+        key: RAZORPAY_KEY,
+        amount: amount * 100, // ensure amount is rupees -> paise logic matches backend
         currency,
         name: "QuickBite Premium",
         description: `${planDetails.planName} Plan Subscription`,
@@ -127,6 +269,7 @@ const CustomerPremium = () => {
               },
               { headers: { Authorization: `Bearer ${token}` } }
             );
+            // nice UX: small friendly toast would be better; keeping alert for minimal deps
             alert("🎉 Subscription successful!");
             fetchPlan();
             setShowUpgradePage(false);
@@ -157,8 +300,6 @@ const CustomerPremium = () => {
 
   const handleCancelSubscription = async () => {
     if (!planInfo?._id || !token) return alert("No active subscription found.");
-    if (!window.confirm("Are you sure you want to cancel your subscription?"))
-      return;
     try {
       setLoading(true);
       await API.delete(`/premium/subscriptions/${planInfo._id}`, {
@@ -166,6 +307,7 @@ const CustomerPremium = () => {
       });
       alert("Subscription cancelled successfully.");
       setPlanInfo(null);
+      setShowCancelModal(false);
     } catch {
       alert("Failed to cancel subscription. Please try again.");
     } finally {
@@ -188,15 +330,76 @@ const CustomerPremium = () => {
   const subscriptionActive = planInfo && isSubscriptionActive(planInfo.endDate);
   const subscriptionExpired = planInfo && !subscriptionActive;
 
+  const savedAmount = planInfo?.totalSavings || 0;
+
   return (
     <div className="p-6 text-gray-800 dark:text-white min-h-[80vh]">
+      {/* HERO */}
+      <motion.section
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="rounded-2xl p-8 mb-8 bg-gradient-to-r from-orange-400 via-pink-500 to-purple-600 text-white shadow-lg"
+      >
+        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-6 items-center">
+          <div>
+            <h1 className="text-4xl font-extrabold mb-2">
+              Upgrade to{" "}
+              <span className="underline decoration-yellow-300">
+                QuickBite Premium
+              </span>
+            </h1>
+            <p className="opacity-90 mb-4">
+              Free deliveries, priority support and exclusive partner offers —
+              built for frequent food lovers.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUpgradePage(true)}
+                className="bg-white text-black px-5 py-3 rounded-full font-semibold shadow hover:brightness-95"
+              >
+                Get Premium
+              </button>
+              <button
+                onClick={() => navigate("/customer/offers")}
+                className="bg-transparent border border-white px-4 py-3 rounded-full hover:bg-white/10"
+              >
+                See Offers
+              </button>
+            </div>
+            <div className="mt-4 flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <FaStar /> <div className="text-sm">Rated 4.8 by members</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <FaGift />{" "}
+                <div className="text-sm">Free priority deliveries</div>
+              </div>
+            </div>
+          </div>
+          <div className="hidden md:block">
+            {/* Placeholder illustration — you can replace with Lottie or image */}
+            <div className="h-40 rounded-lg bg-white/20 border border-white/10 flex items-center justify-center">
+              <div className="text-center">
+                <div className="text-2xl font-bold">Premium Illustration</div>
+                <div className="text-sm mt-1">
+                  Happy customers & speedy deliveries
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      {/* BODY */}
       {subscriptionActive ? (
         <PremiumMemberView
           planInfo={planInfo}
-          onCancel={handleCancelSubscription}
+          onCancel={() => setShowCancelModal(true)}
           onUpgrade={() => setShowUpgradePage(true)}
           user={user}
           isExpiredView={false}
+          savedAmount={savedAmount}
         />
       ) : subscriptionExpired ? (
         <PremiumMemberView
@@ -205,68 +408,219 @@ const CustomerPremium = () => {
           onUpgrade={() => setShowUpgradePage(true)}
           user={user}
           isExpiredView={true}
+          savedAmount={savedAmount}
         />
       ) : (
         <PremiumLandingPage
           plans={PLANS}
+          billingPeriod={billingPeriod}
+          setBillingPeriod={setBillingPeriod}
           onSubscribe={(plan) => handlePayment(plan)}
         />
       )}
 
+      {/* Upgrade modal */}
       {showUpgradePage && (
         <UpgradePage
           currentPlan={planInfo}
           plans={PLANS}
+          billingPeriod={billingPeriod}
           onClose={() => setShowUpgradePage(false)}
           onSelectPlan={(plan) => handlePayment(plan)}
         />
       )}
+
+      {/* Cancel confirmation modal */}
+      {showCancelModal && (
+        <CancelModal
+          planInfo={planInfo}
+          onClose={() => setShowCancelModal(false)}
+          onConfirm={handleCancelSubscription}
+        />
+      )}
+
+      {/* Sticky mobile CTA */}
+      <StickyBottomBar
+        onUpgrade={() => setShowUpgradePage(true)}
+        plans={PLANS}
+      />
     </div>
   );
 };
 
-// ------------------ UPGRADE PAGE ------------------
-const UpgradePage = ({ currentPlan, plans, onSelectPlan, onClose }) => (
-  <div className="fixed inset-0 z-50 bg-black/60 flex justify-center items-center overflow-auto transition-all">
-    <div className="bg-white dark:bg-secondary rounded-2xl p-8 max-w-4xl w-full shadow-2xl border dark:border-gray-700">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Upgrade Your Plan
-        </h2>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-900 dark:hover:text-white text-xl"
-          aria-label="Close upgrade modal"
-        >
-          <FaTimes />
-        </button>
-      </div>
-      <div className="grid md:grid-cols-2 gap-8">
-        {plans.map((plan) => {
-          const isCurrent =
-            currentPlan?.planName?.toLowerCase() ===
-            plan.planName.toLowerCase();
+/* ------------------ UPGRADE PAGE ------------------ */
+const UpgradePage = ({
+  currentPlan,
+  plans,
+  billingPeriod,
+  onSelectPlan,
+  onClose,
+}) => {
+  // Mark Gold Yearly as most popular for ribbon
+  const mostPopular = "Gold";
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex justify-center items-start overflow-auto py-10">
+      <motion.div
+        initial={{ scale: 0.98, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.18 }}
+        className="bg-white dark:bg-secondary rounded-2xl p-6 max-w-5xl w-full shadow-2xl border dark:border-gray-700"
+      >
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+            Choose a Plan
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-900"
+          >
+            <FaTimes />
+          </button>
+        </div>
 
-          return (
-            <div
+        <div className="flex items-center gap-4 mb-4">
+          <BillingToggle />
+          <div className="text-sm text-gray-500">
+            Toggle between monthly and yearly pricing
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {plans.map((plan) => {
+            const isCurrent =
+              currentPlan?.planName?.toLowerCase() ===
+              plan.planName.toLowerCase();
+
+            const showPopular =
+              plan.tier === mostPopular && billingPeriod === "yearly";
+
+            // savings example: compare to monthly * 12
+            const monthlyEquivalent =
+              plan.monthlyPrice * (billingPeriod === "yearly" ? 12 : 1);
+            const savings = Math.max(0, monthlyEquivalent - plan.price);
+
+            return (
+              <motion.div
+                key={plan.planName}
+                whileHover={{ scale: 1.03 }}
+                className={`relative p-6 border rounded-2xl shadow-md transition-all duration-200 bg-gradient-to-br from-white to-gray-50 dark:bg-secondary dark:border-gray-700`}
+              >
+                {showPopular && (
+                  <span className="absolute top-3 left-3 bg-primary text-white text-xs px-2 py-1 rounded-full font-semibold shadow">
+                    Most Popular
+                  </span>
+                )}
+
+                <div className="flex items-center gap-3 mb-3">
+                  <PlanTierIcon tier={plan.tier} />
+                  <h3 className="text-xl font-bold text-primary">
+                    {plan.planName}
+                  </h3>
+                </div>
+
+                <div className="text-2xl font-semibold mb-1">
+                  {formatCurrency(plan.price)}
+                </div>
+                <p className="text-sm text-gray-500 mb-2">
+                  Valid for {plan.durationInDays} days
+                </p>
+
+                {savings > 0 && (
+                  <div className="text-sm text-green-600 mb-2">
+                    Save {formatCurrency(savings)} vs monthly
+                  </div>
+                )}
+
+                <ul className="mb-4 space-y-1 text-sm">
+                  {plan.perks.map((perk, i) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <span className="text-green-600">✔</span>
+                      <span>{perk}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => onSelectPlan(plan)}
+                  disabled={isCurrent}
+                  className={`w-full px-4 py-2 rounded-lg font-semibold transition ${
+                    isCurrent
+                      ? "bg-gray-400 text-white cursor-not-allowed"
+                      : "bg-primary text-white hover:brightness-95"
+                  }`}
+                >
+                  {isCurrent ? "Current Plan" : `Get ${plan.planName}`}
+                </button>
+              </motion.div>
+            );
+          })}
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+/* ------------------ LANDING PAGE ------------------ */
+const PremiumLandingPage = ({
+  plans,
+  billingPeriod,
+  setBillingPeriod,
+  onSubscribe,
+}) => {
+  return (
+    <div className="max-w-6xl mx-auto animate-fade-in">
+      <section className="mb-8">
+        <h2 className="text-3xl font-extrabold mb-3">Why upgrade?</h2>
+        <div className="grid md:grid-cols-3 gap-6 mb-6">
+          <Benefit
+            icon={<FaTruck />}
+            title="Unlimited Free Delivery"
+            desc="Order as often as you like without delivery fees."
+          />
+          <Benefit
+            icon={<FaTags />}
+            title="Exclusive Member Discounts"
+            desc="Special offers and partner deals."
+          />
+          <Benefit
+            icon={<FaHeadset />}
+            title="24×7 VIP Support"
+            desc="Always-on assistance for any need."
+          />
+        </div>
+      </section>
+
+      <section className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-semibold">Choose Your Plan</h2>
+          <div className="flex items-center gap-3">
+            <BillingToggle
+              billingPeriod={billingPeriod}
+              setBillingPeriod={setBillingPeriod}
+            />
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {plans.map((plan) => (
+            <motion.div
+              whileHover={{ scale: 1.02 }}
               key={plan.planName}
-              className={`relative p-6 border rounded-2xl shadow-md transition-all duration-200 ${
-                isCurrent
-                  ? "border-green-600 bg-green-50 dark:bg-green-900/20"
-                  : "border-gray-200 dark:border-gray-700 dark:bg-secondary"
-              }`}
+              className="p-6 border rounded-2xl shadow hover:scale-[1.03] transition cursor-pointer bg-white dark:bg-secondary"
             >
-              <div className="absolute top-3 right-3">
-                {isCurrent && (
-                  <span className="bg-green-500 text-white px-3 py-1 text-xs rounded-full font-semibold shadow">
-                    Current Plan
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-xl font-bold text-primary">
+                  {plan.planName}
+                </h3>
+                {plan.tier === "Gold" && billingPeriod === "yearly" && (
+                  <span className="bg-primary text-white text-xs px-2 py-1 rounded-full">
+                    Most Popular
                   </span>
                 )}
               </div>
-              <h3 className="text-xl font-bold mb-1 text-primary">
-                {plan.planName}
-              </h3>
-              <div className="text-2xl font-semibold mb-1">₹{plan.price}</div>
+              <div className="text-2xl font-semibold">
+                {formatCurrency(plan.price)}
+              </div>
               <p className="text-sm text-gray-500 mb-3">
                 Valid for {plan.durationInDays} days
               </p>
@@ -279,92 +633,31 @@ const UpgradePage = ({ currentPlan, plans, onSelectPlan, onClose }) => (
                 ))}
               </ul>
               <button
-                onClick={() => !isCurrent && onSelectPlan(plan)}
-                disabled={isCurrent}
-                className={`w-full px-4 py-2 rounded-lg font-semibold transition ${
-                  isCurrent
-                    ? "bg-gray-400 text-white cursor-not-allowed"
-                    : "bg-primary text-white hover:brightness-95"
-                }`}
+                onClick={() => onSubscribe(plan)}
+                className="w-full px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:brightness-95 transition"
               >
-                {isCurrent ? "Current Plan" : `Upgrade to ${plan.planName}`}
+                Subscribe
               </button>
-            </div>
-          );
-        })}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <ComparisonTable />
+      <Testimonials />
+      <FAQ />
     </div>
-  </div>
-);
+  );
+};
 
-// ------------------ LANDING PAGE ------------------
-const PremiumLandingPage = ({ plans, onSubscribe }) => (
-  <div className="max-w-6xl mx-auto animate-fade-in">
-    <h1 className="text-4xl font-extrabold text-center mb-8">
-      Upgrade to <span className="text-primary">QuickBite Premium</span>
-    </h1>
-    <section className="grid md:grid-cols-3 gap-6 mb-12">
-      <Benefit
-        icon={<FaTruck />}
-        title="Unlimited Free Delivery"
-        desc="Order as often as you like without delivery fees."
-      />
-      <Benefit
-        icon={<FaTags />}
-        title="Exclusive Member Discounts"
-        desc="Special offers and priority deals."
-      />
-      <Benefit
-        icon={<FaHeadset />}
-        title="24×7 VIP Support"
-        desc="Always-on assistance for any need."
-      />
-    </section>
-    <section className="mb-12">
-      <h2 className="text-2xl font-semibold mb-4">Choose Your Plan</h2>
-      <div className="grid md:grid-cols-2 gap-6">
-        {plans.map((plan) => (
-          <div
-            key={plan.planName}
-            className="p-6 border rounded-2xl shadow hover:scale-[1.03] transition cursor-pointer bg-white dark:bg-secondary"
-          >
-            <h3 className="text-xl font-bold text-primary">{plan.planName}</h3>
-            <div className="text-2xl font-semibold">₹{plan.price}</div>
-            <p className="text-sm text-gray-500 mb-3">
-              Valid for {plan.durationInDays} days
-            </p>
-            <ul className="mb-4 space-y-1 text-sm">
-              {plan.perks.map((perk, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <span className="text-green-600">✔</span>
-                  <span>{perk}</span>
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={() => onSubscribe(plan)}
-              className="w-full px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:brightness-95 transition"
-            >
-              Subscribe
-            </button>
-          </div>
-        ))}
-      </div>
-    </section>
-    <ComparisonTable />
-    <Testimonials />
-    <FAQ />
-    <FloatingCTA onClick={() => onSubscribe(plans[0])} />
-  </div>
-);
-
-// ------------------ OTHER COMPONENTS ------------------
+/* ------------------ MEMBER VIEW ------------------ */
 const PremiumMemberView = ({
   planInfo,
   onCancel,
   onUpgrade,
   user,
   isExpiredView,
+  savedAmount,
 }) => {
   const start = moment(planInfo?.startDate || moment());
   const end = moment(planInfo?.endDate || moment().add(30, "days"));
@@ -388,12 +681,14 @@ const PremiumMemberView = ({
 
   return (
     <div className="max-w-6xl mx-auto animate-fade-in">
-      <div
+      <motion.div
+        layout
+        transition={{ duration: 0.35 }}
         className={`bg-gradient-to-r ${
           isExpiredView
             ? "from-red-100 to-red-200 dark:from-red-900 dark:to-red-800"
             : "from-yellow-100 to-white dark:from-yellow-800 dark:to-secondary"
-        } rounded-2xl p-8 shadow-lg mb-6 border dark:border-gray-700 transition-all`}
+        } rounded-2xl p-8 shadow-lg mb-6 border dark:border-gray-700`}
       >
         <div className="flex items-center gap-4 mb-3">
           <div className="rounded-full bg-yellow-300 dark:bg-yellow-700 p-3 text-yellow-900 dark:text-yellow-100 shadow-md ring-4 ring-yellow-200/40">
@@ -410,6 +705,7 @@ const PremiumMemberView = ({
             </p>
           </div>
         </div>
+
         <div className="mt-5 grid md:grid-cols-2 gap-4 items-center">
           <div>
             <div className="text-sm text-gray-600 dark:text-gray-300 mb-1">
@@ -423,6 +719,7 @@ const PremiumMemberView = ({
                 {remainingDays} day{remainingDays !== 1 ? "s" : ""} left
               </div>
             )}
+
             <div className="mt-4">
               <div
                 className="relative h-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
@@ -431,34 +728,48 @@ const PremiumMemberView = ({
                 aria-valuemin={0}
                 aria-valuemax={100}
               >
-                <div
-                  className={`absolute inset-0 h-full ${
+                <motion.div
+                  className={`${
                     isExpiredView
                       ? "bg-red-400"
                       : "bg-gradient-to-r from-yellow-400 to-orange-500"
-                  } transition-all duration-700`}
-                  style={{ width: `${progressPercent}%` }}
+                  } absolute inset-0 h-full`}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.9 }}
                 />
               </div>
               <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-2">
                 <span>{startOfDay.format("Do MMM, YYYY")}</span>
                 <span>{endOfDay.format("Do MMM, YYYY")}</span>
               </div>
+
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {progressPercent}% used — {totalDays} day
                 {totalDays !== 1 ? "s" : ""} total
               </div>
             </div>
           </div>
+
           <div className="flex flex-col gap-3">
             <QuickPerkButton
               icon={<FaTruck />}
               label="Order with Free Delivery"
+              to="/customer/restaurants"
             />
-            <QuickPerkButton icon={<FaHeadset />} label="Contact VIP Support" />
-            <QuickPerkButton icon={<FaTags />} label="View Exclusive Offers" />
+            <QuickPerkButton
+              icon={<FaHeadset />}
+              label="Contact VIP Support"
+              onClick={() => alert("Opening VIP support - coming soon")}
+            />
+            <QuickPerkButton
+              icon={<FaTags />}
+              label="View Exclusive Offers"
+              to="/customer/offers"
+            />
           </div>
         </div>
+
         <div className="mt-7 flex flex-wrap gap-3">
           <button
             onClick={onCancel}
@@ -485,7 +796,8 @@ const PremiumMemberView = ({
             Use Your Perks
           </button>
         </div>
-      </div>
+      </motion.div>
+
       <section className="grid md:grid-cols-3 gap-6">
         <PerkCard
           title="Unlimited Free Deliveries"
@@ -503,16 +815,50 @@ const PremiumMemberView = ({
           icon={<FaHeadset />}
         />
       </section>
+
+      <div className="mt-8 flex gap-6 items-center">
+        <div className="bg-white dark:bg-secondary p-4 rounded-lg shadow">
+          <div className="text-sm text-gray-500">You’ve saved</div>
+          <div className="text-2xl font-bold">
+            <CountUp
+              end={savedAmount}
+              duration={1.6}
+              separator=","
+              prefix="₹"
+            />
+          </div>
+          <div className="text-sm text-gray-400">since joining Premium</div>
+        </div>
+
+        <div className="p-4 rounded-lg border dark:border-gray-700 bg-white dark:bg-secondary">
+          <div className="text-sm text-gray-500">Membership</div>
+          <div className="flex items-center gap-2">
+            <FaCrown className="text-yellow-500" />
+            <div className="font-semibold">{planInfo.planName}</div>
+            <div className="text-xs text-gray-400">• Premium</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-const QuickPerkButton = ({ icon, label }) => (
-  <button className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-primary/10 rounded-lg border dark:border-gray-700 shadow-sm hover:shadow-md transition">
-    <div className="text-primary text-lg">{icon}</div>
-    <div className="text-sm font-medium">{label}</div>
-  </button>
-);
+/* ------------------ small UI building blocks ------------------ */
+const QuickPerkButton = ({ icon, label, to, onClick }) => {
+  const navigate = useNavigate();
+  return (
+    <button
+      onClick={() => {
+        if (onClick) return onClick();
+        if (to) return navigate(to);
+      }}
+      className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-primary/10 rounded-lg border dark:border-gray-700 shadow-sm hover:shadow-md transition"
+    >
+      <div className="text-primary text-lg">{icon}</div>
+      <div className="text-sm font-medium">{label}</div>
+    </button>
+  );
+};
 
 const Benefit = ({ icon, title, desc }) => (
   <div className="flex flex-col items-center text-center p-4 bg-white dark:bg-secondary rounded-xl shadow">
@@ -534,6 +880,14 @@ const PerkCard = ({ icon, title, desc }) => (
   </div>
 );
 
+const PlanTierIcon = ({ tier }) => {
+  if (tier === "Gold") return <FaCrown className="text-yellow-500" />;
+  if (tier === "Platinum") return <FaCrown className="text-slate-400" />;
+  if (tier === "Diamond") return <FaCrown className="text-indigo-400" />;
+  return <FaCrown />;
+};
+
+/* ------------------ Comparison, Testimonials, FAQ ------------------ */
 const ComparisonTable = () => (
   <div className="mt-12">
     <h2 className="text-2xl font-semibold mb-4">Compare Plans</h2>
@@ -561,30 +915,34 @@ const ComparisonTable = () => (
   </div>
 );
 
-const Testimonials = () => (
-  <div className="mt-12">
-    <h2 className="text-2xl font-semibold mb-4">What Members Say</h2>
-    <div className="grid md:grid-cols-3 gap-6">
-      <Testimonial
-        name="Priya"
-        text="QuickBite Premium has saved me so much on delivery fees!"
-      />
-      <Testimonial name="Ravi" text="The VIP support is worth every rupee." />
-      <Testimonial
-        name="Anita"
-        text="Exclusive discounts make it totally worth it."
-      />
-    </div>
-  </div>
-);
+const Testimonials = () => {
+  const items = [
+    {
+      name: "Priya",
+      text: "QuickBite Premium has saved me so much on delivery fees!",
+    },
+    { name: "Ravi", text: "The VIP support is worth every rupee." },
+    { name: "Anita", text: "Exclusive discounts make it totally worth it." },
+  ];
 
-const Testimonial = ({ name, text }) => (
-  <div className="p-4 bg-white dark:bg-secondary rounded-xl shadow">
-    <FaStar className="text-yellow-500 mb-2" />
-    <p className="italic">"{text}"</p>
-    <div className="mt-2 font-bold">- {name}</div>
-  </div>
-);
+  return (
+    <div className="mt-12">
+      <h2 className="text-2xl font-semibold mb-4">What Members Say</h2>
+      <div className="grid md:grid-cols-3 gap-6">
+        {items.map((t) => (
+          <div
+            key={t.name}
+            className="p-4 bg-white dark:bg-secondary rounded-xl shadow"
+          >
+            <FaStar className="text-yellow-500 mb-2" />
+            <p className="italic">"{t.text}"</p>
+            <div className="mt-2 font-bold">- {t.name}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const FAQ = () => (
   <div className="mt-12">
@@ -611,14 +969,117 @@ const FAQItem = ({ q, a }) => (
   </div>
 );
 
-const FloatingCTA = ({ onClick }) => (
-  <button
-    onClick={onClick}
-    className="fixed bottom-6 right-6 bg-primary text-white px-5 py-3 rounded-full shadow-lg hover:brightness-95 flex items-center gap-2"
-  >
-    <FaGift /> Get Premium
-  </button>
-);
+/* ------------------ Cancel modal (reinforce value) ------------------ */
+const CancelModal = ({ planInfo, onClose, onConfirm }) => {
+  return (
+    <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ y: 10, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white dark:bg-secondary rounded-2xl p-6 max-w-lg w-full shadow-lg border dark:border-gray-700"
+      >
+        <div className="flex justify-between items-start gap-4">
+          <div>
+            <h3 className="text-xl font-bold">
+              Are you sure you want to cancel?
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">
+              You will lose the benefits of your {planInfo.planName} membership.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-500">
+            <FaTimes />
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {planInfo.perks?.map((p, i) => (
+            <div key={i} className="p-3 bg-gray-50 dark:bg-gray-800 rounded">
+              <div className="text-sm">{p}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 flex gap-3 justify-end">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg border">
+            Keep Benefits
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 rounded-lg bg-red-600 text-white"
+          >
+            Cancel Subscription
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+/* ------------------ Mobile sticky CTA ------------------ */
+const StickyBottomBar = ({ plans, onUpgrade }) => {
+  const popular = plans.find((p) => p.tier === "Gold") || plans[0];
+  return (
+    <div className="fixed bottom-4 left-4 right-4 md:hidden z-50">
+      <div className="bg-white dark:bg-secondary px-4 py-3 rounded-full shadow-lg flex items-center justify-between gap-3">
+        <div>
+          <div className="text-xs text-gray-500">Most Popular</div>
+          <div className="font-semibold">
+            {popular.planName} • {formatCurrency(popular.price)}
+          </div>
+        </div>
+        <div>
+          <button
+            onClick={onUpgrade}
+            className="bg-primary text-white px-4 py-2 rounded-full"
+          >
+            Upgrade Now
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ------------------ Billing toggle ------------------ */
+const BillingToggle = ({ billingPeriod = "yearly", setBillingPeriod }) => {
+  // If setBillingPeriod provided, use it; else no-op local toggle (used inside modal)
+  const [local, setLocal] = useState(billingPeriod);
+  useEffect(() => setLocal(billingPeriod), [billingPeriod]);
+
+  const toggle = () => {
+    const next = local === "yearly" ? "monthly" : "yearly";
+    setLocal(next);
+    if (setBillingPeriod) setBillingPeriod(next);
+  };
+
+  return (
+    <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-full">
+      <button
+        onClick={() => {
+          setLocal("monthly");
+          if (setBillingPeriod) setBillingPeriod("monthly");
+        }}
+        className={`px-3 py-1 rounded-full text-sm ${
+          local === "monthly" ? "bg-white dark:bg-primary/20 shadow" : ""
+        }`}
+      >
+        Monthly
+      </button>
+      <button
+        onClick={() => {
+          setLocal("yearly");
+          if (setBillingPeriod) setBillingPeriod("yearly");
+        }}
+        className={`px-3 py-1 rounded-full text-sm ${
+          local === "yearly" ? "bg-white dark:bg-primary/20 shadow" : ""
+        }`}
+      >
+        Yearly
+      </button>
+    </div>
+  );
+};
 
 const LoadingSpinner = () => (
   <div className="flex justify-center items-center h-[60vh]">

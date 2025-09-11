@@ -225,7 +225,7 @@ const CustomerDashboard = () => {
             subtitle="Last orders"
           />
         </GradientTile>
-        <GradientTile onClick={() => navigate("/premium-benefits")}>
+        <GradientTile onClick={() => navigate("/customer/premium")}>
           <TileContent
             icon={<FaCrown className="text-yellow-500 text-xl" />}
             title={`₹${currency(savingsCount)} Saved`}
