@@ -25,7 +25,33 @@ const createSubscription = async (req, res) => {
         .json({ message: "Missing required subscription fields" });
     }
 
-    const newSubscription = await PremiumSubscription.create(req.body);
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Unauthorized: User ID missing" });
+    }
+
+    const newSubscriptionData = {
+      userId: req.user._id, // ✅ Ensure correct linkage
+      subscriberId,
+      subscriberType,
+      planName,
+      price,
+      durationInDays,
+      startDate: new Date(),
+      endDate: new Date(endDate),
+      isActive: true,
+      paymentStatus: "Paid", // Set initial payment status
+      perks: {
+        freeDelivery: true,
+        extraDiscount: 0,
+        cashback: 0,
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const newSubscription = await PremiumSubscription.create(
+      newSubscriptionData
+    );
 
     res.status(201).json({
       message: "Subscription created successfully",
@@ -43,12 +69,10 @@ const getSubscriptionsBySubscriber = async (req, res) => {
     const { subscriberId, subscriberType } = req.query;
 
     if (!subscriberId || !subscriberType) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "subscriberId and subscriberType query parameters are required",
-        });
+      return res.status(400).json({
+        message:
+          "subscriberId and subscriberType query parameters are required",
+      });
     }
 
     const subscriptions = await PremiumSubscription.find({
