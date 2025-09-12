@@ -204,7 +204,13 @@ const verifyPremiumPayment = async (req, res) => {
       subscriptionData,
     } = req.body;
 
-    // 1️⃣ Verify Razorpay signature
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Unauthorized: User ID missing" });
+    }
+
+    const userId = req.user._id;
+
+    // Verify Razorpay signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -216,7 +222,7 @@ const verifyPremiumPayment = async (req, res) => {
         .json({ success: false, message: "Invalid Razorpay signature" });
     }
 
-    // 2️⃣ Check if an active subscription exists
+    // Check for existing subscription
     let subscription = await PremiumSubscription.findOne({
       subscriberId: subscriptionData.subscriberId,
     });
@@ -225,7 +231,6 @@ const verifyPremiumPayment = async (req, res) => {
     const newEndDate = subscriptionData.endDate;
 
     if (subscription) {
-      // If existing subscription, update it
       subscription.planName = subscriptionData.planName;
       subscription.price = subscriptionData.price;
       subscription.durationInDays = subscriptionData.durationInDays;
@@ -236,8 +241,8 @@ const verifyPremiumPayment = async (req, res) => {
       subscription.paymentId = razorpay_payment_id;
       await subscription.save();
     } else {
-      // If no existing subscription, create new
       subscription = await PremiumSubscription.create({
+        userId, // ✅ Add this
         subscriberId: subscriptionData.subscriberId,
         subscriberType: subscriptionData.subscriberType || "User",
         planName: subscriptionData.planName,
@@ -251,7 +256,6 @@ const verifyPremiumPayment = async (req, res) => {
       });
     }
 
-    // 3️⃣ Always log to SubscriptionHistory
     await SubscriptionHistory.create({
       subscriberId: subscriptionData.subscriberId,
       subscriberType: subscriptionData.subscriberType || "User",

@@ -1,120 +1,3 @@
-// src/pages/customer/CustomerPremium.jsx
-// import React, { useState, useEffect, useContext, useMemo } from "react";
-// import moment from "moment";
-// import { useNavigate } from "react-router-dom";
-// import API from "../../api/axios";
-// import { AuthContext } from "../../context/AuthContext";
-// import CustomerPremiumLanding from "./CustomerPremiumLanding";
-// import CustomerPremiumMember from "./CustomerPremiumMember";
-
-// const PLANS_BASE = [
-//   {
-//     planName: "Gold",
-//     tier: "Gold",
-//     monthlyPrice: 199,
-//     yearlyPrice: 1999,
-//     durationMonthly: 30,
-//     durationYearly: 365,
-//     perks: ["Unlimited Free Deliveries", "Exclusive Discounts", "VIP Support"],
-//   },
-//   {
-//     planName: "Platinum",
-//     tier: "Platinum",
-//     monthlyPrice: 499,
-//     yearlyPrice: 4999,
-//     durationMonthly: 30,
-//     durationYearly: 365,
-//     perks: [
-//       "Unlimited Free Deliveries",
-//       "Exclusive Discounts",
-//       "VIP Support",
-//       "Free Priority Deliveries",
-//     ],
-//   },
-//   {
-//     planName: "Diamond",
-//     tier: "Diamond",
-//     monthlyPrice: 999,
-//     yearlyPrice: 9999,
-//     durationMonthly: 30,
-//     durationYearly: 365,
-//     perks: [
-//       "All Platinum Perks",
-//       "Dedicated Account Manager",
-//       "Early Access to Features",
-//     ],
-//   },
-// ];
-
-// const CustomerPremium = () => {
-//   const { token, user } = useContext(AuthContext);
-//   const [planInfo, setPlanInfo] = useState(null);
-//   const [loading, setLoading] = useState(true);
-//   const [billingPeriod, setBillingPeriod] = useState("yearly");
-//   const navigate = useNavigate();
-
-//   const PLANS = useMemo(
-//     () =>
-//       PLANS_BASE.map((p) => ({
-//         ...p,
-//         price: billingPeriod === "yearly" ? p.yearlyPrice : p.monthlyPrice,
-//         durationInDays:
-//           billingPeriod === "yearly" ? p.durationYearly : p.durationMonthly,
-//       })),
-//     [billingPeriod]
-//   );
-
-//   const fetchPlan = async () => {
-//     if (!user?._id || !token) {
-//       setLoading(false);
-//       return;
-//     }
-//     setLoading(true);
-//     try {
-//       const res = await API.get(`/premium/subscriptions`, {
-//         params: { subscriberType: "User", subscriberId: user._id },
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-//       setPlanInfo(res.data?.subscriptions?.[0] || null);
-//     } catch {
-//       setPlanInfo(null);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   useEffect(() => {
-//     if (user?._id && token) fetchPlan();
-//   }, [user?._id, token]);
-
-//   // 👇 either blank screen or message instead of spinner
-//   if (loading)
-//     return (
-//       <div className="text-center text-gray-500 py-10">
-//         Loading your Premium data…
-//       </div>
-//     );
-
-//   const subscriptionActive =
-//     planInfo && moment().isBefore(moment(planInfo.endDate).endOf("day"));
-
-//   return (
-//     <div className="p-6 text-gray-800 dark:text-white min-h-[80vh]">
-//       {subscriptionActive ? (
-//         <CustomerPremiumMember planInfo={planInfo} user={user} />
-//       ) : (
-//         <CustomerPremiumLanding
-//           plans={PLANS}
-//           billingPeriod={billingPeriod}
-//           setBillingPeriod={setBillingPeriod}
-//         />
-//       )}
-//     </div>
-//   );
-// };
-
-// export default CustomerPremium;
-
 import React, { useState, useEffect, useContext, useMemo } from "react";
 import {
   FaTruck,
@@ -227,27 +110,39 @@ const CustomerPremium = () => {
 
   // Razorpay payment handler (keeps your original flow, but uses env key)
   const handlePayment = async (planDetails) => {
+    if (!user?._id || !token) return alert("User not authenticated.");
+
     try {
+      // 1️⃣ Create Razorpay order on backend
       const { data } = await API.post(
         "/payment/create-premium-order",
-        { amount: planDetails.price },
+        { amount: planDetails.price }, // price in rupees
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
       const { razorpayOrderId, amount, currency } = data;
 
-      const RAZORPAY_KEY =
-        import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_GDBH9Rf7wvZ3R6";
+      if (!window.Razorpay) {
+        return alert(
+          "Payment SDK not loaded. Ensure Razorpay script is included in index.html."
+        );
+      }
 
       const options = {
-        key: RAZORPAY_KEY,
-        amount: amount * 100, // ensure amount is rupees -> paise logic matches backend
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: amount * 100, // convert rupees → paise
         currency,
         name: "QuickBite Premium",
         description: `${planDetails.planName} Plan Subscription`,
         order_id: razorpayOrderId,
-        handler: async function (response) {
+        prefill: {
+          name: user?.name || "",
+          email: user?.email || "",
+        },
+        theme: { color: "#F59E0B" },
+        handler: async (response) => {
           try {
+            // 2️⃣ Verify payment with backend
             await API.post(
               "/payment/verify-premium-payment",
               {
@@ -269,31 +164,22 @@ const CustomerPremium = () => {
               },
               { headers: { Authorization: `Bearer ${token}` } }
             );
-            // nice UX: small friendly toast would be better; keeping alert for minimal deps
+
             alert("🎉 Subscription successful!");
             fetchPlan();
             setShowUpgradePage(false);
-          } catch {
+          } catch (err) {
+            console.error("Payment verification failed:", err);
             alert("Payment verification failed. Please contact support.");
           }
         },
-        prefill: {
-          name: user?.name || "",
-          email: user?.email || "",
-        },
-        theme: { color: "#F59E0B" },
       };
 
-      if (!window.Razorpay) {
-        alert(
-          "Payment SDK not loaded. Ensure Razorpay script is included in index.html."
-        );
-        return;
-      }
-
+      // 3️⃣ Open Razorpay checkout
       const rzp = new window.Razorpay(options);
       rzp.open();
-    } catch {
+    } catch (err) {
+      console.error("Payment initialization failed:", err);
       alert("Payment failed. Please try again.");
     }
   };
@@ -971,6 +857,8 @@ const FAQItem = ({ q, a }) => (
 
 /* ------------------ Cancel modal (reinforce value) ------------------ */
 const CancelModal = ({ planInfo, onClose, onConfirm }) => {
+  const perks = Array.isArray(planInfo?.perks) ? planInfo.perks : [];
+
   return (
     <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4">
       <motion.div
@@ -984,7 +872,8 @@ const CancelModal = ({ planInfo, onClose, onConfirm }) => {
               Are you sure you want to cancel?
             </h3>
             <p className="text-sm text-gray-600 mt-1">
-              You will lose the benefits of your {planInfo.planName} membership.
+              You will lose the benefits of your {planInfo?.planName}{" "}
+              membership.
             </p>
           </div>
           <button onClick={onClose} className="text-gray-500">
@@ -993,7 +882,7 @@ const CancelModal = ({ planInfo, onClose, onConfirm }) => {
         </div>
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {planInfo.perks?.map((p, i) => (
+          {perks.map((p, i) => (
             <div key={i} className="p-3 bg-gray-50 dark:bg-gray-800 rounded">
               <div className="text-sm">{p}</div>
             </div>
@@ -1088,3 +977,119 @@ const LoadingSpinner = () => (
 );
 
 export default CustomerPremium;
+// src/pages/customer/CustomerPremium.jsx
+// import React, { useState, useEffect, useContext, useMemo } from "react";
+// import moment from "moment";
+// import { useNavigate } from "react-router-dom";
+// import API from "../../api/axios";
+// import { AuthContext } from "../../context/AuthContext";
+// import CustomerPremiumLanding from "./CustomerPremiumLanding";
+// import CustomerPremiumMember from "./CustomerPremiumMember";
+
+// const PLANS_BASE = [
+//   {
+//     planName: "Gold",
+//     tier: "Gold",
+//     monthlyPrice: 199,
+//     yearlyPrice: 1999,
+//     durationMonthly: 30,
+//     durationYearly: 365,
+//     perks: ["Unlimited Free Deliveries", "Exclusive Discounts", "VIP Support"],
+//   },
+//   {
+//     planName: "Platinum",
+//     tier: "Platinum",
+//     monthlyPrice: 499,
+//     yearlyPrice: 4999,
+//     durationMonthly: 30,
+//     durationYearly: 365,
+//     perks: [
+//       "Unlimited Free Deliveries",
+//       "Exclusive Discounts",
+//       "VIP Support",
+//       "Free Priority Deliveries",
+//     ],
+//   },
+//   {
+//     planName: "Diamond",
+//     tier: "Diamond",
+//     monthlyPrice: 999,
+//     yearlyPrice: 9999,
+//     durationMonthly: 30,
+//     durationYearly: 365,
+//     perks: [
+//       "All Platinum Perks",
+//       "Dedicated Account Manager",
+//       "Early Access to Features",
+//     ],
+//   },
+// ];
+
+// const CustomerPremium = () => {
+//   const { token, user } = useContext(AuthContext);
+//   const [planInfo, setPlanInfo] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   const [billingPeriod, setBillingPeriod] = useState("yearly");
+//   const navigate = useNavigate();
+
+//   const PLANS = useMemo(
+//     () =>
+//       PLANS_BASE.map((p) => ({
+//         ...p,
+//         price: billingPeriod === "yearly" ? p.yearlyPrice : p.monthlyPrice,
+//         durationInDays:
+//           billingPeriod === "yearly" ? p.durationYearly : p.durationMonthly,
+//       })),
+//     [billingPeriod]
+//   );
+
+//   const fetchPlan = async () => {
+//     if (!user?._id || !token) {
+//       setLoading(false);
+//       return;
+//     }
+//     setLoading(true);
+//     try {
+//       const res = await API.get(`/premium/subscriptions`, {
+//         params: { subscriberType: "User", subscriberId: user._id },
+//         headers: { Authorization: `Bearer ${token}` },
+//       });
+//       setPlanInfo(res.data?.subscriptions?.[0] || null);
+//     } catch {
+//       setPlanInfo(null);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (user?._id && token) fetchPlan();
+//   }, [user?._id, token]);
+
+//   // 👇 either blank screen or message instead of spinner
+//   if (loading)
+//     return (
+//       <div className="text-center text-gray-500 py-10">
+//         Loading your Premium data…
+//       </div>
+//     );
+
+//   const subscriptionActive =
+//     planInfo && moment().isBefore(moment(planInfo.endDate).endOf("day"));
+
+//   return (
+//     <div className="p-6 text-gray-800 dark:text-white min-h-[80vh]">
+//       {subscriptionActive ? (
+//         <CustomerPremiumMember planInfo={planInfo} user={user} />
+//       ) : (
+//         <CustomerPremiumLanding
+//           plans={PLANS}
+//           billingPeriod={billingPeriod}
+//           setBillingPeriod={setBillingPeriod}
+//         />
+//       )}
+//     </div>
+//   );
+// };
+
+// export default CustomerPremium;
