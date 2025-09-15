@@ -53,6 +53,7 @@ const verifyRazorpaySignature = async (req, res) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
       req.body.paymentDetails;
 
+    // 1. Verify Razorpay signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -64,14 +65,13 @@ const verifyRazorpaySignature = async (req, res) => {
         .json({ success: false, message: "❌ Invalid Razorpay signature" });
     }
 
-    // Fetch menu item details
+    // 2. Fetch menu item details
     const detailedItems = await Promise.all(
       req.body.items.map(async (item) => {
         const menu = await Menu.findById(item.menuItemId).lean();
         if (!menu) {
           throw new Error(`Menu item not found: ${item.menuItemId}`);
         }
-
         return {
           menuItemId: item.menuItemId,
           name: menu.name,
@@ -82,20 +82,79 @@ const verifyRazorpaySignature = async (req, res) => {
       })
     );
 
-    // Fetch address
+    // 3. Fetch address
     const address = await Address.findById(req.body.addressId).lean();
     if (!address) throw new Error("Address not found");
 
-    // Create order object
+    // 4. PREMIUM LOGIC: calculate premium savings if user is premium
+    let premiumApplied = false;
+    let savings = 0;
+    let premiumBreakdown = {
+      freeDelivery: 0,
+      extraDiscount: 0,
+      cashback: 0,
+    };
+
+    // Fetch active premium subscription
+    const subscription = await PremiumSubscription.findOne({
+      subscriberId: req.body.customerId,
+      subscriberType: "User",
+      isActive: true,
+      endDate: { $gte: new Date() },
+    });
+
+    // Use original delivery fee instead of client’s fee
+    // (fetch from restaurant config or set default)
+    const originalDeliveryFee = req.body.originalDeliveryFee || 40;
+    let deliveryFee = originalDeliveryFee;
+    let discount = req.body.discount;
+
+    if (subscription) {
+      premiumApplied = true;
+
+      // Free Delivery
+      const deliverySavings = subscription.perks.freeDelivery
+        ? originalDeliveryFee
+        : 0;
+      deliveryFee = subscription.perks.freeDelivery ? 0 : originalDeliveryFee;
+
+      // Extra Discount
+      const extraDiscountRate = subscription.perks.extraDiscount || 0;
+      const discountSavings = (req.body.subtotal * extraDiscountRate) / 100;
+      discount = discount + discountSavings;
+
+      // Cashback (if any)
+      const cashback = subscription.perks.cashback
+        ? (req.body.subtotal * subscription.perks.cashback) / 100
+        : 0;
+
+      premiumBreakdown = {
+        freeDelivery: deliverySavings,
+        extraDiscount: discountSavings,
+        cashback,
+      };
+
+      savings = deliverySavings + discountSavings + cashback;
+
+      // Update subscription’s total savings
+      subscription.totalSavings = (subscription.totalSavings || 0) + savings;
+      await subscription.save();
+    }
+
+    // Compute totalAmount with updated deliveryFee & discount
+    const totalAmount =
+      req.body.subtotal + req.body.tax + deliveryFee - discount;
+
+    // 6. Prepare order object (add premium fields)
     const orderData = {
       customerId: req.body.customerId,
       restaurantId: req.body.restaurantId,
       items: detailedItems,
       subtotal: req.body.subtotal,
       tax: req.body.tax,
-      deliveryFee: req.body.deliveryFee,
-      discount: req.body.discount,
-      totalAmount: req.body.totalAmount,
+      deliveryFee, // already updated above
+      discount, // already updated above
+      totalAmount, // already computed above
       offerId: req.body.offerId || null,
       deliveryAddress: {
         addressLine: address.addressLine,
@@ -117,11 +176,16 @@ const verifyRazorpaySignature = async (req, res) => {
         razorpay_payment_id,
         razorpay_signature,
       },
+      // Premium fields
+      premiumApplied,
+      savings,
+      premiumBreakdown,
     };
 
+    // 7. Create the order
     const createdOrder = await Order.create(orderData);
 
-    // 🟢 Clear cart after successful payment
+    // 8. Clear cart after successful payment
     await Cart.deleteOne({
       userId: req.body.customerId,
       restaurantId: req.body.restaurantId,

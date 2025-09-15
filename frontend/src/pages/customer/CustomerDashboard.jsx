@@ -57,22 +57,27 @@ const CustomerDashboard = () => {
   const navigate = useNavigate();
   const greeting = useTimeGreeting();
 
-  // Fetch Orders
+  /* ------------------------- Fetch Orders ------------------------- */
   useEffect(() => {
-    if (user?._id) {
-      API.get(`/orders/orders/customer/${user._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+    if (!user?._id) return;
+
+    API.get(`/orders/orders/customer/${user._id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        const fetchedOrders = res.data.orders || [];
+        setOrders(fetchedOrders);
+        setLoading(false);
       })
-        .then((res) => {
-          setOrders(res.data.orders || []);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    }
+      .catch(() => {
+        setLoading(false);
+      });
   }, [user, token]);
 
-  // Fetch Reviews
+  /* ------------------------- Fetch Reviews ------------------------- */
   useEffect(() => {
+    if (!token) return;
+
     API.get(`/reviews/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => {
         const reviews = Array.isArray(res.data) ? res.data : [];
@@ -86,7 +91,7 @@ const CustomerDashboard = () => {
       .catch(() => {});
   }, [token]);
 
-  // Fetch Restaurants
+  /* ------------------------- Fetch Restaurants ------------------------- */
   useEffect(() => {
     API.get(`/restaurants/restaurants`)
       .then((res) => {
@@ -100,20 +105,62 @@ const CustomerDashboard = () => {
       .catch(() => {});
   }, []);
 
-  // Fetch Premium
+  /* ------------------------- Fetch Premium ------------------------- */
   useEffect(() => {
-    if (user?._id) {
-      API.get(`/premium/subscriptions`, {
-        params: { subscriberId: user._id, subscriberType: "Customer" },
-        headers: { Authorization: `Bearer ${token}` },
+    if (!user?._id) return;
+
+    API.get(`/premium/subscriptions`, {
+      params: { subscriberId: user._id, subscriberType: "User" },
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        const subs = res.data?.subscriptions || [];
+
+        if (subs.length) {
+          const sub = subs[0];
+
+          let endDateObj = null;
+          if (sub.endDate) {
+            if (sub.endDate.$date) {
+              endDateObj = new Date(sub.endDate.$date);
+            } else {
+              endDateObj = new Date(sub.endDate);
+            }
+          }
+
+          setPremium({
+            ...sub,
+            totalSavings: sub.totalSavings || 0,
+            endDate: endDateObj,
+          });
+        } else {
+          const totalSavingsFromOrders = orders
+            .filter((o) => o.premiumApplied)
+            .reduce((sum, o) => sum + (o.savings || 0), 0);
+
+          if (totalSavingsFromOrders > 0) {
+            setPremium({
+              isActive: true,
+              planName: "Premium",
+              totalSavings: totalSavingsFromOrders,
+              endDate: null,
+            });
+          }
+        }
       })
-        .then((res) => {
-          const subs = res.data?.subscriptions || [];
-          if (subs.length) setPremium(subs[0]);
-        })
-        .catch(() => {});
+      .catch(() => {});
+  }, [user, token, orders]);
+
+  /* --------------------- Update premium totalSavings when orders change --------------------- */
+  useEffect(() => {
+    if (premium) {
+      const totalSavingsFromOrders = orders
+        .filter((o) => o.premiumApplied)
+        .reduce((sum, o) => sum + (o.savings || 0), 0);
+
+      setPremium((prev) => ({ ...prev, totalSavings: totalSavingsFromOrders }));
     }
-  }, [user, token]);
+  }, [orders]);
 
   /* --------------------------- Numbers to Animate -------------------------- */
   const ordersCount = useCountUp(orders.length, 0.9);
@@ -139,6 +186,16 @@ const CustomerDashboard = () => {
     }
   };
 
+  /* --------------------- Last Order Saving --------------------- */
+  const lastOrderSaving = useMemo(() => {
+    const lastOrder = orders[0];
+    if (lastOrder?.premiumApplied && lastOrder?.savings > 0) {
+      return lastOrder.savings;
+    }
+    return 0;
+  }, [orders]);
+
+  /* ------------------------------- Render ------------------------------- */
   return (
     <motion.div
       className="px-4 sm:px-8 md:px-10 lg:px-12 py-8 text-gray-800 dark:text-white"
@@ -195,24 +252,29 @@ const CustomerDashboard = () => {
         </div>
       </div>
 
-      {/* Current Order Tracker */}
-      {activeOrder && (
-        <div className="mb-8 p-4 bg-primary/10 rounded-xl shadow">
-          <h4 className="font-semibold flex items-center gap-2">
-            <FaTruck /> Your order is on the way!
-          </h4>
-          <p className="text-sm mt-1">
-            {activeOrder.items.map((it) => it?.menuItemId?.name).join(", ")}
-          </p>
-          <div className="mt-3 w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-            <div className="bg-primary h-2 w-2/3"></div>
+      {/* Premium Banner */}
+      {premium?.isActive && (
+        <div className="mb-8 bg-gradient-to-r from-yellow-100 to-orange-50 dark:from-yellow-800 dark:to-secondary p-4 rounded-xl shadow flex items-center gap-4">
+          <FaCrown className="text-yellow-500 text-2xl" />
+          <div>
+            <p className="font-semibold">
+              Premium Member ({premium.planName}) – Valid till{" "}
+              {premium?.endDate
+                ? new Date(premium.endDate).toLocaleDateString("en-IN")
+                : "N/A"}
+            </p>
+
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              You’ve saved ₹{currency(premium?.totalSavings ?? 0)} so far!
+            </p>
           </div>
-          <p className="text-xs text-gray-500 mt-1">
-            ETA:{" "}
-            {new Date(activeOrder.estimatedDelivery).toLocaleTimeString(
-              "en-IN"
-            )}
-          </p>
+        </div>
+      )}
+
+      {/* Last Order Savings Highlight */}
+      {lastOrderSaving > 0 && (
+        <div className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 text-sm px-4 py-2 rounded-lg mb-6 shadow">
+          💎 You saved ₹{lastOrderSaving} on your last order!
         </div>
       )}
 
@@ -356,7 +418,6 @@ const CustomerDashboard = () => {
                         {new Date(order.createdAt).toLocaleDateString("en-IN")}
                       </p>
 
-                      {/* Premium Savings per order */}
                       {order.premiumApplied && order.savings > 0 && (
                         <p className="text-green-600 text-xs mt-1">
                           💎 Saved ₹{order.savings}{" "}
@@ -393,7 +454,7 @@ const CustomerDashboard = () => {
   );
 };
 
-/* --------------------------------- Parts --------------------------------- */
+/* ------------------------------- Parts ------------------------------- */
 const GradientTile = ({ children, onClick }) => (
   <div
     onClick={onClick}
