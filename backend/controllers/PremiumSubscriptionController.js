@@ -10,6 +10,7 @@ const createSubscription = async (req, res) => {
       price,
       durationInDays,
       endDate,
+      perks = {},
     } = req.body;
 
     if (
@@ -30,7 +31,7 @@ const createSubscription = async (req, res) => {
     }
 
     const newSubscriptionData = {
-      userId: req.user._id, // ✅ Ensure correct linkage
+      userId: req.user._id, // Link to logged-in user
       subscriberId,
       subscriberType,
       planName,
@@ -41,10 +42,11 @@ const createSubscription = async (req, res) => {
       isActive: true,
       paymentStatus: "Paid", // Set initial payment status
       perks: {
-        freeDelivery: true,
-        extraDiscount: 0,
-        cashback: 0,
+        freeDelivery: perks.freeDelivery ?? true,
+        extraDiscount: perks.extraDiscount ?? 0,
+        cashback: perks.cashback ?? 0,
       },
+      totalSavings: 0, // ✅ initialize totalSavings
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -107,7 +109,7 @@ const getSubscriptionById = async (req, res) => {
   }
 };
 
-// ✏️ Update subscription (e.g. payment status)
+// ✏️ Update subscription (e.g. payment status, perks, totalSavings)
 const updateSubscription = async (req, res) => {
   try {
     const updated = await PremiumSubscription.findByIdAndUpdate(

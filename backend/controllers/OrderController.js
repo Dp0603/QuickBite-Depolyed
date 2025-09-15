@@ -26,14 +26,27 @@ const createOrder = async (req, res) => {
       endDate: { $gte: new Date() },
     });
 
+    // 🔍 Check Premium
     if (subscription) {
       premiumApplied = true;
 
-      // Apply perks dynamically from subscription
-      const deliverySavings = subscription.perks.freeDelivery ? deliveryFee : 0;
-      const discountSavings = subscription.perks.extraDiscount
-        ? (subtotal * subscription.perks.extraDiscount) / 100
+      // 🔹 Always derive the original delivery fee on the backend
+      const originalDeliveryFee = deliveryFee || 40; // default or from restaurant config
+
+      // Free Delivery Saving
+      const deliverySavings = subscription.perks.freeDelivery
+        ? originalDeliveryFee
         : 0;
+      finalDeliveryFee = subscription.perks.freeDelivery
+        ? 0
+        : originalDeliveryFee;
+
+      // Extra Discount Saving
+      const extraDiscountRate = subscription.perks.extraDiscount || 0;
+      const discountSavings = (subtotal * extraDiscountRate) / 100;
+      finalDiscount = discount + discountSavings;
+
+      // Cashback (if any)
       const cashback = subscription.perks.cashback || 0;
 
       premiumBreakdown = {
@@ -43,10 +56,6 @@ const createOrder = async (req, res) => {
       };
 
       savings = deliverySavings + discountSavings + cashback;
-
-      // Apply perks to order
-      finalDeliveryFee = deliveryFee - deliverySavings;
-      finalDiscount = discount + discountSavings;
 
       // ✅ Update subscription’s totalSavings
       subscription.totalSavings = (subscription.totalSavings || 0) + savings;
@@ -159,6 +168,7 @@ const getCustomerOrders = async (req, res) => {
     const orders = await Order.find({ customerId })
       .populate("restaurantId", "name")
       .populate("items.menuItemId", "name price")
+      .sort({ createdAt: -1 })
       .lean();
 
     const formattedOrders = orders.map((order) => ({
