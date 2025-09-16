@@ -39,7 +39,7 @@ const createProfile = async (req, res) => {
       licenseNumber: req.body.licenseNumber,
       gstNumber: req.body.gstNumber,
       bankAccount: req.body.bankAccount,
-      status: "pending",
+      // status: "pending",
       isActive: true,
     });
 
