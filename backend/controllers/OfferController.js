@@ -3,14 +3,21 @@ const Offer = require("../models/OfferModel");
 // 🎁 Create new offer
 const createOffer = async (req, res) => {
   try {
-    const { restaurantId } = req.body;
+    const { restaurantId, validFrom, validTill, promoCode } = req.body;
+
     if (!restaurantId) {
-      return res.status(400).json({ message: "Restaurant ID is required" });
+      return res.status(400).json({ message: "Restaurant ID is required." });
+    }
+
+    if (new Date(validFrom) > new Date(validTill)) {
+      return res
+        .status(400)
+        .json({ message: "validFrom cannot be after validTill." });
     }
 
     // Normalize promo code
-    if (req.body.promoCode) {
-      req.body.promoCode = req.body.promoCode.toUpperCase().trim();
+    if (promoCode) {
+      req.body.promoCode = promoCode.toUpperCase().trim();
     }
 
     const offer = await Offer.create({
@@ -19,13 +26,18 @@ const createOffer = async (req, res) => {
     });
 
     res.status(201).json({
-      message: "Offer created successfully",
+      message: "Offer created successfully.",
       offer,
     });
   } catch (err) {
-    if (err.code === 11000 && err.keyPattern?.promoCode) {
-      return res.status(400).json({ message: "Promo code already exists" });
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
     }
+
+    if (err.code === 11000 && err.keyPattern?.promoCode) {
+      return res.status(400).json({ message: "Promo code already exists." });
+    }
+
     console.error("❌ createOffer error:", err);
     res.status(500).json({ message: err.message });
   }
@@ -64,8 +76,17 @@ const getOfferById = async (req, res) => {
 // 🔁 Update offer
 const updateOffer = async (req, res) => {
   try {
-    if (req.body.promoCode) {
-      req.body.promoCode = req.body.promoCode.toUpperCase().trim();
+    const { validFrom, validTill, promoCode } = req.body;
+
+    if (validFrom && validTill && new Date(validFrom) > new Date(validTill)) {
+      return res
+        .status(400)
+        .json({ message: "validFrom cannot be after validTill." });
+    }
+
+    // Normalize promo code
+    if (promoCode) {
+      req.body.promoCode = promoCode.toUpperCase().trim();
     }
 
     const updatedOffer = await Offer.findByIdAndUpdate(
@@ -73,20 +94,27 @@ const updateOffer = async (req, res) => {
       req.body,
       {
         new: true,
+        runValidators: true, // ✅ Ensure model validation is run
       }
     );
 
-    if (!updatedOffer)
-      return res.status(404).json({ message: "Offer not found" });
+    if (!updatedOffer) {
+      return res.status(404).json({ message: "Offer not found." });
+    }
 
     res.status(200).json({
-      message: "Offer updated successfully",
+      message: "Offer updated successfully.",
       offer: updatedOffer,
     });
   } catch (err) {
-    if (err.code === 11000 && err.keyPattern?.promoCode) {
-      return res.status(400).json({ message: "Promo code already exists" });
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
     }
+
+    if (err.code === 11000 && err.keyPattern?.promoCode) {
+      return res.status(400).json({ message: "Promo code already exists." });
+    }
+
     console.error("❌ updateOffer error:", err);
     res.status(500).json({ message: err.message });
   }

@@ -12,7 +12,8 @@ const RestaurantOffersManager = () => {
 
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState({});
+  const [generalError, setGeneralError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [editingOffer, setEditingOffer] = useState(null);
   const [formData, setFormData] = useState({
@@ -32,15 +33,15 @@ const RestaurantOffersManager = () => {
 
   // Fetch offers for this restaurant
   const fetchOffers = async () => {
-    if (!restaurantId) return setError("Restaurant ID not found.");
+    if (!restaurantId) return setGeneralError("Restaurant ID not found.");
     try {
       setLoading(true);
-      setError("");
+      setGeneralError("");
       const res = await API.get(`/offers/offers/restaurant/${restaurantId}`);
       setOffers(res.data.offers || []);
     } catch (err) {
       console.error("Error fetching offers:", err);
-      setError("Unable to load offers. Please try again.");
+      setGeneralError("Unable to load offers. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -51,7 +52,24 @@ const RestaurantOffersManager = () => {
   }, [restaurantId]);
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    let { name, value, type, checked } = e.target;
+
+    // Auto-uppercase promo code
+    if (name === "promoCode") {
+      value = value.toUpperCase().trim();
+    }
+
+    // Clear maxDiscountAmount when switching discountType
+    if (name === "discountType") {
+      setFormData((prev) => ({
+        ...prev,
+        discountType: value,
+        maxDiscountAmount: value === "UPTO" ? prev.maxDiscountAmount : "",
+      }));
+      setErrors({});
+      return;
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -60,9 +78,65 @@ const RestaurantOffersManager = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors({});
+    setGeneralError("");
 
     if (!restaurantId) {
-      setError("Restaurant ID missing. Please log in again.");
+      setGeneralError("Restaurant ID missing. Please log in again.");
+      return;
+    }
+
+    // 🛡️ Field-level validations
+    const newErrors = {};
+
+    if (!formData.title.trim()) newErrors.title = "Title is required";
+
+    if (!formData.discountValue)
+      newErrors.discountValue = "Discount value is required";
+
+    if (!formData.minOrderAmount)
+      newErrors.minOrderAmount = "Minimum order amount is required";
+
+    const discountValueNum = Number(formData.discountValue);
+    const minOrderAmountNum = Number(formData.minOrderAmount);
+    const maxDiscountAmountNum = Number(formData.maxDiscountAmount);
+
+    if (formData.discountType === "PERCENT") {
+      if (discountValueNum < 1 || discountValueNum > 100) {
+        newErrors.discountValue =
+          "Percentage discount must be between 1 and 100";
+      }
+    }
+
+    if (formData.discountType === "FLAT") {
+      if (discountValueNum < 1) {
+        newErrors.discountValue = "Flat discount must be at least ₹1";
+      }
+    }
+
+    if (formData.discountType === "UPTO") {
+      if (!formData.maxDiscountAmount) {
+        newErrors.maxDiscountAmount =
+          "Max discount amount is required for UPTO offers";
+      } else if (maxDiscountAmountNum < 1) {
+        newErrors.maxDiscountAmount = "Max discount amount must be at least ₹1";
+      }
+      if (discountValueNum < 1) {
+        newErrors.discountValue = "Discount value must be at least ₹1";
+      }
+    }
+
+    if (!formData.validFrom) newErrors.validFrom = "Start date is required";
+    if (!formData.validTill) newErrors.validTill = "End date is required";
+
+    if (formData.validFrom && formData.validTill) {
+      if (new Date(formData.validFrom) > new Date(formData.validTill)) {
+        newErrors.validFrom = "validFrom must be before validTill";
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -70,6 +144,16 @@ const RestaurantOffersManager = () => {
       const payload = {
         ...formData,
         restaurantId,
+        discountValue: discountValueNum,
+        minOrderAmount: minOrderAmountNum,
+        maxDiscountAmount:
+          formData.discountType === "UPTO" ? maxDiscountAmountNum : undefined,
+        usageLimit: formData.usageLimit
+          ? Number(formData.usageLimit)
+          : undefined,
+        perUserLimit: formData.perUserLimit
+          ? Number(formData.perUserLimit)
+          : undefined,
         validFrom: new Date(formData.validFrom),
         validTill: new Date(formData.validTill),
       };
@@ -84,7 +168,9 @@ const RestaurantOffersManager = () => {
       fetchOffers();
     } catch (err) {
       console.error("Error saving offer:", err.response?.data || err);
-      setError("Failed to save offer. Please try again.");
+      setGeneralError(
+        err.response?.data?.message || "Failed to save offer. Please try again."
+      );
     }
   };
 
@@ -104,6 +190,8 @@ const RestaurantOffersManager = () => {
       usageLimit: offer.usageLimit || "",
       perUserLimit: offer.perUserLimit || "",
     });
+    setErrors({});
+    setGeneralError("");
     setShowForm(true);
   };
 
@@ -114,7 +202,7 @@ const RestaurantOffersManager = () => {
       fetchOffers();
     } catch (err) {
       console.error("Error deleting offer:", err);
-      setError("Failed to delete offer. Please try again.");
+      setGeneralError("Failed to delete offer. Please try again.");
     }
   };
 
@@ -124,7 +212,7 @@ const RestaurantOffersManager = () => {
       fetchOffers();
     } catch (err) {
       console.error("Error toggling offer:", err);
-      setError("Failed to toggle offer status. Please try again.");
+      setGeneralError("Failed to toggle offer status. Please try again.");
     }
   };
 
@@ -144,6 +232,8 @@ const RestaurantOffersManager = () => {
       usageLimit: "",
       perUserLimit: "",
     });
+    setErrors({});
+    setGeneralError("");
     setShowForm(false);
   };
 
@@ -165,12 +255,12 @@ const RestaurantOffersManager = () => {
       {/* Error / Loading */}
       {loading ? (
         <p className="text-lg text-gray-500">Loading offers...</p>
-      ) : error ? (
-        <p className="text-red-500 mb-4">{error}</p>
+      ) : generalError ? (
+        <p className="text-red-500 mb-4">{generalError}</p>
       ) : null}
 
       {/* Offers Grid */}
-      {offers.length === 0 && !loading && !error ? (
+      {offers.length === 0 && !loading && !generalError ? (
         <p className="text-gray-500 text-lg">
           No offers yet. Create your first offer!
         </p>
@@ -259,8 +349,10 @@ const RestaurantOffersManager = () => {
                     value={formData.title}
                     onChange={handleChange}
                     className="border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
-                    required
                   />
+                  {errors.title && (
+                    <span className="text-red-500 text-sm">{errors.title}</span>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -300,24 +392,51 @@ const RestaurantOffersManager = () => {
                       value={formData.discountValue}
                       onChange={handleChange}
                       className="border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
-                      required
                     />
+                    {errors.discountValue && (
+                      <span className="text-red-500 text-sm">
+                        {errors.discountValue}
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {formData.discountType !== "FLAT" && (
+                {formData.discountType === "UPTO" && (
                   <div className="flex flex-col gap-2">
-                    <label className="font-medium">Max Discount Amount</label>
+                    <label className="font-medium">Max Discount Amount *</label>
                     <input
                       type="number"
                       name="maxDiscountAmount"
-                      placeholder="Optional"
+                      placeholder="Enter max discount amount"
                       value={formData.maxDiscountAmount}
                       onChange={handleChange}
                       className="border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
                     />
+                    {errors.maxDiscountAmount && (
+                      <span className="text-red-500 text-sm">
+                        {errors.maxDiscountAmount}
+                      </span>
+                    )}
                   </div>
                 )}
+
+                {/* Min Order Amount */}
+                <div className="flex flex-col gap-2">
+                  <label className="font-medium">Minimum Order Amount *</label>
+                  <input
+                    type="number"
+                    name="minOrderAmount"
+                    placeholder="Enter minimum order amount"
+                    value={formData.minOrderAmount}
+                    onChange={handleChange}
+                    className="border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
+                  />
+                  {errors.minOrderAmount && (
+                    <span className="text-red-500 text-sm">
+                      {errors.minOrderAmount}
+                    </span>
+                  )}
+                </div>
 
                 {/* Dates */}
                 <div className="flex gap-3">
@@ -329,8 +448,12 @@ const RestaurantOffersManager = () => {
                       value={formData.validFrom}
                       onChange={handleChange}
                       className="border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
-                      required
                     />
+                    {errors.validFrom && (
+                      <span className="text-red-500 text-sm">
+                        {errors.validFrom}
+                      </span>
+                    )}
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
                     <label className="font-medium">Valid Till *</label>
@@ -340,8 +463,12 @@ const RestaurantOffersManager = () => {
                       value={formData.validTill}
                       onChange={handleChange}
                       className="border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none"
-                      required
                     />
+                    {errors.validTill && (
+                      <span className="text-red-500 text-sm">
+                        {errors.validTill}
+                      </span>
+                    )}
                   </div>
                 </div>
 
