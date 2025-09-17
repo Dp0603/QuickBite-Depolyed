@@ -5,7 +5,6 @@ const offerSchema = new mongoose.Schema(
     restaurantId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Restaurant",
-      // required: true,
       default: null,
     },
     title: {
@@ -18,7 +17,6 @@ const offerSchema = new mongoose.Schema(
       maxlength: 300,
     },
 
-    // 🔢 Discount Information
     discountType: {
       type: String,
       enum: ["PERCENT", "FLAT", "UPTO"],
@@ -31,16 +29,14 @@ const offerSchema = new mongoose.Schema(
     },
     maxDiscountAmount: {
       type: Number,
-      default: null, // Only for PERCENT/UPTO types
+      default: null,
     },
 
-    // 💰 Conditions
     minOrderAmount: {
       type: Number,
       default: 0,
     },
 
-    // 📅 Validity
     validFrom: {
       type: Date,
       required: true,
@@ -50,19 +46,17 @@ const offerSchema = new mongoose.Schema(
       required: true,
     },
 
-    // 🎯 Promo logic
     promoCode: {
       type: String,
       trim: true,
       unique: true,
-      sparse: true, // Allows null/undefined for auto apply
+      sparse: true,
     },
     isAutoApply: {
       type: Boolean,
       default: true,
     },
 
-    // 📊 Optional: Usage Controls
     usageLimit: {
       type: Number,
       default: null,
@@ -79,5 +73,38 @@ const offerSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// ✅ Validation logic
+offerSchema.pre("save", function (next) {
+  if (this.discountType === "PERCENT") {
+    if (this.discountValue < 1 || this.discountValue > 100) {
+      return next(
+        new Error("Percentage discountValue must be between 1 and 100.")
+      );
+    }
+  }
+
+  if (this.discountType === "UPTO") {
+    if (this.maxDiscountAmount === null || this.maxDiscountAmount < 1) {
+      return next(
+        new Error(
+          "maxDiscountAmount is required and must be ≥ 1 for UPTO offers."
+        )
+      );
+    }
+  }
+
+  if (this.discountType === "FLAT") {
+    if (this.discountValue < 1) {
+      return next(new Error("Flat discountValue must be at least ₹1."));
+    }
+  }
+
+  if (this.validFrom > this.validTill) {
+    return next(new Error("validFrom date cannot be after validTill date."));
+  }
+
+  next();
+});
 
 module.exports = mongoose.model("Offer", offerSchema);
