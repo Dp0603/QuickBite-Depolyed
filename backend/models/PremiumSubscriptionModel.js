@@ -4,8 +4,8 @@ const premiumSubscriptionSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
       ref: "User",
+      required: true,
     },
     subscriberId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -29,38 +29,18 @@ const premiumSubscriptionSchema = new mongoose.Schema(
         "Gold Yearly",
       ],
     },
-    price: {
-      type: Number,
-      required: true,
-    },
-    durationInDays: {
-      type: Number,
-      required: true,
-    },
-    startDate: {
-      type: Date,
-      default: Date.now,
-    },
-    endDate: {
-      type: Date,
-      required: true,
-    },
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
+    price: { type: Number, required: true },
+    durationInDays: { type: Number, required: true },
+    startDate: { type: Date, default: Date.now },
+    endDate: { type: Date, required: true },
+    isActive: { type: Boolean, default: true },
     paymentStatus: {
       type: String,
       enum: ["Pending", "Paid", "Failed"],
       default: "Pending",
     },
-    paymentId: {
-      type: String,
-    },
-    totalSavings: {
-      type: Number,
-      default: 0,
-    },
+    paymentId: { type: String },
+    totalSavings: { type: Number, default: 0 },
     perks: {
       freeDelivery: { type: Boolean, default: true },
       extraDiscount: { type: Number, default: 0 },

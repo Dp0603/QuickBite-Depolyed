@@ -5,7 +5,7 @@ const offerValidationRules = () => [
 
   // Conditional discountValue validation
   body("discountValue").custom((value, { req }) => {
-    const type = req.body.discountType;
+    const type = req.body.discountType?.toUpperCase();
     if (type === "PERCENT") {
       if (value < 1 || value > 100) {
         throw new Error("Percentage discount must be between 1 and 100");

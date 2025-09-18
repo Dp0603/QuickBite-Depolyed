@@ -26,12 +26,21 @@ const createSubscription = async (req, res) => {
         .json({ message: "Missing required subscription fields" });
     }
 
-    if (!req.user || !req.user._id) {
-      return res.status(401).json({ message: "Unauthorized: User ID missing" });
+    // ✅ Prevent multiple active subscriptions
+    const activeSub = await PremiumSubscription.findOne({
+      subscriberId,
+      subscriberType,
+      isActive: true,
+      endDate: { $gte: new Date() },
+    });
+    if (activeSub) {
+      return res
+        .status(400)
+        .json({ message: "Subscriber already has an active subscription" });
     }
 
     const newSubscriptionData = {
-      userId: req.user._id, // Link to logged-in user
+      userId: req.user?._id || null,
       subscriberId,
       subscriberType,
       planName,
@@ -40,15 +49,13 @@ const createSubscription = async (req, res) => {
       startDate: new Date(),
       endDate: new Date(endDate),
       isActive: true,
-      paymentStatus: "Paid", // Set initial payment status
+      paymentStatus: "Paid",
       perks: {
         freeDelivery: perks.freeDelivery ?? true,
         extraDiscount: perks.extraDiscount ?? 0,
         cashback: perks.cashback ?? 0,
       },
-      totalSavings: 0, // ✅ initialize totalSavings
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      totalSavings: 0,
     };
 
     const newSubscription = await PremiumSubscription.create(
@@ -65,11 +72,10 @@ const createSubscription = async (req, res) => {
   }
 };
 
-// 📦 Get all subscriptions for a specific user or restaurant (via query params)
+// 📦 Get all subscriptions for a subscriber
 const getSubscriptionsBySubscriber = async (req, res) => {
   try {
     const { subscriberId, subscriberType } = req.query;
-
     if (!subscriberId || !subscriberType) {
       return res.status(400).json({
         message:
@@ -81,11 +87,9 @@ const getSubscriptionsBySubscriber = async (req, res) => {
       subscriberId,
       subscriberType,
     });
-
-    res.status(200).json({
-      message: "Subscriptions fetched successfully",
-      subscriptions,
-    });
+    res
+      .status(200)
+      .json({ message: "Subscriptions fetched successfully", subscriptions });
   } catch (err) {
     console.error("Get Subscriptions Error:", err);
     res.status(500).json({ message: err.message });
@@ -99,17 +103,16 @@ const getSubscriptionById = async (req, res) => {
     if (!subscription)
       return res.status(404).json({ message: "Subscription not found" });
 
-    res.status(200).json({
-      message: "Subscription fetched successfully",
-      subscription,
-    });
+    res
+      .status(200)
+      .json({ message: "Subscription fetched successfully", subscription });
   } catch (err) {
     console.error("Get Subscription By ID Error:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// ✏️ Update subscription (e.g. payment status, perks, totalSavings)
+// ✏️ Update subscription
 const updateSubscription = async (req, res) => {
   try {
     const updated = await PremiumSubscription.findByIdAndUpdate(
@@ -117,14 +120,15 @@ const updateSubscription = async (req, res) => {
       req.body,
       { new: true }
     );
-
     if (!updated)
       return res.status(404).json({ message: "Subscription not found" });
 
-    res.status(200).json({
-      message: "Subscription updated successfully",
-      subscription: updated,
-    });
+    res
+      .status(200)
+      .json({
+        message: "Subscription updated successfully",
+        subscription: updated,
+      });
   } catch (err) {
     console.error("Update Subscription Error:", err);
     res.status(500).json({ message: err.message });
@@ -145,15 +149,16 @@ const deleteSubscription = async (req, res) => {
   }
 };
 
-// 📊 Get all active subscriptions (Admin/report use)
+// 📊 Get all active subscriptions
 const getAllActiveSubscriptions = async (req, res) => {
   try {
     const activeSubs = await PremiumSubscription.find({ isActive: true });
-
-    res.status(200).json({
-      message: "Active subscriptions fetched successfully",
-      subscriptions: activeSubs,
-    });
+    res
+      .status(200)
+      .json({
+        message: "Active subscriptions fetched successfully",
+        subscriptions: activeSubs,
+      });
   } catch (err) {
     console.error("Get Active Subscriptions Error:", err);
     res.status(500).json({ message: err.message });
