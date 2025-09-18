@@ -17,8 +17,8 @@ const CustomerCart = () => {
   const [availableOffers, setAvailableOffers] = useState([]);
   const [selectedOfferId, setSelectedOfferId] = useState("");
   const [premiumSummary, setPremiumSummary] = useState({
-    freeDelivery: 0,
-    extraDiscount: 0,
+    freeDelivery: false,
+    extraDiscount: 0, // percentage
     cashback: 0,
     totalSavings: 0,
   });
@@ -34,9 +34,9 @@ const CustomerCart = () => {
       const restId = res.data.cart?.restaurantId?._id || null;
       setRestaurantId(restId);
 
-      // ✅ Premium benefits
+      // ✅ Premium benefits (safe fallback)
       const premium = res.data.cart?.premiumSummary || {
-        freeDelivery: 0,
+        freeDelivery: false,
         extraDiscount: 0,
         cashback: 0,
         totalSavings: 0,
@@ -50,7 +50,7 @@ const CustomerCart = () => {
       setCartItems([]);
       setRestaurantId(null);
       setPremiumSummary({
-        freeDelivery: 0,
+        freeDelivery: false,
         extraDiscount: 0,
         cashback: 0,
         totalSavings: 0,
@@ -110,17 +110,22 @@ const CustomerCart = () => {
     (acc, item) => acc + item.menuItem.price * item.quantity,
     0
   );
-  const tax = Math.round(subtotal * 0.08);
 
+  const tax = parseFloat((subtotal * 0.08).toFixed(2));
+
+  // ✅ Delivery Fee
   const baseDeliveryFee = subtotal >= 500 ? 0 : 40;
-  const deliveryFee = Math.max(
-    baseDeliveryFee - (premiumSummary.freeDelivery || 0),
-    0
-  );
+  const deliveryFee = premiumSummary.freeDelivery ? 0 : baseDeliveryFee;
+
+  // ✅ Premium Extra Discount (percentage of subtotal)
+  const premiumExtraDiscount = premiumSummary.extraDiscount
+    ? parseFloat(((subtotal * premiumSummary.extraDiscount) / 100).toFixed(2))
+    : 0;
 
   const totalBeforeDiscount = subtotal + tax + deliveryFee;
+
   const totalPayable = Math.max(
-    totalBeforeDiscount - appliedDiscount - (premiumSummary.extraDiscount || 0),
+    totalBeforeDiscount - appliedDiscount - premiumExtraDiscount,
     0
   ).toFixed(2);
 
@@ -144,7 +149,8 @@ const CustomerCart = () => {
       case "FLAT":
         discount = offer.discountValue;
         break;
-      case "PERCENT": {
+      case "PERCENT":
+      case "UPTO": {
         const percentDiscount = Math.floor(
           (subtotal * offer.discountValue) / 100
         );
@@ -153,9 +159,6 @@ const CustomerCart = () => {
           : percentDiscount;
         break;
       }
-      case "UPTO":
-        discount = Math.min(offer.discountValue, subtotal);
-        break;
       default:
         discount = 0;
     }
@@ -216,22 +219,21 @@ const CustomerCart = () => {
 
             {/* Premium Summary */}
             {premiumSummary &&
-              ((premiumSummary.extraDiscount || 0) > 0 ||
-                ((premiumSummary.freeDelivery || 0) > 0 && subtotal < 500) ||
+              (premiumExtraDiscount > 0 ||
+                (premiumSummary.freeDelivery && subtotal < 500) ||
                 (premiumSummary.cashback || 0) > 0) && (
                 <div className="mb-2 p-2 bg-green-50 dark:bg-green-900 rounded">
                   <h4 className="font-semibold text-green-800 dark:text-green-300">
                     💎 Premium Benefits Applied:
                   </h4>
-                  {(premiumSummary.freeDelivery || 0) > 0 && subtotal < 500 && (
+                  {premiumSummary.freeDelivery && subtotal < 500 && (
                     <p className="text-green-600 dark:text-green-300">
-                      Free Delivery: ₹{Math.round(premiumSummary.freeDelivery)}
+                      Free Delivery: ₹{baseDeliveryFee}
                     </p>
                   )}
-                  {(premiumSummary.extraDiscount || 0) > 0 && (
+                  {premiumExtraDiscount > 0 && (
                     <p className="text-green-600 dark:text-green-300">
-                      Extra Discount: ₹
-                      {Math.round(premiumSummary.extraDiscount)}
+                      Extra Discount: ₹{premiumExtraDiscount}
                     </p>
                   )}
                   {(premiumSummary.cashback || 0) > 0 && (
@@ -257,7 +259,8 @@ const CustomerCart = () => {
                 {availableOffers.map((offer) => (
                   <option key={offer._id} value={offer._id}>
                     {offer.title} ({offer.discountType}) -{" "}
-                    {offer.discountType.toUpperCase() === "PERCENT"
+                    {offer.discountType.toUpperCase() === "PERCENT" ||
+                    offer.discountType.toUpperCase() === "UPTO"
                       ? `${offer.discountValue}%`
                       : `₹${offer.discountValue}`}
                   </option>
@@ -300,14 +303,13 @@ const CustomerCart = () => {
                     <span className="text-green-600 text-xs">(Free)</span>
                   )}
                 </span>
-                <span>₹{deliveryFee}</span>
+                <span>₹{deliveryFee.toFixed(2)}</span>
               </div>
-              {(appliedDiscount > 0 ||
-                (premiumSummary.extraDiscount || 0) > 0) && (
+              {(appliedDiscount > 0 || premiumExtraDiscount > 0) && (
                 <div className="flex justify-between">
                   <span>Discount</span>
                   <span className="text-green-600">
-                    –₹{appliedDiscount + (premiumSummary.extraDiscount || 0)}
+                    –₹{(appliedDiscount + premiumExtraDiscount).toFixed(2)}
                   </span>
                 </div>
               )}

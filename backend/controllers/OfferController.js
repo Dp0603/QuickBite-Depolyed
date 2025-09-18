@@ -5,39 +5,23 @@ const createOffer = async (req, res) => {
   try {
     const { restaurantId, validFrom, validTill, promoCode } = req.body;
 
-    if (!restaurantId) {
+    if (!restaurantId)
       return res.status(400).json({ message: "Restaurant ID is required." });
-    }
-
-    if (new Date(validFrom) > new Date(validTill)) {
+    if (new Date(validFrom) > new Date(validTill))
       return res
         .status(400)
         .json({ message: "validFrom cannot be after validTill." });
-    }
 
-    // Normalize promo code
-    if (promoCode) {
-      req.body.promoCode = promoCode.toUpperCase().trim();
-    }
+    if (promoCode) req.body.promoCode = promoCode.toUpperCase().trim();
 
-    const offer = await Offer.create({
-      ...req.body,
-      restaurantId,
-    });
+    const offer = await Offer.create({ ...req.body, restaurantId });
 
-    res.status(201).json({
-      message: "Offer created successfully.",
-      offer,
-    });
+    res.status(201).json({ message: "Offer created successfully.", offer });
   } catch (err) {
-    if (err.name === "ValidationError") {
+    if (err.name === "ValidationError")
       return res.status(400).json({ message: err.message });
-    }
-
-    if (err.code === 11000 && err.keyPattern?.promoCode) {
+    if (err.code === 11000 && err.keyPattern?.promoCode)
       return res.status(400).json({ message: "Promo code already exists." });
-    }
-
     console.error("❌ createOffer error:", err);
     res.status(500).json({ message: err.message });
   }
@@ -47,10 +31,7 @@ const createOffer = async (req, res) => {
 const getOffersByRestaurant = async (req, res) => {
   try {
     const offers = await Offer.find({ restaurantId: req.params.restaurantId });
-    res.status(200).json({
-      message: "Offers fetched successfully",
-      offers,
-    });
+    res.status(200).json({ message: "Offers fetched successfully", offers });
   } catch (err) {
     console.error("❌ getOffersByRestaurant error:", err);
     res.status(500).json({ message: err.message });
@@ -62,11 +43,7 @@ const getOfferById = async (req, res) => {
   try {
     const offer = await Offer.findById(req.params.id);
     if (!offer) return res.status(404).json({ message: "Offer not found" });
-
-    res.status(200).json({
-      message: "Offer fetched successfully",
-      offer,
-    });
+    res.status(200).json({ message: "Offer fetched successfully", offer });
   } catch (err) {
     console.error("❌ getOfferById error:", err);
     res.status(500).json({ message: err.message });
@@ -77,44 +54,33 @@ const getOfferById = async (req, res) => {
 const updateOffer = async (req, res) => {
   try {
     const { validFrom, validTill, promoCode } = req.body;
-
-    if (validFrom && validTill && new Date(validFrom) > new Date(validTill)) {
+    if (validFrom && validTill && new Date(validFrom) > new Date(validTill))
       return res
         .status(400)
         .json({ message: "validFrom cannot be after validTill." });
-    }
 
-    // Normalize promo code
-    if (promoCode) {
-      req.body.promoCode = promoCode.toUpperCase().trim();
-    }
+    if (promoCode) req.body.promoCode = promoCode.toUpperCase().trim();
 
     const updatedOffer = await Offer.findByIdAndUpdate(
       req.params.id,
       req.body,
       {
         new: true,
-        runValidators: true, // ✅ Ensure model validation is run
+        runValidators: true,
       }
     );
 
-    if (!updatedOffer) {
+    if (!updatedOffer)
       return res.status(404).json({ message: "Offer not found." });
-    }
 
-    res.status(200).json({
-      message: "Offer updated successfully.",
-      offer: updatedOffer,
-    });
+    res
+      .status(200)
+      .json({ message: "Offer updated successfully.", offer: updatedOffer });
   } catch (err) {
-    if (err.name === "ValidationError") {
+    if (err.name === "ValidationError")
       return res.status(400).json({ message: err.message });
-    }
-
-    if (err.code === 11000 && err.keyPattern?.promoCode) {
+    if (err.code === 11000 && err.keyPattern?.promoCode)
       return res.status(400).json({ message: "Promo code already exists." });
-    }
-
     console.error("❌ updateOffer error:", err);
     res.status(500).json({ message: err.message });
   }
@@ -125,7 +91,6 @@ const deleteOffer = async (req, res) => {
   try {
     const deleted = await Offer.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: "Offer not found" });
-
     res.status(200).json({ message: "Offer deleted successfully" });
   } catch (err) {
     console.error("❌ deleteOffer error:", err);
@@ -144,10 +109,9 @@ const getValidOffersForCustomer = async (req, res) => {
       validTill: { $gte: now },
     });
 
-    res.status(200).json({
-      message: "Valid offers fetched successfully",
-      offers,
-    });
+    res
+      .status(200)
+      .json({ message: "Valid offers fetched successfully", offers });
   } catch (err) {
     console.error("❌ getValidOffersForCustomer error:", err);
     res.status(500).json({ message: err.message });
@@ -163,10 +127,12 @@ const toggleOfferStatus = async (req, res) => {
     offer.isActive = !offer.isActive;
     await offer.save();
 
-    res.status(200).json({
-      message: `Offer is now ${offer.isActive ? "active" : "inactive"}`,
-      offer,
-    });
+    res
+      .status(200)
+      .json({
+        message: `Offer is now ${offer.isActive ? "active" : "inactive"}`,
+        offer,
+      });
   } catch (err) {
     console.error("❌ toggleOfferStatus error:", err);
     res.status(500).json({ message: err.message });
@@ -192,10 +158,7 @@ const getOfferByPromoCode = async (req, res) => {
     if (!offer)
       return res.status(404).json({ message: "Invalid or expired promo code" });
 
-    res.status(200).json({
-      message: "Promo code applied successfully",
-      offer,
-    });
+    res.status(200).json({ message: "Promo code applied successfully", offer });
   } catch (err) {
     console.error("❌ getOfferByPromoCode error:", err);
     res.status(500).json({ message: err.message });
@@ -215,14 +178,15 @@ const getAllOffersForCustomer = async (req, res) => {
       (offer) =>
         offer.isActive && offer.validFrom <= now && offer.validTill >= now
     );
-
     const expiredOffers = offers.filter((offer) => offer.validTill < now);
 
-    res.status(200).json({
-      message: "All offers fetched successfully",
-      activeOffers,
-      expiredOffers,
-    });
+    res
+      .status(200)
+      .json({
+        message: "All offers fetched successfully",
+        activeOffers,
+        expiredOffers,
+      });
   } catch (err) {
     console.error("❌ getAllOffersForCustomer error:", err);
     res.status(500).json({ message: err.message });

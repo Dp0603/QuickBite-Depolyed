@@ -1,12 +1,22 @@
 const Order = require("../models/OrderModel");
 const Cart = require("../models/CartModel");
 const PremiumSubscription = require("../models/PremiumSubscriptionModel");
+const Offer = require("../models/OfferModel");
 
 // 🧾 Create a new order
 const createOrder = async (req, res) => {
   try {
-    const { customerId, restaurantId, subtotal, tax, deliveryFee, discount } =
-      req.body;
+    const {
+      customerId,
+      restaurantId,
+      items,
+      subtotal,
+      tax,
+      deliveryFee,
+      discount = 0,
+      offerId = null,
+      paymentMethod,
+    } = req.body;
 
     let premiumApplied = false;
     let savings = 0;
@@ -18,7 +28,7 @@ const createOrder = async (req, res) => {
       cashback: 0,
     };
 
-    // 🔍 Check if customer has an active Premium subscription
+    // 🔍 Check active Premium subscription
     const subscription = await PremiumSubscription.findOne({
       subscriberId: customerId,
       subscriberType: "User",
@@ -26,14 +36,12 @@ const createOrder = async (req, res) => {
       endDate: { $gte: new Date() },
     });
 
-    // 🔍 Check Premium
+    // 🔹 Apply Premium benefits
     if (subscription) {
       premiumApplied = true;
 
-      // 🔹 Always derive the original delivery fee on the backend
-      const originalDeliveryFee = deliveryFee || 40; // default or from restaurant config
-
-      // Free Delivery Saving
+      // Free Delivery
+      const originalDeliveryFee = deliveryFee || 40;
       const deliverySavings = subscription.perks.freeDelivery
         ? originalDeliveryFee
         : 0;
@@ -41,12 +49,12 @@ const createOrder = async (req, res) => {
         ? 0
         : originalDeliveryFee;
 
-      // Extra Discount Saving
+      // Extra Discount
       const extraDiscountRate = subscription.perks.extraDiscount || 0;
-      const discountSavings = (subtotal * extraDiscountRate) / 100;
-      finalDiscount = discount + discountSavings;
+      const discountSavings = Math.floor((subtotal * extraDiscountRate) / 100);
+      finalDiscount += discountSavings;
 
-      // Cashback (if any)
+      // Cashback
       const cashback = subscription.perks.cashback || 0;
 
       premiumBreakdown = {
@@ -57,26 +65,64 @@ const createOrder = async (req, res) => {
 
       savings = deliverySavings + discountSavings + cashback;
 
-      // ✅ Update subscription’s totalSavings
+      // ✅ Update totalSavings
       subscription.totalSavings = (subscription.totalSavings || 0) + savings;
       await subscription.save();
     }
 
-    // ✅ Create order with updated amounts
-    const totalAmount = subtotal + tax + finalDeliveryFee - finalDiscount;
+    // 🔹 Apply Offer if exists
+    if (offerId) {
+      const offer = await Offer.findById(offerId);
+      if (offer && offer.isActive) {
+        if (subtotal >= offer.minOrderAmount) {
+          let offerDiscount = 0;
+          switch (offer.discountType.toUpperCase()) {
+            case "FLAT":
+              offerDiscount = offer.discountValue;
+              break;
+            case "PERCENT":
+            case "UPTO": {
+              const percentDiscount = Math.floor(
+                (subtotal * offer.discountValue) / 100
+              );
+              offerDiscount = offer.maxDiscountAmount
+                ? Math.min(percentDiscount, offer.maxDiscountAmount)
+                : percentDiscount;
+              break;
+            }
+            default:
+              offerDiscount = 0;
+          }
+          finalDiscount += offerDiscount;
+        }
+      }
+    }
 
+    // 🔹 Calculate totalAmount
+    const totalAmount = Math.max(
+      subtotal + tax + finalDeliveryFee - finalDiscount,
+      0
+    );
+
+    // ✅ Create order
     const order = await Order.create({
-      ...req.body,
+      customerId,
+      restaurantId,
+      items,
+      subtotal,
+      tax,
       deliveryFee: finalDeliveryFee,
       discount: finalDiscount,
       totalAmount,
+      offerId,
+      paymentMethod,
       premiumApplied,
       savings,
       premiumBreakdown,
     });
 
-    // 🟢 If COD → clear cart immediately
-    if (order.paymentMethod === "COD") {
+    // 🟢 Clear cart on COD
+    if (paymentMethod === "COD") {
       await Cart.deleteOne({ userId: customerId, restaurantId });
     }
 
@@ -90,7 +136,7 @@ const createOrder = async (req, res) => {
   }
 };
 
-// 🔁 Update order status (Preparing, Ready, etc.)
+// 🔁 Update order status
 const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -102,9 +148,8 @@ const updateOrderStatus = async (req, res) => {
       { new: true }
     );
 
-    if (!updatedOrder) {
+    if (!updatedOrder)
       return res.status(404).json({ message: "Order not found" });
-    }
 
     const io = req.app.get("io");
     io.to(orderId).emit("orderStatusUpdated", {
@@ -139,9 +184,8 @@ const updateDeliveryStatus = async (req, res) => {
       { new: true }
     );
 
-    if (!updatedOrder) {
+    if (!updatedOrder)
       return res.status(404).json({ message: "Order not found" });
-    }
 
     const io = req.app.get("io");
     io.to(orderId).emit("deliveryStatusUpdated", {
@@ -160,7 +204,7 @@ const updateDeliveryStatus = async (req, res) => {
   }
 };
 
-// 👤 Get all orders of a customer
+// 👤 Get customer orders
 const getCustomerOrders = async (req, res) => {
   try {
     const { customerId } = req.params;
@@ -186,7 +230,7 @@ const getCustomerOrders = async (req, res) => {
   }
 };
 
-// 🍽️ Get all orders of a restaurant
+// 🍽️ Get restaurant orders
 const getRestaurantOrders = async (req, res) => {
   try {
     const { restaurantId } = req.params;
@@ -211,7 +255,7 @@ const getRestaurantOrders = async (req, res) => {
   }
 };
 
-// 🔍 Get single order by ID
+// 🔍 Get single order
 const getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -223,9 +267,7 @@ const getOrderById = async (req, res) => {
       .populate("deliveryDetails.deliveryAgentId", "name")
       .lean();
 
-    if (!order) {
-      return res.status(404).json({ message: "Order not found" });
-    }
+    if (!order) return res.status(404).json({ message: "Order not found" });
 
     if (order.premiumApplied) {
       order.premiumSummary = `You saved ₹${order.savings} (Delivery: ₹${order.premiumBreakdown.freeDelivery}, Discount: ₹${order.premiumBreakdown.extraDiscount}, Cashback: ₹${order.premiumBreakdown.cashback}) with Premium`;
@@ -237,7 +279,7 @@ const getOrderById = async (req, res) => {
   }
 };
 
-// ⭐ Mark order as rated after feedback
+// ⭐ Mark order as rated
 const markOrderAsRated = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -248,9 +290,8 @@ const markOrderAsRated = async (req, res) => {
       { new: true }
     );
 
-    if (!updatedOrder) {
+    if (!updatedOrder)
       return res.status(404).json({ message: "Order not found" });
-    }
 
     res
       .status(200)

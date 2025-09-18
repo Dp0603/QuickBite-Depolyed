@@ -86,15 +86,9 @@ const orderSchema = new mongoose.Schema(
       razorpay_signature: String,
     },
 
-    // 🟢 Premium fields
-    savings: {
-      type: Number,
-      default: 0,
-    },
-    premiumApplied: {
-      type: Boolean,
-      default: false,
-    },
+    // Premium fields
+    savings: { type: Number, default: 0 },
+    premiumApplied: { type: Boolean, default: false },
     premiumBreakdown: {
       freeDelivery: { type: Number, default: 0 },
       extraDiscount: { type: Number, default: 0 },
@@ -104,7 +98,7 @@ const orderSchema = new mongoose.Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-// Virtual field for full address string
+// Virtual for full address string
 orderSchema.virtual("deliveryAddress.fullAddress").get(function () {
   const addr = this.deliveryAddress;
   if (!addr) return "";
