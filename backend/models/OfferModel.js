@@ -23,7 +23,7 @@ const offerSchema = new mongoose.Schema(
     validFrom: { type: Date, required: true },
     validTill: { type: Date, required: true },
 
-    promoCode: { type: String, trim: true, unique: true, sparse: true },
+    promoCode: { type: String, trim: true, sparse: true }, // removed unique
     isAutoApply: { type: Boolean, default: true },
 
     usageLimit: { type: Number, default: null },
@@ -62,5 +62,11 @@ offerSchema.pre("save", function (next) {
 
   next();
 });
+
+// ✅ Compound index to allow same promo code across different restaurants
+offerSchema.index(
+  { restaurantId: 1, promoCode: 1 },
+  { unique: true, sparse: true }
+);
 
 module.exports = mongoose.model("Offer", offerSchema);

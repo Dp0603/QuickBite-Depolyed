@@ -52,10 +52,17 @@ const createSubscription = async (req, res) => {
       paymentStatus: "Paid",
       perks: {
         freeDelivery: perks.freeDelivery ?? true,
-        extraDiscount: perks.extraDiscount ?? 0,
-        cashback: perks.cashback ?? 0,
+        extraDiscount: {
+          type: perks.extraDiscount?.type || "FLAT", // "FLAT" or "PERCENT"
+          value: perks.extraDiscount?.value ?? 0,
+        },
+        cashback: {
+          type: perks.cashback?.type || "FLAT",
+          value: perks.cashback?.value ?? 0,
+        },
       },
       totalSavings: 0,
+      perkUsageHistory: [],
     };
 
     const newSubscription = await PremiumSubscription.create(
@@ -115,20 +122,30 @@ const getSubscriptionById = async (req, res) => {
 // ✏️ Update subscription
 const updateSubscription = async (req, res) => {
   try {
+    // Ensure perks are in correct format if provided
+    if (req.body.perks) {
+      req.body.perks.extraDiscount = {
+        type: req.body.perks.extraDiscount?.type || "FLAT",
+        value: req.body.perks.extraDiscount?.value ?? 0,
+      };
+      req.body.perks.cashback = {
+        type: req.body.perks.cashback?.type || "FLAT",
+        value: req.body.perks.cashback?.value ?? 0,
+      };
+    }
+
     const updated = await PremiumSubscription.findByIdAndUpdate(
       req.params.id,
       req.body,
-      { new: true }
+      { new: true, runValidators: true }
     );
     if (!updated)
       return res.status(404).json({ message: "Subscription not found" });
 
-    res
-      .status(200)
-      .json({
-        message: "Subscription updated successfully",
-        subscription: updated,
-      });
+    res.status(200).json({
+      message: "Subscription updated successfully",
+      subscription: updated,
+    });
   } catch (err) {
     console.error("Update Subscription Error:", err);
     res.status(500).json({ message: err.message });
@@ -153,16 +170,24 @@ const deleteSubscription = async (req, res) => {
 const getAllActiveSubscriptions = async (req, res) => {
   try {
     const activeSubs = await PremiumSubscription.find({ isActive: true });
-    res
-      .status(200)
-      .json({
-        message: "Active subscriptions fetched successfully",
-        subscriptions: activeSubs,
-      });
+    res.status(200).json({
+      message: "Active subscriptions fetched successfully",
+      subscriptions: activeSubs,
+    });
   } catch (err) {
     console.error("Get Active Subscriptions Error:", err);
     res.status(500).json({ message: err.message });
   }
+};
+
+// 🔹 Helper: Fetch active premium subscription for a subscriber
+const getActivePremiumPlan = async (subscriberId) => {
+  return await PremiumSubscription.findOne({
+    subscriberId,
+    isActive: true,
+    startDate: { $lte: new Date() },
+    endDate: { $gte: new Date() },
+  });
 };
 
 module.exports = {
@@ -172,4 +197,5 @@ module.exports = {
   updateSubscription,
   deleteSubscription,
   getAllActiveSubscriptions,
+  getActivePremiumPlan,
 };

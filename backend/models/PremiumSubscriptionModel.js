@@ -43,10 +43,26 @@ const premiumSubscriptionSchema = new mongoose.Schema(
     totalSavings: { type: Number, default: 0 },
     perks: {
       freeDelivery: { type: Boolean, default: true },
-      extraDiscount: { type: Number, default: 0 },
-      cashback: { type: Number, default: 0 },
+      extraDiscount: {
+        type: { type: String, enum: ["FLAT", "PERCENT"], default: "FLAT" },
+        value: { type: Number, default: 0 },
+      },
+      cashback: {
+        type: { type: String, enum: ["FLAT", "PERCENT"], default: "FLAT" },
+        value: { type: Number, default: 0 },
+      },
     },
+    perkUsageHistory: [
+      {
+        orderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order" },
+        appliedAt: { type: Date, default: Date.now },
+        discountApplied: Number,
+        cashbackApplied: Number,
+        freeDeliveryApplied: Boolean,
+      },
+    ],
   },
+
   { timestamps: true }
 );
 

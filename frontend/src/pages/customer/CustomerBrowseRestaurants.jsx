@@ -163,22 +163,32 @@ const CustomerBrowseRestaurants = () => {
 
   // Toggle favorite with animation and disable button during API call
   const toggleWishlist = async (restaurantId) => {
+    console.log("⭐ toggleWishlist called", { userId, restaurantId });
+
     if (!userId) {
       alert("Please log in to use favorites.");
+      return;
+    }
+    if (!restaurantId) {
+      console.error("❌ No restaurant ID provided!");
       return;
     }
     if (updatingFav) return; // prevent spamming
     setUpdatingFav(true);
 
-    const isFavorited = wishlist.includes(restaurantId);
+    const isFavorited = wishlist.some(
+      (id) => id.toString() === restaurantId.toString()
+    );
 
     try {
       if (isFavorited) {
+        console.log("➡ Removing favorite", { userId, restaurantId });
         await API.delete("/favorites/favorites", {
           data: { userId, restaurantId },
         });
         setWishlist((prev) => prev.filter((id) => id !== restaurantId));
       } else {
+        console.log("➡ Adding favorite", { userId, restaurantId });
         await API.post("/favorites/favorites", { userId, restaurantId });
         setWishlist((prev) => [...prev, restaurantId]);
       }
