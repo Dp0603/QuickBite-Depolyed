@@ -9,29 +9,32 @@ const addToFavorites = async (req, res) => {
     console.log("⭐ Incoming body:", req.body);
     const { userId, restaurantId } = req.body;
 
-    let favorite = await Favorite.findOne({ userId });
-
-    if (!favorite) {
-      favorite = new Favorite({
-        userId,
-        restaurantIds: [new mongoose.Types.ObjectId(restaurantId)],
-      });
-    } else {
-      if (favorite.restaurantIds.some((id) => id.equals(restaurantId))) {
-        return res
-          .status(400)
-          .json({ message: "Restaurant already in favorites" });
-      }
-      favorite.restaurantIds.push(new mongoose.Types.ObjectId(restaurantId));
+    // Validate IDs
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(restaurantId)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Invalid userId or restaurantId" });
     }
 
-    await favorite.save();
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    const restIdObj = new mongoose.Types.ObjectId(restaurantId);
+
+    // Add to favorites safely using $addToSet
+    const favorite = await Favorite.findOneAndUpdate(
+      { userId: userIdObj },
+      { $addToSet: { restaurantIds: restIdObj } },
+      { new: true, upsert: true }
+    );
 
     res.status(200).json({
       message: "Restaurant added to favorites",
       favorites: favorite,
     });
   } catch (err) {
+    console.error("❌ Error in addToFavorites:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -41,23 +44,34 @@ const removeFromFavorites = async (req, res) => {
   try {
     const { userId, restaurantId } = req.body;
 
-    const favorite = await Favorite.findOne({ userId });
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(restaurantId)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Invalid userId or restaurantId" });
+    }
+
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    const restIdObj = new mongoose.Types.ObjectId(restaurantId);
+
+    const favorite = await Favorite.findOneAndUpdate(
+      { userId: userIdObj },
+      { $pull: { restaurantIds: restIdObj } },
+      { new: true }
+    );
 
     if (!favorite) {
       return res.status(404).json({ message: "Favorite list not found" });
     }
-
-    favorite.restaurantIds = favorite.restaurantIds.filter(
-      (id) => !id.equals(restaurantId)
-    );
-
-    await favorite.save();
 
     res.status(200).json({
       message: "Restaurant removed from favorites",
       favorites: favorite,
     });
   } catch (err) {
+    console.error("❌ Error in removeFromFavorites:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -65,9 +79,12 @@ const removeFromFavorites = async (req, res) => {
 // 📜 Get all favorite restaurants of a user
 const getUserFavorites = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return res.status(400).json({ message: "Invalid userId" });
+    }
+    const userIdObj = new mongoose.Types.ObjectId(req.params.userId);
 
-    const favorite = await Favorite.findOne({ userId }).populate(
+    const favorite = await Favorite.findOne({ userId: userIdObj }).populate(
       "restaurantIds",
       "name logo cuisineType"
     );
@@ -83,6 +100,7 @@ const getUserFavorites = async (req, res) => {
       favorites: favorite.restaurantIds,
     });
   } catch (err) {
+    console.error("❌ Error in getUserFavorites:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -92,30 +110,28 @@ const addMenuItemToFavorites = async (req, res) => {
   try {
     const { userId, menuItemId } = req.body;
 
-    let favorite = await Favorite.findOne({ userId });
-
-    if (!favorite) {
-      favorite = new Favorite({
-        userId,
-        menuItemIds: [new mongoose.Types.ObjectId(menuItemId)],
-      });
-    } else {
-      if (favorite.menuItemIds?.some((id) => id.equals(menuItemId))) {
-        return res
-          .status(400)
-          .json({ message: "Menu item already in favorites" });
-      }
-      favorite.menuItemIds = favorite.menuItemIds || [];
-      favorite.menuItemIds.push(new mongoose.Types.ObjectId(menuItemId));
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(menuItemId)
+    ) {
+      return res.status(400).json({ message: "Invalid userId or menuItemId" });
     }
 
-    await favorite.save();
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    const menuIdObj = new mongoose.Types.ObjectId(menuItemId);
+
+    const favorite = await Favorite.findOneAndUpdate(
+      { userId: userIdObj },
+      { $addToSet: { menuItemIds: menuIdObj } },
+      { new: true, upsert: true }
+    );
 
     res.status(200).json({
       message: "Menu item added to favorites",
       favorites: favorite,
     });
   } catch (err) {
+    console.error("❌ Error in addMenuItemToFavorites:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -125,23 +141,32 @@ const removeMenuItemFromFavorites = async (req, res) => {
   try {
     const { userId, menuItemId } = req.body;
 
-    const favorite = await Favorite.findOne({ userId });
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(menuItemId)
+    ) {
+      return res.status(400).json({ message: "Invalid userId or menuItemId" });
+    }
+
+    const userIdObj = new mongoose.Types.ObjectId(userId);
+    const menuIdObj = new mongoose.Types.ObjectId(menuItemId);
+
+    const favorite = await Favorite.findOneAndUpdate(
+      { userId: userIdObj },
+      { $pull: { menuItemIds: menuIdObj } },
+      { new: true }
+    );
 
     if (!favorite) {
       return res.status(404).json({ message: "Favorite list not found" });
     }
-
-    favorite.menuItemIds = (favorite.menuItemIds || []).filter(
-      (id) => !id.equals(menuItemId)
-    );
-
-    await favorite.save();
 
     res.status(200).json({
       message: "Menu item removed from favorites",
       favorites: favorite,
     });
   } catch (err) {
+    console.error("❌ Error in removeMenuItemFromFavorites:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -149,9 +174,12 @@ const removeMenuItemFromFavorites = async (req, res) => {
 // 📜 Get all favorite menu items of a user
 const getUserMenuItemFavorites = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return res.status(400).json({ message: "Invalid userId" });
+    }
+    const userIdObj = new mongoose.Types.ObjectId(req.params.userId);
 
-    const favorite = await Favorite.findOne({ userId }).populate(
+    const favorite = await Favorite.findOne({ userId: userIdObj }).populate(
       "menuItemIds",
       "name image price description"
     );
@@ -167,6 +195,7 @@ const getUserMenuItemFavorites = async (req, res) => {
       favorites: favorite.menuItemIds,
     });
   } catch (err) {
+    console.error("❌ Error in getUserMenuItemFavorites:", err);
     res.status(500).json({ message: err.message });
   }
 };
