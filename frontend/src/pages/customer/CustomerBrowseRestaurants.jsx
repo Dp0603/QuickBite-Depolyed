@@ -50,13 +50,11 @@ const CustomerBrowseRestaurants = () => {
   const [loadingWishlist, setLoadingWishlist] = useState(false);
   const [updatingFav, setUpdatingFav] = useState(false);
 
-  // Fetch restaurants with pagination
+  // Fetch restaurants
   useEffect(() => {
     const fetchRestaurants = async () => {
       setLoading(true);
       try {
-        // Ideally, your backend should support pagination & filtering via query params.
-        // For demo, fetching all and paginating on frontend.
         const res = await API.get("/restaurants/restaurants");
         setRestaurants(res.data.restaurants);
       } catch (err) {
@@ -83,7 +81,7 @@ const CustomerBrowseRestaurants = () => {
 
   // Toggle cuisine multi-select
   const toggleCuisine = (cuisine) => {
-    setPage(1); // reset page on filter change
+    setPage(1);
     setSelectedCuisines((prev) =>
       prev.includes(cuisine)
         ? prev.filter((c) => c !== cuisine)
@@ -91,7 +89,17 @@ const CustomerBrowseRestaurants = () => {
     );
   };
 
-  // Sorting logic helper
+  // Parse delivery time string to minutes
+  const parseDeliveryTime = (str) => {
+    if (!str) return null;
+    const match = str.match(/(\d+)/g);
+    if (!match) return null;
+    return match.length >= 2
+      ? (parseInt(match[0]) + parseInt(match[1])) / 2
+      : parseInt(match[0]);
+  };
+
+  // Sort restaurants
   const sortRestaurants = (list) => {
     switch (sortBy) {
       case "ratingDesc":
@@ -118,77 +126,46 @@ const CustomerBrowseRestaurants = () => {
     }
   };
 
-  // Parse deliveryTimeEstimate string to minutes number for sorting
-  const parseDeliveryTime = (str) => {
-    if (!str) return null;
-    // Expect format like "30–40 min" or "20-25 min"
-    const match = str.match(/(\d+)/g);
-    if (!match) return null;
-    // Return average of range if two numbers present
-    if (match.length >= 2) {
-      return (parseInt(match[0]) + parseInt(match[1])) / 2;
-    }
-    return parseInt(match[0]);
-  };
-
-  // Prepare filtered, sorted, paginated list
-  let filtered = restaurants.filter((r) => {
-    // Filter cuisine if selected any
-    if (selectedCuisines.length > 0) {
-      if (!r.cuisineType) return false;
-      const hasCuisine = selectedCuisines.some((c) =>
-        r.cuisineType.includes(c)
-      );
-      if (!hasCuisine) return false;
-    }
-
-    // Search by name or city
-    const searchStr = `${r.name} ${r.addressId?.city || ""}`.toLowerCase();
-    if (!searchStr.includes(search.toLowerCase())) return false;
-
-    return true;
-  });
-
-  // Add numeric delivery time for sorting
-  filtered = filtered.map((r) => ({
-    ...r,
-    deliveryTimeEstimateNum: parseDeliveryTime(r.deliveryTimeEstimate),
-  }));
+  // Prepare filtered and paginated restaurants
+  let filtered = restaurants
+    .filter((r) => {
+      if (selectedCuisines.length > 0) {
+        if (!r.cuisineType) return false;
+        if (!selectedCuisines.some((c) => r.cuisineType.includes(c)))
+          return false;
+      }
+      const searchStr = `${r.name} ${r.addressId?.city || ""}`.toLowerCase();
+      return searchStr.includes(search.toLowerCase());
+    })
+    .map((r) => ({
+      ...r,
+      deliveryTimeEstimateNum: parseDeliveryTime(r.deliveryTimeEstimate),
+    }));
 
   filtered = sortRestaurants(filtered);
 
-  // Pagination
   const paginated = filtered.slice(0, PAGE_SIZE * page);
   const hasMore = paginated.length < filtered.length;
 
-  // Toggle favorite with animation and disable button during API call
+  // Toggle wishlist
   const toggleWishlist = async (restaurantId) => {
-    console.log("⭐ toggleWishlist called", { userId, restaurantId });
-
     if (!userId) {
       alert("Please log in to use favorites.");
       return;
     }
-    if (!restaurantId) {
-      console.error("❌ No restaurant ID provided!");
-      return;
-    }
-    if (updatingFav) return; // prevent spamming
-    setUpdatingFav(true);
+    if (!restaurantId) return;
+    if (updatingFav) return;
 
-    const isFavorited = wishlist.some(
-      (id) => id.toString() === restaurantId.toString()
-    );
+    setUpdatingFav(true);
+    const isFavorited = wishlist.includes(restaurantId);
 
     try {
       if (isFavorited) {
-        console.log("➡ Removing favorite", { userId, restaurantId });
         await API.delete("/favorites/favorites", {
           data: { userId, restaurantId },
         });
         setWishlist((prev) => prev.filter((id) => id !== restaurantId));
       } else {
-        console.log("➡ Adding favorite", { userId, restaurantId });
         await API.post("/favorites/favorites", { userId, restaurantId });
         setWishlist((prev) => [...prev, restaurantId]);
       }
@@ -206,7 +183,6 @@ const CustomerBrowseRestaurants = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      {/* Header */}
       <h1 className="text-3xl font-bold mb-2">🍽️ Discover Restaurants</h1>
       <p className="text-gray-600 dark:text-gray-300 mb-6">
         Find top-rated restaurants near you.
@@ -226,7 +202,6 @@ const CustomerBrowseRestaurants = () => {
           aria-label="Search restaurants or location"
         />
 
-        {/* Cuisine multi-select */}
         <div className="flex flex-wrap gap-2 max-w-full sm:max-w-md overflow-x-auto scrollbar-thin scrollbar-thumb-rounded scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
           {cuisinesList.map((c) => {
             const isSelected = selectedCuisines.includes(c);
@@ -247,7 +222,6 @@ const CustomerBrowseRestaurants = () => {
           })}
         </div>
 
-        {/* Sort dropdown */}
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
@@ -270,131 +244,136 @@ const CustomerBrowseRestaurants = () => {
             <SkeletonCard key={i} />
           ))
         ) : paginated.length > 0 ? (
-          paginated.map((r) => (
-            <motion.div
-              key={r._id}
-              onClick={() => navigate(`/customer/menu/restaurant/${r._id}`)}
-              className="cursor-pointer relative bg-white dark:bg-secondary rounded-xl overflow-hidden shadow-md hover:shadow-lg transition group focus:outline-none focus:ring-4 focus:ring-yellow-400"
-              tabIndex={0}
-              role="button"
-              aria-label={`View menu for ${r.name}`}
-              whileHover={{ scale: 1.02 }}
-              whileFocus={{ scale: 1.02 }}
-            >
-              <div className="h-48 w-full overflow-hidden relative">
-                <img
-                  src={r.logo || "/QuickBite.png"}
-                  alt={r.name}
-                  loading="lazy"
-                  className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+          paginated.map((r) => {
+            const isAvailable = r.isOnline && r.status === "approved";
 
-                {/* Badges */}
-                {r.isOpen && (
-                  <span className="absolute top-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs shadow-md">
-                    Open Now
-                  </span>
-                )}
-                {r.isPopular && (
-                  <span className="absolute top-3 right-3 bg-yellow-400 text-black px-2 py-1 rounded-full text-xs shadow-md mr-10">
-                    Popular
-                  </span>
-                )}
+            return (
+              <motion.div
+                key={r._id}
+                onClick={() =>
+                  isAvailable && navigate(`/customer/menu/restaurant/${r._id}`)
+                }
+                className={`cursor-pointer relative bg-white dark:bg-secondary rounded-xl overflow-hidden shadow-md hover:shadow-lg transition group ${
+                  !isAvailable ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                tabIndex={0}
+                role="button"
+                aria-label={`View menu for ${r.name}`}
+              >
+                <div className="h-48 w-full overflow-hidden relative">
+                  <img
+                    src={r.logo || "/QuickBite.png"}
+                    alt={r.name}
+                    loading="lazy"
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
 
-                {/* Favorite button */}
-                <motion.div
-                  className="absolute top-3 right-3 z-10"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (!updatingFav) toggleWishlist(r._id);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={
-                    wishlist.includes(r._id)
-                      ? `Remove ${r.name} from favorites`
-                      : `Add ${r.name} to favorites`
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
+                  {/* Badges */}
+                  {!isAvailable && (
+                    <span className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs shadow-md">
+                      Offline
+                    </span>
+                  )}
+                  {r.isPopular && (
+                    <span className="absolute top-3 right-3 bg-yellow-400 text-black px-2 py-1 rounded-full text-xs shadow-md mr-10">
+                      Popular
+                    </span>
+                  )}
+
+                  {/* Favorite button */}
+                  <motion.div
+                    className="absolute top-3 right-3 z-10"
+                    onClick={(e) => {
                       e.stopPropagation();
                       if (!updatingFav) toggleWishlist(r._id);
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={
+                      wishlist.includes(r._id)
+                        ? `Remove ${r.name} from favorites`
+                        : `Add ${r.name} to favorites`
                     }
-                  }}
-                >
-                  {wishlist.includes(r._id) ? (
-                    <motion.div
-                      key="filled"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 20,
-                      }}
-                      className="text-red-500 text-lg"
-                    >
-                      <FaHeart />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="empty"
-                      initial={{ scale: 1 }}
-                      animate={{ scale: 1 }}
-                      whileHover={{ scale: 1.3, color: "#f59e0b" }}
-                      className="text-white text-lg drop-shadow-md"
-                    >
-                      <FaRegHeart />
-                    </motion.div>
-                  )}
-                </motion.div>
-              </div>
-
-              <div className="p-4">
-                <h3
-                  className="text-lg font-semibold truncate text-gray-800 dark:text-white"
-                  title={r.name}
-                >
-                  {r.name}
-                </h3>
-
-                <p
-                  className="text-sm text-gray-500 dark:text-gray-300 flex items-center gap-1 mt-1 truncate"
-                  title={`${r.addressId?.addressLine || "Unknown"}, ${
-                    r.addressId?.city || "Unknown"
-                  }`}
-                >
-                  <FaMapMarkerAlt className="text-primary" />
-                  {r.addressId?.addressLine || "Unknown"},{" "}
-                  {r.addressId?.city || "Unknown"}
-                </p>
-
-                {/* Small review snippet (if available) */}
-                {r.topReview && (
-                  <blockquote
-                    className="mt-2 text-xs italic text-gray-600 dark:text-gray-400 line-clamp-2"
-                    title={r.topReview.comment}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.stopPropagation();
+                        if (!updatingFav) toggleWishlist(r._id);
+                      }
+                    }}
                   >
-                    “{r.topReview.comment}”
-                  </blockquote>
-                )}
-
-                <div className="flex justify-between items-center mt-3 text-sm">
-                  <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                    <FaClock />
-                    {r.deliveryTimeEstimate || "30–40 min"}
-                    <FaUtensils className="ml-3" />
-                    ₹20 delivery
-                  </span>
-                  <span className="flex items-center gap-1 bg-yellow-400 text-black px-2 py-0.5 rounded-full text-xs font-bold shadow">
-                    <FaStar />
-                    {r.averageRating?.toFixed(1) || "4.5"}
-                  </span>
+                    {wishlist.includes(r._id) ? (
+                      <motion.div
+                        key="filled"
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 300,
+                          damping: 20,
+                        }}
+                        className="text-red-500 text-lg"
+                      >
+                        <FaHeart />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="empty"
+                        initial={{ scale: 1 }}
+                        animate={{ scale: 1 }}
+                        whileHover={{ scale: 1.3, color: "#f59e0b" }}
+                        className="text-white text-lg drop-shadow-md"
+                      >
+                        <FaRegHeart />
+                      </motion.div>
+                    )}
+                  </motion.div>
                 </div>
-              </div>
-            </motion.div>
-          ))
+
+                <div className="p-4">
+                  <h3
+                    className="text-lg font-semibold truncate text-gray-800 dark:text-white"
+                    title={r.name}
+                  >
+                    {r.name}
+                  </h3>
+
+                  <p
+                    className="text-sm text-gray-500 dark:text-gray-300 flex items-center gap-1 mt-1 truncate"
+                    title={`${r.addressId?.addressLine || "Unknown"}, ${
+                      r.addressId?.city || "Unknown"
+                    }`}
+                  >
+                    <FaMapMarkerAlt className="text-primary" />
+                    {r.addressId?.addressLine || "Unknown"},{" "}
+                    {r.addressId?.city || "Unknown"}
+                  </p>
+
+                  {r.topReview && (
+                    <blockquote
+                      className="mt-2 text-xs italic text-gray-600 dark:text-gray-400 line-clamp-2"
+                      title={r.topReview.comment}
+                    >
+                      “{r.topReview.comment}”
+                    </blockquote>
+                  )}
+
+                  <div className="flex justify-between items-center mt-3 text-sm">
+                    <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                      <FaClock />
+                      {r.deliveryTimeEstimate || "30–40 min"}
+                      <FaUtensils className="ml-3" />
+                      ₹20 delivery
+                    </span>
+                    <span className="flex items-center gap-1 bg-yellow-400 text-black px-2 py-0.5 rounded-full text-xs font-bold shadow">
+                      <FaStar />
+                      {r.averageRating?.toFixed(1) || "4.5"}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })
         ) : (
           <p className="text-gray-500 dark:text-gray-400 mt-12 text-center col-span-full">
             No restaurants found.
@@ -402,7 +381,6 @@ const CustomerBrowseRestaurants = () => {
         )}
       </div>
 
-      {/* Load more button */}
       {hasMore && !loading && (
         <div className="flex justify-center mt-8">
           <button

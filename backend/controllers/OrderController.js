@@ -18,6 +18,21 @@ const createOrder = async (req, res) => {
       paymentMethod,
     } = req.body;
 
+    // ✅ Check if restaurant exists and is online
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant || restaurant.status !== "approved") {
+      return res
+        .status(400)
+        .json({ message: "Restaurant not found or not approved" });
+    }
+    if (!restaurant.isOnline) {
+      return res
+        .status(400)
+        .json({
+          message: "Restaurant is currently offline. Please try later.",
+        });
+    }
+
     let premiumApplied = false;
     let savings = 0;
     let finalDeliveryFee = deliveryFee;

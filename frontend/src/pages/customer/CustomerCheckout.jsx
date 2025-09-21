@@ -25,7 +25,7 @@ const CustomerCheckout = () => {
     premiumSummary = {},
   } = location.state || {};
 
-  // Adjust delivery fee & total with premium and offer
+  // Adjust delivery fee & total with premium perks for UI only
   const deliveryFee = Math.max(
     baseDeliveryFee - (premiumSummary.freeDelivery || 0),
     0
@@ -109,6 +109,18 @@ const CustomerCheckout = () => {
         description: "Food Order Payment",
         order_id: razorpayOrderId,
         handler: async function (response) {
+          const normalizedPremium = {
+            freeDelivery: premiumSummary.freeDelivery > 0, // Boolean
+            extraDiscount: {
+              type: "FLAT", // or "PERCENT" if your logic uses percentage
+              value: premiumSummary.extraDiscount || 0,
+            },
+            cashback: {
+              type: "FLAT", // or "PERCENT" if your logic uses percentage
+              value: premiumSummary.cashback || 0,
+            },
+          };
+
           const payload = {
             customerId: user._id,
             restaurantId,
@@ -121,11 +133,10 @@ const CustomerCheckout = () => {
             })),
             subtotal,
             tax,
-            deliveryFee,
-            discount: appliedDiscount + (premiumSummary.extraDiscount || 0),
-            totalAmount: totalPayable,
+            originalDeliveryFee: baseDeliveryFee, // send original fee, backend applies premium
+            discount: appliedDiscount, // only offer discount
             offerId: selectedOfferId || null,
-            premiumSummary: premiumSummary || {},
+            premiumBreakdown: normalizedPremium, // use normalized object
             paymentMethod: "Razorpay",
             addressId: defaultAddress._id,
             deliveryAddress: {

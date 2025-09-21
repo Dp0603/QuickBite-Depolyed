@@ -8,6 +8,28 @@ const PremiumSubscription = require("../models/PremiumSubscriptionModel");
 const generateInvoice = require("../utils/generateInvoice");
 const SubscriptionHistory = require("../models/SubscriptionHistorymodel");
 
+// 🔹 Normalize perks so it always matches schema
+const normalizePerks = (perks = {}) => {
+  const typeMap = {
+    0: "FLAT",
+    1: "PERCENT",
+    FLAT: "FLAT",
+    PERCENT: "PERCENT",
+  };
+
+  return {
+    freeDelivery: perks.freeDelivery ?? true,
+    extraDiscount: {
+      type: typeMap[perks.extraDiscount?.type] || "FLAT",
+      value: perks.extraDiscount?.value ?? 0,
+    },
+    cashback: {
+      type: typeMap[perks.cashback?.type] || "FLAT",
+      value: perks.cashback?.value ?? 0,
+    },
+  };
+};
+
 // 🔐 Initialize Razorpay
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -274,7 +296,7 @@ const verifyPremiumPayment = async (req, res) => {
 
     const userId = req.user._id;
 
-    // Verify Razorpay signature
+    // 1️⃣ Verify Razorpay signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -286,7 +308,10 @@ const verifyPremiumPayment = async (req, res) => {
         .json({ success: false, message: "Invalid Razorpay signature" });
     }
 
-    // Check for existing subscription
+    // 2️⃣ Normalize perks before saving
+    const normalizedPerks = normalizePerks(subscriptionData.perks);
+
+    // 3️⃣ Check if subscription exists
     let subscription = await PremiumSubscription.findOne({
       subscriberId: subscriptionData.subscriberId,
     });
@@ -303,10 +328,11 @@ const verifyPremiumPayment = async (req, res) => {
       subscription.isActive = true;
       subscription.paymentStatus = "Paid";
       subscription.paymentId = razorpay_payment_id;
+      subscription.perks = normalizedPerks;
       await subscription.save();
     } else {
       subscription = await PremiumSubscription.create({
-        userId, // ✅ Add this
+        userId,
         subscriberId: subscriptionData.subscriberId,
         subscriberType: subscriptionData.subscriberType || "User",
         planName: subscriptionData.planName,
@@ -317,9 +343,11 @@ const verifyPremiumPayment = async (req, res) => {
         isActive: true,
         paymentStatus: "Paid",
         paymentId: razorpay_payment_id,
+        perks: normalizedPerks,
       });
     }
 
+    // 4️⃣ Log subscription history
     await SubscriptionHistory.create({
       subscriberId: subscriptionData.subscriberId,
       subscriberType: subscriptionData.subscriberType || "User",

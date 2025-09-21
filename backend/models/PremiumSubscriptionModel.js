@@ -62,9 +62,28 @@ const premiumSubscriptionSchema = new mongoose.Schema(
       },
     ],
   },
-
   { timestamps: true }
 );
+
+// 🔹 Pre-validate hook to normalize perks type (0 → FLAT, 1 → PERCENT)
+premiumSubscriptionSchema.pre("validate", function (next) {
+  const typeMap = {
+    0: "FLAT",
+    1: "PERCENT",
+    FLAT: "FLAT",
+    PERCENT: "PERCENT",
+  };
+
+  if (this.perks?.extraDiscount) {
+    this.perks.extraDiscount.type =
+      typeMap[this.perks.extraDiscount.type] || "FLAT";
+  }
+  if (this.perks?.cashback) {
+    this.perks.cashback.type = typeMap[this.perks.cashback.type] || "FLAT";
+  }
+
+  next();
+});
 
 module.exports = mongoose.model(
   "PremiumSubscription",

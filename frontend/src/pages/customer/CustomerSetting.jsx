@@ -52,8 +52,8 @@ const CustomerSettings = () => {
     try {
       localStorage.setItem("darkMode", darkMode);
 
-      await API.patch(
-        "/users/preferences",
+      await API.put(
+        `/users/users/${user._id}`,
         { darkMode, notifications },
         { headers: { Authorization: `Bearer ${token}` } }
       );
