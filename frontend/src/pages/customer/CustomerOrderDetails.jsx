@@ -106,18 +106,35 @@ const CustomerOrderDetails = () => {
       <div className="bg-white dark:bg-secondary rounded-lg shadow p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">💰 Billing</h2>
         <div className="space-y-2">
+          {/* Subtotal */}
           <div className="flex justify-between">
             <span>Subtotal:</span>
             <span>{formatPrice(order.subtotal)}</span>
           </div>
+
+          {/* Tax */}
           <div className="flex justify-between">
             <span>Tax:</span>
             <span>{formatPrice(order.tax)}</span>
           </div>
+
+          {/* Delivery Fee */}
           <div className="flex justify-between">
-            <span>Delivery Fee:</span>
-            <span>{formatPrice(order.deliveryFee)}</span>
+            <span>
+              Delivery Fee
+              {order.premiumApplied && order.premiumBreakdown.freeDelivery > 0
+                ? ` (₹${order.premiumBreakdown.freeDelivery} saved with Premium)`
+                : ""}
+              :
+            </span>
+            <span>
+              {order.premiumApplied && order.premiumBreakdown.freeDelivery > 0
+                ? "Free"
+                : formatPrice(order.deliveryFee)}
+            </span>
           </div>
+
+          {/* Discount */}
           {order.discount > 0 && (
             <div className="flex justify-between text-green-600 font-medium">
               <span>Discount:</span>
@@ -125,15 +142,17 @@ const CustomerOrderDetails = () => {
             </div>
           )}
 
-          {/* Premium savings display */}
-          {order.premiumApplied && order.savings > 0 && (
+          {/* Extra Premium Savings (if any other perks like extraDiscount) */}
+          {order.premiumApplied && order.premiumBreakdown.extraDiscount > 0 && (
             <div className="flex justify-between text-yellow-700 dark:text-yellow-400 font-medium">
-              <span>Premium Savings:</span>
-              <span>-{formatPrice(order.savings)}</span>
+              <span>Premium Extra Discount:</span>
+              <span>-{formatPrice(order.premiumBreakdown.extraDiscount)}</span>
             </div>
           )}
 
           <hr className="border-t dark:border-gray-600 my-2" />
+
+          {/* Total */}
           <div className="flex justify-between font-bold text-lg">
             <span>Total:</span>
             <span>{formatPrice(order.totalAmount)}</span>
