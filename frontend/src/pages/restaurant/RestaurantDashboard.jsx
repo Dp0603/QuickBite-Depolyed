@@ -29,7 +29,8 @@ const RestaurantDashboard = () => {
           const orderRes = await API.get(
             `/orders/orders/restaurant/${profileRes.data.restaurant._id}`
           );
-          setOrders(orderRes.data.data || []);
+          console.log("Orders API response:", orderRes.data);
+          setOrders(orderRes.data.orders || []);
         }
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
@@ -90,7 +91,7 @@ const RestaurantDashboard = () => {
   );
 
   const earnings = todayOrders.reduce(
-    (sum, order) => sum + order.totalAmount,
+    (sum, order) => sum + (order.subtotal || 0),
     0
   );
 
@@ -105,26 +106,39 @@ const RestaurantDashboard = () => {
         )
       : 0;
 
+  // 🔥 Top Dishes with image support
   const topDishes = (() => {
     const map = {};
     todayOrders.forEach((order) =>
       order.items.forEach(({ menuItemId, quantity }) => {
-        const name = menuItemId?.name || "Unknown Dish";
-        map[name] = (map[name] || 0) + quantity;
+        if (!menuItemId) return;
+        const name = menuItemId.name || "Unknown Dish";
+        const image = menuItemId.image || null;
+
+        if (!map[name]) {
+          map[name] = { count: 0, image };
+        }
+        map[name].count += quantity;
       })
     );
     return Object.entries(map)
-      .sort((a, b) => b[1] - a[1])
+      .sort((a, b) => b[1].count - a[1].count)
       .slice(0, 3)
-      .map(([name, orders]) => ({ name, orders }));
+      .map(([name, data]) => ({
+        name,
+        orders: data.count,
+        image: data.image,
+      }));
   })();
 
+  // 🕒 Recent Orders
   const recentOrders = [...orders]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5)
     .map((order) => ({
       customer: order.customerId?.name || "Customer",
       dish: order.items?.[0]?.menuItemId?.name || "Dish",
+      image: order.items?.[0]?.menuItemId?.image || null,
       time: dayjs(order.createdAt).format("h:mm A"),
       status: order.status,
     }));
@@ -195,8 +209,16 @@ const RestaurantDashboard = () => {
                 key={i}
                 className="bg-white dark:bg-secondary p-4 rounded-xl shadow hover:shadow-md"
               >
-                <div className="h-24 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center mb-3 text-sm text-gray-400">
-                  Dish Image
+                <div className="h-24 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center mb-3 overflow-hidden">
+                  {dish.image ? (
+                    <img
+                      src={dish.image}
+                      alt={dish.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-sm text-gray-400">No Image</span>
+                  )}
                 </div>
                 <h4 className="font-semibold">{dish.name}</h4>
                 <p className="text-sm text-gray-500 dark:text-gray-300">
@@ -228,11 +250,24 @@ const RestaurantDashboard = () => {
                 key={i}
                 className="bg-white dark:bg-secondary rounded-lg shadow p-4 flex justify-between items-center hover:shadow-md"
               >
-                <div>
-                  <h4 className="font-medium">{order.dish}</h4>
-                  <p className="text-xs text-gray-500">
-                    {order.customer} • {order.time}
-                  </p>
+                <div className="flex items-center gap-3">
+                  {order.image ? (
+                    <img
+                      src={order.image}
+                      alt={order.dish}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded flex items-center justify-center text-xs text-gray-400">
+                      No Img
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="font-medium">{order.dish}</h4>
+                    <p className="text-xs text-gray-500">
+                      {order.customer} • {order.time}
+                    </p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <span
