@@ -1,5 +1,27 @@
 const PremiumSubscription = require("../models/PremiumSubscriptionModel");
 
+// 🔹 Helper to normalize perks input
+const normalizePerks = (perks = {}) => {
+  const typeMap = {
+    0: "FLAT",
+    1: "PERCENT",
+    FLAT: "FLAT",
+    PERCENT: "PERCENT",
+  };
+
+  return {
+    freeDelivery: perks.freeDelivery ?? true,
+    extraDiscount: {
+      type: typeMap[perks.extraDiscount?.type] || "FLAT",
+      value: perks.extraDiscount?.value ?? 0,
+    },
+    cashback: {
+      type: typeMap[perks.cashback?.type] || "FLAT",
+      value: perks.cashback?.value ?? 0,
+    },
+  };
+};
+
 // ➕ Create new premium subscription
 const createSubscription = async (req, res) => {
   try {
@@ -10,7 +32,7 @@ const createSubscription = async (req, res) => {
       price,
       durationInDays,
       endDate,
-      perks = {},
+      perks,
     } = req.body;
 
     if (
@@ -50,17 +72,7 @@ const createSubscription = async (req, res) => {
       endDate: new Date(endDate),
       isActive: true,
       paymentStatus: "Paid",
-      perks: {
-        freeDelivery: perks.freeDelivery ?? true,
-        extraDiscount: {
-          type: perks.extraDiscount?.type || "FLAT", // "FLAT" or "PERCENT"
-          value: perks.extraDiscount?.value ?? 0,
-        },
-        cashback: {
-          type: perks.cashback?.type || "FLAT",
-          value: perks.cashback?.value ?? 0,
-        },
-      },
+      perks: normalizePerks(perks),
       totalSavings: 0,
       perkUsageHistory: [],
     };
@@ -122,16 +134,8 @@ const getSubscriptionById = async (req, res) => {
 // ✏️ Update subscription
 const updateSubscription = async (req, res) => {
   try {
-    // Ensure perks are in correct format if provided
     if (req.body.perks) {
-      req.body.perks.extraDiscount = {
-        type: req.body.perks.extraDiscount?.type || "FLAT",
-        value: req.body.perks.extraDiscount?.value ?? 0,
-      };
-      req.body.perks.cashback = {
-        type: req.body.perks.cashback?.type || "FLAT",
-        value: req.body.perks.cashback?.value ?? 0,
-      };
+      req.body.perks = normalizePerks(req.body.perks);
     }
 
     const updated = await PremiumSubscription.findByIdAndUpdate(

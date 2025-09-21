@@ -115,8 +115,15 @@ const CustomerRestaurantMenu = () => {
     fetchActiveCart();
   }, [user?._id, restaurantId]);
 
+  // Check if restaurant is online
+  const isAvailable = restaurant?.isOnline && restaurant?.status === "approved";
+
   // Add item
   const handleAdd = (itemId) => {
+    if (!isAvailable) {
+      alert("This restaurant is currently offline. You cannot add items.");
+      return;
+    }
     if (!user?._id) return alert("Please login to add to cart.");
     addItemToCart(itemId, false);
   };
@@ -157,6 +164,7 @@ const CustomerRestaurantMenu = () => {
 
   // Remove item
   const handleRemove = async (itemId) => {
+    if (!isAvailable) return;
     const currentQty = cart[itemId]?.quantity || 0;
     if (currentQty <= 0) return;
 
@@ -229,11 +237,18 @@ const CustomerRestaurantMenu = () => {
     <div className="p-6 text-gray-800 dark:text-white max-w-6xl mx-auto">
       {/* Restaurant Info */}
       {restaurant && (
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-10">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6 mb-10 relative">
+          {!isAvailable && (
+            <span className="absolute top-2 left-2 bg-red-500 text-white px-3 py-1 rounded-full text-sm z-10 shadow">
+              Offline
+            </span>
+          )}
           <img
             src={restaurant.logo || "/QuickBite.png"}
             alt="Logo"
-            className="w-28 h-28 rounded-xl object-cover shadow-md"
+            className={`w-28 h-28 rounded-xl object-cover shadow-md ${
+              !isAvailable ? "opacity-50" : ""
+            }`}
           />
           <div className="text-center md:text-left">
             <h1 className="text-3xl font-bold mb-1">{restaurant.name}</h1>
@@ -273,7 +288,9 @@ const CustomerRestaurantMenu = () => {
           menuItems.map((item) => (
             <div
               key={item._id}
-              className="p-4 bg-white dark:bg-secondary rounded-xl shadow-sm hover:shadow-md transition border dark:border-gray-700 flex flex-col"
+              className={`p-4 bg-white dark:bg-secondary rounded-xl shadow-sm hover:shadow-md transition border dark:border-gray-700 flex flex-col relative ${
+                !isAvailable ? "opacity-50 cursor-not-allowed" : ""
+              }`}
             >
               <div className="relative">
                 <img
@@ -307,6 +324,7 @@ const CustomerRestaurantMenu = () => {
                     <button
                       onClick={() => handleRemove(item._id)}
                       className="w-8 h-8 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-white rounded-full hover:bg-gray-300 dark:hover:bg-gray-500"
+                      disabled={!isAvailable}
                     >
                       <FaMinus />
                     </button>
@@ -316,6 +334,7 @@ const CustomerRestaurantMenu = () => {
                     <button
                       onClick={() => handleAdd(item._id)}
                       className="w-8 h-8 bg-primary text-white rounded-full hover:bg-orange-600"
+                      disabled={!isAvailable}
                     >
                       <FaPlus />
                     </button>
@@ -324,6 +343,7 @@ const CustomerRestaurantMenu = () => {
                   <button
                     onClick={() => handleAdd(item._id)}
                     className="bg-primary hover:bg-orange-600 text-white px-4 py-2 rounded-full text-sm font-medium transition"
+                    disabled={!isAvailable}
                   >
                     Add
                   </button>
@@ -338,7 +358,7 @@ const CustomerRestaurantMenu = () => {
         )}
       </div>
 
-      {/* Floating Cart (always shows if global cart has items) */}
+      {/* Floating Cart */}
       {totalItems > 0 && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 bg-primary text-white shadow-lg px-6 py-3 rounded-full flex items-center gap-6 z-50">
           <span>
