@@ -55,8 +55,11 @@ const createOrder = async (req, res) => {
     if (subscription) {
       premiumApplied = true;
 
-      // Free Delivery
-      const originalDeliveryFee = deliveryFee || 40;
+      // Original delivery fee charged by restaurant
+      const originalDeliveryFee =
+        deliveryFee ?? restaurant.deliverySettings.deliveryChargeFlat ?? 40;
+
+      // Free Delivery for Premium users
       const deliverySavings = subscription.perks.freeDelivery
         ? originalDeliveryFee
         : 0;
@@ -72,15 +75,17 @@ const createOrder = async (req, res) => {
       // Cashback
       const cashback = subscription.perks.cashback || 0;
 
+      // Save premium breakdown
       premiumBreakdown = {
-        freeDelivery: deliverySavings,
+        freeDelivery: deliverySavings, // original fee for display
         extraDiscount: discountSavings,
         cashback,
       };
 
-      savings = deliverySavings + discountSavings + cashback;
+      // Only extraDiscount + cashback counted as savings for user
+      savings = discountSavings + cashback;
 
-      // ✅ Update totalSavings
+      // Update total savings in subscription
       subscription.totalSavings = (subscription.totalSavings || 0) + savings;
       await subscription.save();
     }
@@ -88,32 +93,29 @@ const createOrder = async (req, res) => {
     // 🔹 Apply Offer if exists
     if (offerId) {
       const offer = await Offer.findById(offerId);
-      if (offer && offer.isActive) {
-        if (subtotal >= offer.minOrderAmount) {
-          let offerDiscount = 0;
-          switch (offer.discountType.toUpperCase()) {
-            case "FLAT":
-              offerDiscount = offer.discountValue;
-              break;
-            case "PERCENT":
-            case "UPTO": {
-              const percentDiscount = Math.floor(
-                (subtotal * offer.discountValue) / 100
-              );
-              offerDiscount = offer.maxDiscountAmount
-                ? Math.min(percentDiscount, offer.maxDiscountAmount)
-                : percentDiscount;
-              break;
-            }
-            default:
-              offerDiscount = 0;
-          }
-          finalDiscount += offerDiscount;
+      if (offer && offer.isActive && subtotal >= offer.minOrderAmount) {
+        let offerDiscount = 0;
+        switch (offer.discountType.toUpperCase()) {
+          case "FLAT":
+            offerDiscount = offer.discountValue;
+            break;
+          case "PERCENT":
+          case "UPTO":
+            const percentDiscount = Math.floor(
+              (subtotal * offer.discountValue) / 100
+            );
+            offerDiscount = offer.maxDiscountAmount
+              ? Math.min(percentDiscount, offer.maxDiscountAmount)
+              : percentDiscount;
+            break;
+          default:
+            offerDiscount = 0;
         }
+        finalDiscount += offerDiscount;
       }
     }
 
-    // 🔹 Calculate totalAmount
+    // 🔹 Calculate totalAmount (do not subtract free delivery)
     const totalAmount = Math.max(
       subtotal + tax + finalDeliveryFee - finalDiscount,
       0
@@ -226,7 +228,7 @@ const getCustomerOrders = async (req, res) => {
 
     const orders = await Order.find({ customerId })
       .populate("restaurantId", "name")
-      .populate("items.menuItemId", "name price")
+      .populate("items.menuItemId", "name price image")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -252,7 +254,7 @@ const getRestaurantOrders = async (req, res) => {
 
     const orders = await Order.find({ restaurantId })
       .populate("customerId", "name")
-      .populate("items.menuItemId", "name price")
+      .populate("items.menuItemId", "name price image")
       .lean();
 
     const formattedOrders = orders.map((order) => ({
@@ -278,7 +280,7 @@ const getOrderById = async (req, res) => {
     const order = await Order.findById(orderId)
       .populate("restaurantId", "name")
       .populate("customerId", "name")
-      .populate("items.menuItemId", "name price")
+      .populate("items.menuItemId", " image")
       .populate("deliveryDetails.deliveryAgentId", "name")
       .lean();
 
