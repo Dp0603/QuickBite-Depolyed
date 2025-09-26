@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import {
   FaUsers,
   FaShoppingCart,
@@ -25,46 +26,58 @@ import {
 } from "recharts";
 
 const AdminDashboard = () => {
-  const topRestaurants = [
-    { name: "Sushi Express", orders: 320, rating: 4.8 },
-    { name: "Pizza Hub", orders: 290, rating: 4.7 },
-    { name: "Burger Haven", orders: 250, rating: 4.5 },
-    { name: "Tandoori Nights", orders: 230, rating: 4.6 },
-    { name: "Pasta Point", orders: 210, rating: 4.4 },
-  ];
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const weeklyOrders = [
-    { day: "Mon", orders: 120 },
-    { day: "Tue", orders: 180 },
-    { day: "Wed", orders: 150 },
-    { day: "Thu", orders: 200 },
-    { day: "Fri", orders: 250 },
-    { day: "Sat", orders: 320 },
-    { day: "Sun", orders: 280 },
-  ];
+  const COLORS = ["#FF5722", "#FF9800", "#FFC107", "#4CAF50", "#2196F3"];
 
-  const geoData = [
-    { name: "Mumbai", value: 400 },
-    { name: "Delhi", value: 300 },
-    { name: "Bangalore", value: 250 },
-    { name: "Chennai", value: 200 },
-  ];
+  // ✅ fetch dashboard stats
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const { data } = await axios.get("/api/admin/dashboard-stats");
+        setStats(data.data);
+      } catch (error) {
+        console.error("Error fetching dashboard stats", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
 
-  const COLORS = ["#FF5722", "#FF9800", "#FFC107", "#4CAF50"];
+  // 📅 map MongoDB $dayOfWeek (1=Sun … 7=Sat) → labels
+  const dayMap = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weeklyOrders =
+    stats?.weeklyOrders.map((d) => ({
+      day: dayMap[d._id - 1],
+      orders: d.orders,
+    })) || [];
 
+  const topRestaurants = stats?.topRestaurants || [];
+  const geoData =
+    stats?.cityDistribution.map((c) => ({
+      name: c._id,
+      value: c.value,
+    })) || [];
+
+  const orderStatus = stats?.orderStatus || [];
+
+  // Fake notifications & activity (still static for now)
   const notifications = [
     "🍽️ 3 new restaurants pending approval",
     "🚨 5 complaints unresolved",
     "📦 2 delayed orders flagged by delivery agents",
     "💰 1 payout pending confirmation",
   ];
-
   const auditLog = [
     "✔️ Approved 'Ramen King' restaurant",
     "🚫 Banned user Ravi Mehra",
     "💸 Issued payout of ₹12,000 to Pizza Hub",
     "📝 Updated system-wide delivery fee settings",
   ];
+
+  if (loading) return <p className="p-10">Loading dashboard...</p>;
 
   return (
     <motion.div
@@ -83,17 +96,23 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
           <FaUsers className="text-2xl text-primary mb-2" />
-          <h4 className="text-xl font-semibold">8,210 Users</h4>
+          <h4 className="text-xl font-semibold">
+            {stats?.totals.totalUsers || 0} Users
+          </h4>
           <p className="text-sm text-gray-500">Last 30 days</p>
         </div>
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
           <FaShoppingCart className="text-2xl text-orange-500 mb-2" />
-          <h4 className="text-xl font-semibold">1,245 Orders</h4>
+          <h4 className="text-xl font-semibold">
+            {stats?.totals.totalOrders || 0} Orders
+          </h4>
           <p className="text-sm text-gray-500">This Week</p>
         </div>
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
           <FaRupeeSign className="text-2xl text-green-500 mb-2" />
-          <h4 className="text-xl font-semibold">₹5.4L Revenue</h4>
+          <h4 className="text-xl font-semibold">
+            ₹{stats?.totals.totalSales.toLocaleString() || 0} Revenue
+          </h4>
           <p className="text-sm text-gray-500">This Month</p>
         </div>
       </div>
@@ -103,20 +122,13 @@ const AdminDashboard = () => {
         <FaChartPie /> Order Status Breakdown
       </h3>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-        {[
-          { label: "Pending", color: "text-yellow-500", value: 324 },
-          { label: "Ongoing", color: "text-blue-500", value: 187 },
-          { label: "Delivered", color: "text-green-600", value: 724 },
-          { label: "Cancelled", color: "text-red-500", value: 56 },
-        ].map((s, i) => (
+        {orderStatus.map((s, i) => (
           <div
             key={i}
             className="bg-white dark:bg-secondary p-4 rounded-xl shadow text-center"
           >
-            <p className={`text-lg font-bold ${s.color}`}>{s.value}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {s.label}
-            </p>
+            <p className="text-lg font-bold text-primary">{s.count}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{s._id}</p>
           </div>
         ))}
       </div>
