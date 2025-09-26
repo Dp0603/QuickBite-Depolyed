@@ -41,6 +41,7 @@ const getAllOrders = async (req, res) => {
 // 📊 Admin Dashboard Stats
 const getDashboardStats = async (req, res) => {
   try {
+    // ✅ Totals
     const totalUsers = await User.countDocuments();
     const totalRestaurants = await Restaurant.countDocuments();
     const totalOrders = await Order.countDocuments();
@@ -49,13 +50,77 @@ const getDashboardStats = async (req, res) => {
       { $group: { _id: null, total: { $sum: "$totalAmount" } } },
     ]);
 
+    // ✅ Orders by status (Pending, Preparing, Ready, Out for Delivery, Delivered, Cancelled)
+    const orderStatus = await Order.aggregate([
+      { $group: { _id: "$orderStatus", count: { $sum: 1 } } },
+    ]);
+
+    // ✅ Weekly orders trend (last 7 days)
+    const weeklyOrders = await Order.aggregate([
+      {
+        $match: {
+          createdAt: {
+            $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: { $dayOfWeek: "$createdAt" }, // 1=Sunday
+          orders: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    // ✅ Top 5 restaurants by orders
+    const topRestaurants = await Order.aggregate([
+      { $group: { _id: "$restaurantId", orders: { $sum: 1 } } },
+      { $sort: { orders: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: "restaurants", // must match collection name
+          localField: "_id",
+          foreignField: "_id",
+          as: "restaurant",
+        },
+      },
+      { $unwind: "$restaurant" },
+      {
+        $project: {
+          name: "$restaurant.name",
+          rating: "$restaurant.rating",
+          orders: 1,
+        },
+      },
+    ]);
+
+    // ✅ City distribution
+    const cityDistribution = await Order.aggregate([
+      {
+        $group: {
+          _id: "$deliveryAddress.city",
+          value: { $sum: 1 },
+        },
+      },
+      { $sort: { value: -1 } },
+      { $limit: 5 }, // top 5 cities
+    ]);
+
     res.status(200).json({
       message: "Dashboard stats fetched",
       data: {
-        totalUsers,
-        totalRestaurants,
-        totalOrders,
-        totalSales: totalSales[0]?.total || 0,
+        totals: {
+          totalUsers,
+          totalRestaurants,
+          totalOrders,
+          totalSales: totalSales[0]?.total || 0,
+        },
+        orderStatus,
+        weeklyOrders,
+        topRestaurants,
+        cityDistribution,
       },
     });
   } catch (error) {
@@ -94,12 +159,10 @@ const toggleUserStatus = async (req, res) => {
     user.isBlocked = !user.isBlocked;
     await user.save();
 
-    res
-      .status(200)
-      .json({
-        message: `User ${user.isBlocked ? "blocked" : "unblocked"}`,
-        data: user,
-      });
+    res.status(200).json({
+      message: `User ${user.isBlocked ? "blocked" : "unblocked"}`,
+      data: user,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
