@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import {
   FaUsers,
@@ -31,14 +31,14 @@ const AdminDashboard = () => {
 
   const COLORS = ["#FF5722", "#FF9800", "#FFC107", "#4CAF50", "#2196F3"];
 
-  // ✅ fetch dashboard stats
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const { data } = await axios.get("/api/admin/dashboard-stats");
-        setStats(data.data);
+        setStats(data?.data || {});
       } catch (error) {
         console.error("Error fetching dashboard stats", error);
+        // Optional: toast.error("Failed to load dashboard stats");
       } finally {
         setLoading(false);
       }
@@ -46,30 +46,37 @@ const AdminDashboard = () => {
     fetchStats();
   }, []);
 
-  // 📅 map MongoDB $dayOfWeek (1=Sun … 7=Sat) → labels
   const dayMap = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const weeklyOrders =
-    stats?.weeklyOrders.map((d) => ({
-      day: dayMap[d._id - 1],
-      orders: d.orders,
-    })) || [];
+
+  const weeklyOrders = useMemo(
+    () =>
+      stats?.weeklyOrders?.map((d) => ({
+        day: dayMap[d._id - 1],
+        orders: d.orders,
+      })) || [],
+    [stats]
+  );
 
   const topRestaurants = stats?.topRestaurants || [];
-  const geoData =
-    stats?.cityDistribution.map((c) => ({
-      name: c._id,
-      value: c.value,
-    })) || [];
+
+  const geoData = useMemo(
+    () =>
+      stats?.cityDistribution?.map((c) => ({
+        name: c._id,
+        value: c.value,
+      })) || [],
+    [stats]
+  );
 
   const orderStatus = stats?.orderStatus || [];
 
-  // Fake notifications & activity (still static for now)
   const notifications = [
     "🍽️ 3 new restaurants pending approval",
     "🚨 5 complaints unresolved",
     "📦 2 delayed orders flagged by delivery agents",
     "💰 1 payout pending confirmation",
   ];
+
   const auditLog = [
     "✔️ Approved 'Ramen King' restaurant",
     "🚫 Banned user Ravi Mehra",
@@ -77,7 +84,26 @@ const AdminDashboard = () => {
     "📝 Updated system-wide delivery fee settings",
   ];
 
-  if (loading) return <p className="p-10">Loading dashboard...</p>;
+  const exportOrdersCSV = () => {
+    console.log("Export Orders CSV"); // Replace with real export logic
+  };
+  const exportRevenuePDF = () => {
+    console.log("Export Revenue PDF");
+  };
+  const exportUsersXLSX = () => {
+    console.log("Export Users XLSX");
+  };
+
+  if (loading)
+    return (
+      <p className="p-10 text-gray-600 dark:text-gray-300">
+        Loading dashboard...
+      </p>
+    );
+
+  const totalUsers = stats?.totals?.totalUsers || 0;
+  const totalOrders = stats?.totals?.totalOrders || 0;
+  const totalSales = stats?.totals?.totalSales || 0;
 
   return (
     <motion.div
@@ -96,22 +122,18 @@ const AdminDashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
           <FaUsers className="text-2xl text-primary mb-2" />
-          <h4 className="text-xl font-semibold">
-            {stats?.totals.totalUsers || 0} Users
-          </h4>
+          <h4 className="text-xl font-semibold">{totalUsers} Users</h4>
           <p className="text-sm text-gray-500">Last 30 days</p>
         </div>
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
           <FaShoppingCart className="text-2xl text-orange-500 mb-2" />
-          <h4 className="text-xl font-semibold">
-            {stats?.totals.totalOrders || 0} Orders
-          </h4>
+          <h4 className="text-xl font-semibold">{totalOrders} Orders</h4>
           <p className="text-sm text-gray-500">This Week</p>
         </div>
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
           <FaRupeeSign className="text-2xl text-green-500 mb-2" />
           <h4 className="text-xl font-semibold">
-            ₹{stats?.totals.totalSales.toLocaleString() || 0} Revenue
+            ₹{totalSales.toLocaleString()}
           </h4>
           <p className="text-sm text-gray-500">This Month</p>
         </div>
@@ -243,13 +265,22 @@ const AdminDashboard = () => {
       <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow text-center text-sm text-gray-500 dark:text-gray-400">
         📤 Quick Export:
         <div className="mt-3 flex flex-wrap justify-center gap-3">
-          <button className="bg-primary text-white px-4 py-2 rounded hover:bg-orange-600 transition flex items-center gap-2">
+          <button
+            onClick={exportOrdersCSV}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-orange-600 transition flex items-center gap-2"
+          >
             <FaDownload /> Orders CSV
           </button>
-          <button className="bg-primary text-white px-4 py-2 rounded hover:bg-orange-600 transition flex items-center gap-2">
+          <button
+            onClick={exportRevenuePDF}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-orange-600 transition flex items-center gap-2"
+          >
             <FaDownload /> Revenue PDF
           </button>
-          <button className="bg-primary text-white px-4 py-2 rounded hover:bg-orange-600 transition flex items-center gap-2">
+          <button
+            onClick={exportUsersXLSX}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-orange-600 transition flex items-center gap-2"
+          >
             <FaDownload /> Users XLSX
           </button>
         </div>
