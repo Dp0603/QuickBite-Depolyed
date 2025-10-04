@@ -572,7 +572,7 @@ export default function CustomerHelp({ currentUser }) {
             href="tel:+123456789"
             className="flex items-center gap-2 text-primary hover:underline"
           >
-            <FaPhoneAlt /> +1 234 567 89
+            <FaPhoneAlt /> +91XXXXX-XXXXX
           </a>
           <a
             href="https://wa.me/123456789"
@@ -586,7 +586,7 @@ export default function CustomerHelp({ currentUser }) {
             href="mailto:support@example.com"
             className="flex items-center gap-2 text-blue-500 hover:underline"
           >
-            <FaEnvelope /> support@example.com
+            <FaEnvelope /> support@quickbite.com
           </a>
         </div>
       </section>
