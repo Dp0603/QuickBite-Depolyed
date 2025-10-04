@@ -141,7 +141,7 @@ const CustomerPremiumMember = ({
             <QuickPerkButton
               icon={<FaTruck />}
               label="Order with Free Delivery"
-              to="/customer/restaurants"
+              to="/customer/browse"
             />
             <QuickPerkButton
               icon={<FaHeadset />}

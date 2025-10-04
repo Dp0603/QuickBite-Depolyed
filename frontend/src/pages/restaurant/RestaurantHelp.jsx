@@ -533,7 +533,7 @@ export default function RestaurantHelp({ currentUser }) {
             href="tel:+15550001111"
             className="flex items-center gap-2 text-primary hover:underline"
           >
-            <FaPhoneAlt /> +1 555 000 1111
+            <FaPhoneAlt /> +91XXXXX-XXXXX
           </a>
           <a
             href="https://wa.me/15550001111"
@@ -547,7 +547,7 @@ export default function RestaurantHelp({ currentUser }) {
             href="mailto:restaurant.support@example.com"
             className="flex items-center gap-2 text-blue-500 hover:underline"
           >
-            <FaEnvelope /> restaurant.support@example.com
+            <FaEnvelope /> restaurant.support@quickbite.com
           </a>
         </div>
       </section>
