@@ -10,6 +10,9 @@ const {
   toggleUserStatus,
   deleteEntity,
   getAnalyticsSummary,
+  exportOrdersCSV,
+  exportRevenuePDF,
+  exportUsersXLSX,
 } = require("../controllers/AdminController");
 
 // 👥 Get all users
@@ -36,4 +39,7 @@ router.delete("/delete/:type/:id", deleteEntity);
 // 📈 Analytics summary (optional)
 router.get("/analytics-summary", getAnalyticsSummary);
 
+router.get("/export/orders-csv", exportOrdersCSV);
+router.get("/export/revenue-pdf", exportRevenuePDF);
+router.get("/export/users-xlsx", exportUsersXLSX);
 module.exports = router;
