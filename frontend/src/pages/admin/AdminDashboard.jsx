@@ -1,5 +1,8 @@
+// src/pages/Admin/AdminDashboard.jsx
 import React, { useEffect, useState, useMemo } from "react";
-import axios from "axios";
+import API from "../../api/axios";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 import {
   FaUsers,
   FaShoppingCart,
@@ -28,17 +31,19 @@ import {
 const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const COLORS = ["#FF5722", "#FF9800", "#FFC107", "#4CAF50", "#2196F3"];
 
+  // ✅ Fetch Dashboard Data
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const { data } = await axios.get("/api/admin/dashboard-stats");
+        const { data } = await API.get("/admin/dashboard-stats");
         setStats(data?.data || {});
-      } catch (error) {
-        console.error("Error fetching dashboard stats", error);
-        // Optional: toast.error("Failed to load dashboard stats");
+      } catch (err) {
+        console.error("❌ Error fetching dashboard stats:", err);
+        setError("Failed to load dashboard stats. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -85,25 +90,37 @@ const AdminDashboard = () => {
   ];
 
   const exportOrdersCSV = () => {
-    console.log("Export Orders CSV"); // Replace with real export logic
+    window.open(`${API_URL}/admin/export/orders-csv`, "_blank");
   };
   const exportRevenuePDF = () => {
-    console.log("Export Revenue PDF");
+    window.open(`${API_URL}/admin/export/revenue-pdf`, "_blank");
   };
   const exportUsersXLSX = () => {
-    console.log("Export Users XLSX");
+    window.open(`${API_URL}/admin/export/users-xlsx`, "_blank");
   };
 
+  // 🌀 Loading State
   if (loading)
     return (
-      <p className="p-10 text-gray-600 dark:text-gray-300">
-        Loading dashboard...
-      </p>
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-gray-600 dark:text-gray-300 text-lg animate-pulse">
+          Loading dashboard...
+        </p>
+      </div>
+    );
+
+  // ⚠️ Error State
+  if (error)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-red-500 font-medium">{error}</p>
+      </div>
     );
 
   const totalUsers = stats?.totals?.totalUsers || 0;
   const totalOrders = stats?.totals?.totalOrders || 0;
   const totalSales = stats?.totals?.totalSales || 0;
+  const totalRestaurants = stats?.totals?.totalRestaurants || 0;
 
   return (
     <motion.div
@@ -119,23 +136,33 @@ const AdminDashboard = () => {
       </p>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 mb-10">
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
           <FaUsers className="text-2xl text-primary mb-2" />
           <h4 className="text-xl font-semibold">{totalUsers} Users</h4>
-          <p className="text-sm text-gray-500">Last 30 days</p>
+          <p className="text-sm text-gray-500">Total Registered</p>
         </div>
+
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
           <FaShoppingCart className="text-2xl text-orange-500 mb-2" />
           <h4 className="text-xl font-semibold">{totalOrders} Orders</h4>
-          <p className="text-sm text-gray-500">This Week</p>
+          <p className="text-sm text-gray-500">Total Orders</p>
         </div>
+
         <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
           <FaRupeeSign className="text-2xl text-green-500 mb-2" />
           <h4 className="text-xl font-semibold">
             ₹{totalSales.toLocaleString()}
           </h4>
-          <p className="text-sm text-gray-500">This Month</p>
+          <p className="text-sm text-gray-500">Total Revenue</p>
+        </div>
+
+        <div className="bg-white dark:bg-secondary rounded-xl p-5 shadow hover:shadow-lg transition">
+          <FaChartPie className="text-2xl text-blue-500 mb-2" />
+          <h4 className="text-xl font-semibold">
+            {totalRestaurants} Restaurants
+          </h4>
+          <p className="text-sm text-gray-500">Active on Platform</p>
         </div>
       </div>
 
@@ -155,9 +182,9 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Chart & Geo Distribution */}
+      {/* Charts */}
       <div className="grid md:grid-cols-2 gap-8 mb-10">
-        {/* Weekly Chart */}
+        {/* Weekly Order Trend */}
         <div className="bg-white dark:bg-secondary rounded-xl p-6 shadow">
           <h4 className="text-lg font-semibold mb-4">📈 Weekly Order Trend</h4>
           <ResponsiveContainer width="100%" height={200}>
@@ -175,7 +202,7 @@ const AdminDashboard = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Geo Pie Chart */}
+        {/* City Distribution */}
         <div className="bg-white dark:bg-secondary rounded-xl p-6 shadow">
           <h4 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <FaMapMarkerAlt /> City-wise Order Distribution

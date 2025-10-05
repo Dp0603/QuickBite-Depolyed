@@ -1,62 +1,56 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FaShoppingCart, FaTruck, FaSearch } from "react-icons/fa";
+import { FaShoppingCart } from "react-icons/fa";
+import API from "../../api/axios";
 
 const AdminOrders = () => {
-  const orders = [
-    {
-      id: 1,
-      customer: "Alice Johnson",
-      restaurant: "Pizza Hub",
-      total: 599,
-      status: "pending",
-      delivery: null,
-    },
-    {
-      id: 2,
-      customer: "Ravi Mehra",
-      restaurant: "Sushi Express",
-      total: 899,
-      status: "ongoing",
-      delivery: "Deepak Sharma",
-    },
-    {
-      id: 3,
-      customer: "Jane Smith",
-      restaurant: "Tandoori Nights",
-      total: 499,
-      status: "delivered",
-      delivery: "Sunil Kumar",
-    },
-    {
-      id: 4,
-      customer: "Amit Patel",
-      restaurant: "Burger Haven",
-      total: 699,
-      status: "cancelled",
-      delivery: null,
-    },
-  ];
-
+  const [orders, setOrders] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const deliveryAgents = ["Deepak Sharma", "Sunil Kumar", "Meena Rathi"];
 
   const statusColors = {
-    pending:
+    Pending:
       "text-yellow-600 bg-yellow-100 dark:bg-yellow-800 dark:text-yellow-300",
-    ongoing: "text-blue-600 bg-blue-100 dark:bg-blue-800 dark:text-blue-300",
-    delivered:
+    Preparing: "text-blue-600 bg-blue-100 dark:bg-blue-800 dark:text-blue-300",
+    Ready: "text-blue-500 bg-blue-100 dark:bg-blue-800 dark:text-blue-300",
+    "Out for Delivery":
+      "text-indigo-600 bg-indigo-100 dark:bg-indigo-800 dark:text-indigo-300",
+    Delivered:
       "text-green-600 bg-green-100 dark:bg-green-800 dark:text-green-300",
-    cancelled: "text-red-600 bg-red-100 dark:bg-red-800 dark:text-red-300",
+    Cancelled: "text-red-600 bg-red-100 dark:bg-red-800 dark:text-red-300",
   };
 
-  const filtered = orders.filter((o) => {
-    const matchStatus = statusFilter ? o.status === statusFilter : true;
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoading(true);
+      try {
+        const res = await API.get("/admin/orders");
+        const orders = res.data.data || []; // use 'data' instead of 'orders'
+        setOrders(orders);
+        if (!Array.isArray(orders)) {
+          console.error("❌ API response is not an array:", res.data);
+          setOrders([]);
+        } else {
+          setOrders(orders);
+        }
+      } catch (err) {
+        console.error("❌ Error fetching orders:", err);
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchOrders();
+  }, []);
+
+  const filtered = (orders || []).filter((o) => {
+    const matchStatus = statusFilter ? o.orderStatus === statusFilter : true;
     const matchSearch =
-      o.customer.toLowerCase().includes(search.toLowerCase()) ||
-      o.restaurant.toLowerCase().includes(search.toLowerCase());
+      o.customerId?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      o.restaurantId?.name?.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
 
@@ -86,10 +80,11 @@ const AdminOrders = () => {
             className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-secondary text-sm"
           >
             <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="ongoing">Ongoing</option>
-            <option value="delivered">Delivered</option>
-            <option value="cancelled">Cancelled</option>
+            {Object.keys(statusColors).map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -108,27 +103,39 @@ const AdminOrders = () => {
             </tr>
           </thead>
           <tbody>
-            {filtered.length > 0 ? (
+            {loading ? (
+              <tr>
+                <td colSpan="6" className="px-4 py-6 text-center">
+                  Loading orders...
+                </td>
+              </tr>
+            ) : filtered.length > 0 ? (
               filtered.map((order) => (
                 <tr
-                  key={order.id}
+                  key={order._id}
                   className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 even:bg-gray-50 dark:even:bg-secondary transition"
                 >
-                  <td className="px-4 py-3 font-medium">{order.customer}</td>
-                  <td className="px-4 py-3">{order.restaurant}</td>
-                  <td className="px-4 py-3 font-semibold">₹{order.total}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {order.customerId?.name || "Unknown"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {order.restaurantId?.name || "Unknown"}
+                  </td>
+                  <td className="px-4 py-3 font-semibold">
+                    ₹{order.totalAmount}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        statusColors[order.status]
+                        statusColors[order.orderStatus] || ""
                       }`}
                     >
-                      {order.status}
+                      {order.orderStatus}
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    {order.delivery ? (
-                      order.delivery
+                    {order.deliveryDetails?.deliveryAgentId?.name ? (
+                      order.deliveryDetails.deliveryAgentId.name
                     ) : (
                       <select className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800">
                         <option value="">Assign</option>
@@ -163,63 +170,69 @@ const AdminOrders = () => {
     </motion.div>
   );
 };
+
 export default AdminOrders;
 
-
-//new
-// import React, { useState, useEffect } from "react";
+// old
+// import React, { useState } from "react";
 // import { motion } from "framer-motion";
-// import { FaShoppingCart } from "react-icons/fa";
-// import API from "../../api/axios";
+// import { FaShoppingCart, FaTruck, FaSearch } from "react-icons/fa";
 
 // const AdminOrders = () => {
-//   const [orders, setOrders] = useState([]);
+//   const orders = [
+//     {
+//       id: 1,
+//       customer: "Alice Johnson",
+//       restaurant: "Pizza Hub",
+//       total: 599,
+//       status: "pending",
+//       delivery: null,
+//     },
+//     {
+//       id: 2,
+//       customer: "Ravi Mehra",
+//       restaurant: "Sushi Express",
+//       total: 899,
+//       status: "ongoing",
+//       delivery: "Deepak Sharma",
+//     },
+//     {
+//       id: 3,
+//       customer: "Jane Smith",
+//       restaurant: "Tandoori Nights",
+//       total: 499,
+//       status: "delivered",
+//       delivery: "Sunil Kumar",
+//     },
+//     {
+//       id: 4,
+//       customer: "Amit Patel",
+//       restaurant: "Burger Haven",
+//       total: 699,
+//       status: "cancelled",
+//       delivery: null,
+//     },
+//   ];
+
 //   const [statusFilter, setStatusFilter] = useState("");
 //   const [search, setSearch] = useState("");
-//   const [loading, setLoading] = useState(false);
 
 //   const deliveryAgents = ["Deepak Sharma", "Sunil Kumar", "Meena Rathi"];
 
 //   const statusColors = {
-//     Pending:
+//     pending:
 //       "text-yellow-600 bg-yellow-100 dark:bg-yellow-800 dark:text-yellow-300",
-//     Preparing: "text-blue-600 bg-blue-100 dark:bg-blue-800 dark:text-blue-300",
-//     Ready: "text-blue-500 bg-blue-100 dark:bg-blue-800 dark:text-blue-300",
-//     "Out for Delivery":
-//       "text-indigo-600 bg-indigo-100 dark:bg-indigo-800 dark:text-indigo-300",
-//     Delivered:
+//     ongoing: "text-blue-600 bg-blue-100 dark:bg-blue-800 dark:text-blue-300",
+//     delivered:
 //       "text-green-600 bg-green-100 dark:bg-green-800 dark:text-green-300",
-//     Cancelled: "text-red-600 bg-red-100 dark:bg-red-800 dark:text-red-300",
+//     cancelled: "text-red-600 bg-red-100 dark:bg-red-800 dark:text-red-300",
 //   };
 
-//   useEffect(() => {
-//     const fetchOrders = async () => {
-//       setLoading(true);
-//       try {
-//         const res = await API.get("/admin/orders");
-//         const orders = res.data.data || []; // use 'data' instead of 'orders'
-//         setOrders(orders);
-//         if (!Array.isArray(orders)) {
-//           console.error("❌ API response is not an array:", res.data);
-//           setOrders([]);
-//         } else {
-//           setOrders(orders);
-//         }
-//       } catch (err) {
-//         console.error("❌ Error fetching orders:", err);
-//         setOrders([]);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-//     fetchOrders();
-//   }, []);
-
-//   const filtered = (orders || []).filter((o) => {
-//     const matchStatus = statusFilter ? o.orderStatus === statusFilter : true;
+//   const filtered = orders.filter((o) => {
+//     const matchStatus = statusFilter ? o.status === statusFilter : true;
 //     const matchSearch =
-//       o.customerId?.name?.toLowerCase().includes(search.toLowerCase()) ||
-//       o.restaurantId?.name?.toLowerCase().includes(search.toLowerCase());
+//       o.customer.toLowerCase().includes(search.toLowerCase()) ||
+//       o.restaurant.toLowerCase().includes(search.toLowerCase());
 //     return matchStatus && matchSearch;
 //   });
 
@@ -249,11 +262,10 @@ export default AdminOrders;
 //             className="px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-secondary text-sm"
 //           >
 //             <option value="">All Statuses</option>
-//             {Object.keys(statusColors).map((status) => (
-//               <option key={status} value={status}>
-//                 {status}
-//               </option>
-//             ))}
+//             <option value="pending">Pending</option>
+//             <option value="ongoing">Ongoing</option>
+//             <option value="delivered">Delivered</option>
+//             <option value="cancelled">Cancelled</option>
 //           </select>
 //         </div>
 //       </div>
@@ -272,39 +284,27 @@ export default AdminOrders;
 //             </tr>
 //           </thead>
 //           <tbody>
-//             {loading ? (
-//               <tr>
-//                 <td colSpan="6" className="px-4 py-6 text-center">
-//                   Loading orders...
-//                 </td>
-//               </tr>
-//             ) : filtered.length > 0 ? (
+//             {filtered.length > 0 ? (
 //               filtered.map((order) => (
 //                 <tr
-//                   key={order._id}
+//                   key={order.id}
 //                   className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 even:bg-gray-50 dark:even:bg-secondary transition"
 //                 >
-//                   <td className="px-4 py-3 font-medium">
-//                     {order.customerId?.name || "Unknown"}
-//                   </td>
-//                   <td className="px-4 py-3">
-//                     {order.restaurantId?.name || "Unknown"}
-//                   </td>
-//                   <td className="px-4 py-3 font-semibold">
-//                     ₹{order.totalAmount}
-//                   </td>
+//                   <td className="px-4 py-3 font-medium">{order.customer}</td>
+//                   <td className="px-4 py-3">{order.restaurant}</td>
+//                   <td className="px-4 py-3 font-semibold">₹{order.total}</td>
 //                   <td className="px-4 py-3">
 //                     <span
 //                       className={`px-2 py-1 rounded-full text-xs font-medium ${
-//                         statusColors[order.orderStatus] || ""
+//                         statusColors[order.status]
 //                       }`}
 //                     >
-//                       {order.orderStatus}
+//                       {order.status}
 //                     </span>
 //                   </td>
 //                   <td className="px-4 py-3">
-//                     {order.deliveryDetails?.deliveryAgentId?.name ? (
-//                       order.deliveryDetails.deliveryAgentId.name
+//                     {order.delivery ? (
+//                       order.delivery
 //                     ) : (
 //                       <select className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800">
 //                         <option value="">Assign</option>
@@ -339,5 +339,4 @@ export default AdminOrders;
 //     </motion.div>
 //   );
 // };
-
 // export default AdminOrders;
