@@ -30,7 +30,7 @@ router.put("/offers/:id", offerValidationRules(), validateRequest, updateOffer);
 router.get("/offers/all", getAllOffersForCustomer);
 
 // Get all offers for a specific restaurant
-router.get("/offers/all/:restaurantId", getAllOffersForCustomer);
+router.get("/offers/restaurant/all/:restaurantId", getAllOffersForCustomer);
 
 // Get active & valid offers for customer
 router.get("/offers/valid/:restaurantId", getValidOffersForCustomer);

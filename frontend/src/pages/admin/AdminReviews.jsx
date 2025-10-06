@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   FaStar,
@@ -7,56 +7,67 @@ import {
   FaExclamationCircle,
   FaUserCircle,
 } from "react-icons/fa";
+import API from "../../api/axios";
 
 const AdminReviews = () => {
-  const reviews = [
-    {
-      id: 1,
-      user: "Alice Johnson",
-      restaurant: "Pizza Hub",
-      rating: 5,
-      message: "Amazing food, delivered hot and fresh!",
-      date: "Jul 10, 2025",
-      status: "approved",
-    },
-    {
-      id: 2,
-      user: "Ravi Mehra",
-      restaurant: "Sushi Express",
-      rating: 2,
-      message: "Fish was not fresh and rice was hard.",
-      date: "Jul 9, 2025",
-      status: "flagged",
-    },
-    {
-      id: 3,
-      user: "Jane Smith",
-      restaurant: "Tandoori Nights",
-      rating: 4,
-      message: "Great flavors, just a bit slow on delivery.",
-      date: "Jul 8, 2025",
-      status: "pending",
-    },
-    {
-      id: 4,
-      user: "Amit Patel",
-      restaurant: "Burger Haven",
-      rating: 1,
-      message: "Worst experience ever. Cold burger and rude delivery guy.",
-      date: "Jul 7, 2025",
-      status: "flagged",
-    },
-  ];
-
+  const [reviews, setReviews] = useState([]);
   const [search, setSearch] = useState("");
   const [ratingFilter, setRatingFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [loading, setLoading] = useState(true);
 
+  const statusColors = {
+    approved:
+      "text-green-600 bg-green-100 dark:bg-green-800 dark:text-green-300",
+    flagged:
+      "text-yellow-700 bg-yellow-100 dark:bg-yellow-800 dark:text-yellow-300",
+    pending: "text-red-600 bg-red-100 dark:bg-red-800 dark:text-red-300",
+  };
+
+  // 🧭 Fetch all reviews
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const { data } = await API.get("/admin/reviews");
+        setReviews(data.data || []);
+      } catch (err) {
+        console.error("Error fetching reviews:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReviews();
+  }, []);
+
+  // 🔁 Update review status
+  const handleStatusChange = async (id, status) => {
+    try {
+      await API.put(`/admin/reviews/${id}/status`, { status });
+      setReviews((prev) =>
+        prev.map((r) => (r._id === id ? { ...r, status } : r))
+      );
+    } catch (err) {
+      alert("Failed to update status");
+    }
+  };
+
+  // ❌ Delete review
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this review?")) return;
+    try {
+      await API.delete(`/admin/reviews/${id}`);
+      setReviews((prev) => prev.filter((r) => r._id !== id));
+    } catch (err) {
+      alert("Failed to delete review");
+    }
+  };
+
+  // 🔍 Filter logic
   const filtered = reviews.filter((r) => {
     const matchSearch =
-      r.user.toLowerCase().includes(search.toLowerCase()) ||
-      r.restaurant.toLowerCase().includes(search.toLowerCase()) ||
-      r.message.toLowerCase().includes(search.toLowerCase());
+      r.userId?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      r.restaurantId?.name?.toLowerCase().includes(search.toLowerCase()) ||
+      r.comment?.toLowerCase().includes(search.toLowerCase());
 
     const matchRating = ratingFilter
       ? r.rating === parseInt(ratingFilter)
@@ -66,13 +77,12 @@ const AdminReviews = () => {
     return matchSearch && matchRating && matchStatus;
   });
 
-  const statusColors = {
-    approved:
-      "text-green-600 bg-green-100 dark:bg-green-800 dark:text-green-300",
-    flagged:
-      "text-yellow-700 bg-yellow-100 dark:bg-yellow-800 dark:text-yellow-300",
-    pending: "text-red-600 bg-red-100 dark:bg-red-800 dark:text-red-300",
-  };
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-gray-500 animate-pulse">Loading reviews...</p>
+      </div>
+    );
 
   return (
     <motion.div
@@ -127,7 +137,7 @@ const AdminReviews = () => {
               <th className="px-4 py-3">User</th>
               <th className="px-4 py-3">Restaurant</th>
               <th className="px-4 py-3">Rating</th>
-              <th className="px-4 py-3">Message</th>
+              <th className="px-4 py-3">Comment</th>
               <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3 text-right">Actions</th>
@@ -137,14 +147,16 @@ const AdminReviews = () => {
             {filtered.length > 0 ? (
               filtered.map((review) => (
                 <tr
-                  key={review.id}
-                  className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 even:bg-gray-50 dark:even:bg-secondary transition"
+                  key={review._id}
+                  className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
                 >
-                  <td className="px-4 py-3 font-medium flex items-center gap-2">
+                  <td className="px-4 py-3 flex items-center gap-2">
                     <FaUserCircle className="text-gray-400" />
-                    {review.user}
+                    {review.userId?.name || "N/A"}
                   </td>
-                  <td className="px-4 py-3">{review.restaurant}</td>
+                  <td className="px-4 py-3">
+                    {review.restaurantId?.name || "N/A"}
+                  </td>
                   <td className="px-4 py-3 flex items-center text-yellow-500 gap-1">
                     {[...Array(review.rating)].map((_, i) => (
                       <FaStar key={i} className="text-xs" />
@@ -154,9 +166,11 @@ const AdminReviews = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3 truncate max-w-xs">
-                    {review.message}
+                    {review.comment || "-"}
                   </td>
-                  <td className="px-4 py-3">{review.date}</td>
+                  <td className="px-4 py-3">
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${
@@ -168,14 +182,29 @@ const AdminReviews = () => {
                   </td>
                   <td className="px-4 py-3 text-right flex justify-end gap-2">
                     {review.status !== "approved" && (
-                      <button className="px-3 py-1 text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:hover:bg-green-800 dark:text-green-300 rounded flex items-center gap-1">
+                      <button
+                        onClick={() =>
+                          handleStatusChange(review._id, "approved")
+                        }
+                        className="px-3 py-1 text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300 rounded flex items-center gap-1"
+                      >
                         <FaCheck /> Approve
                       </button>
                     )}
-                    <button className="px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-800 dark:text-yellow-200 rounded flex items-center gap-1">
-                      <FaExclamationCircle /> Flag
-                    </button>
-                    <button className="px-3 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:hover:bg-red-800 dark:text-red-300 rounded flex items-center gap-1">
+                    {review.status !== "flagged" && (
+                      <button
+                        onClick={() =>
+                          handleStatusChange(review._id, "flagged")
+                        }
+                        className="px-3 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-800 dark:text-yellow-200 rounded flex items-center gap-1"
+                      >
+                        <FaExclamationCircle /> Flag
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDelete(review._id)}
+                      className="px-3 py-1 text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900 dark:text-red-300 rounded flex items-center gap-1"
+                    >
                       <FaTrash /> Delete
                     </button>
                   </td>

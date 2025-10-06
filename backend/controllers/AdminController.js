@@ -2,6 +2,7 @@ const User = require("../models/UserModel");
 const Restaurant = require("../models/RestaurantModel");
 const Order = require("../models/OrderModel");
 const Analytics = require("../models/AnalyticsModel");
+const Review = require("../models/ReviewModel");
 const PDFDocument = require("pdfkit");
 const ExcelJS = require("exceljs");
 
@@ -277,6 +278,55 @@ const exportUsersXLSX = async (req, res) => {
   }
 };
 
+// 📋 Get all reviews
+const getAllReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find()
+      .populate("userId", "name email")
+      .populate("restaurantId", "name")
+      .sort({ createdAt: -1 });
+    res.status(200).json({ message: "Reviews fetched", data: reviews });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Approve or Flag review
+const updateReviewStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["approved", "flagged", "pending"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    const review = await Review.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
+
+    if (!review) return res.status(404).json({ message: "Review not found" });
+
+    res.status(200).json({ message: "Review status updated", data: review });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ❌ Delete review
+const deleteReviewByAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const review = await Review.findByIdAndDelete(id);
+    if (!review) return res.status(404).json({ message: "Review not found" });
+    res.status(200).json({ message: "Review deleted" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getAllRestaurants,
@@ -289,4 +339,7 @@ module.exports = {
   exportOrdersCSV,
   exportRevenuePDF,
   exportUsersXLSX,
+  getAllReviews,
+  updateReviewStatus,
+  deleteReviewByAdmin,
 };
