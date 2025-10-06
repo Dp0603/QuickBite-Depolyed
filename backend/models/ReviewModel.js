@@ -16,7 +16,14 @@ const reviewSchema = new mongoose.Schema(
     comment: { type: String, required: true, trim: true },
     verified: { type: Boolean, default: false },
 
-    // New field: reply from restaurant owner
+    // ✅ Admin Moderation
+    status: {
+      type: String,
+      enum: ["pending", "approved", "flagged"],
+      default: "pending",
+    },
+
+    // ✅ Reply from restaurant owner
     reply: {
       text: { type: String, trim: true },
       repliedAt: { type: Date },

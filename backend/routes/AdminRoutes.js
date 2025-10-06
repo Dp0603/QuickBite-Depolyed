@@ -10,6 +10,9 @@ const {
   toggleUserStatus,
   deleteEntity,
   getAnalyticsSummary,
+  getAllReviews,
+  updateReviewStatus,
+  deleteReviewByAdmin,
   exportOrdersCSV,
   exportRevenuePDF,
   exportUsersXLSX,
@@ -39,6 +42,12 @@ router.delete("/delete/:type/:id", deleteEntity);
 // 📈 Analytics summary (optional)
 router.get("/analytics-summary", getAnalyticsSummary);
 
+// 📝 Reviews management
+router.get("/reviews", getAllReviews);
+router.delete("/reviews/:id", deleteReviewByAdmin);
+router.put("/reviews/:id/status", updateReviewStatus);
+
+// 📤 Export data
 router.get("/export/orders-csv", exportOrdersCSV);
 router.get("/export/revenue-pdf", exportRevenuePDF);
 router.get("/export/users-xlsx", exportUsersXLSX);
