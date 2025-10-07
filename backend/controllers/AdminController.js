@@ -3,6 +3,7 @@ const Restaurant = require("../models/RestaurantModel");
 const Order = require("../models/OrderModel");
 const Analytics = require("../models/AnalyticsModel");
 const Review = require("../models/ReviewModel");
+const Offer = require("../models/OfferModel");
 const PDFDocument = require("pdfkit");
 const ExcelJS = require("exceljs");
 
@@ -327,6 +328,49 @@ const deleteReviewByAdmin = async (req, res) => {
   }
 };
 
+// 🏷️ Get all offers (Admin)
+const getAllOffersAdmin = async (req, res) => {
+  try {
+    const offers = await Offer.find()
+      .populate("restaurantId", "name")
+      .sort({ createdAt: -1 });
+    res
+      .status(200)
+      .json({ message: "All offers fetched successfully", data: offers });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// 🔄 Toggle offer active/inactive
+const toggleOfferStatusAdmin = async (req, res) => {
+  try {
+    const offer = await Offer.findById(req.params.id);
+    if (!offer) return res.status(404).json({ message: "Offer not found" });
+
+    offer.isActive = !offer.isActive;
+    await offer.save();
+
+    res.status(200).json({
+      message: `Offer is now ${offer.isActive ? "active" : "inactive"}`,
+      data: offer,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ❌ Delete offer (Admin)
+const deleteOfferAdmin = async (req, res) => {
+  try {
+    const offer = await Offer.findByIdAndDelete(req.params.id);
+    if (!offer) return res.status(404).json({ message: "Offer not found" });
+    res.status(200).json({ message: "Offer deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getAllRestaurants,
@@ -342,4 +386,7 @@ module.exports = {
   getAllReviews,
   updateReviewStatus,
   deleteReviewByAdmin,
+  getAllOffersAdmin,
+  toggleOfferStatusAdmin,
+  deleteOfferAdmin,
 };
