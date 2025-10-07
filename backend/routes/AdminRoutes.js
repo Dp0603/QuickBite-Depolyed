@@ -16,6 +16,9 @@ const {
   exportOrdersCSV,
   exportRevenuePDF,
   exportUsersXLSX,
+  getAllOffersAdmin,
+  toggleOfferStatusAdmin,
+  deleteOfferAdmin,
 } = require("../controllers/AdminController");
 
 // 👥 Get all users
@@ -47,8 +50,14 @@ router.get("/reviews", getAllReviews);
 router.delete("/reviews/:id", deleteReviewByAdmin);
 router.put("/reviews/:id/status", updateReviewStatus);
 
+// 🏷️ Offer management (Admin only)
+router.get("/offers", getAllOffersAdmin);
+router.patch("/offers/toggle/:id", toggleOfferStatusAdmin);
+router.delete("/offers/:id", deleteOfferAdmin);
+
 // 📤 Export data
 router.get("/export/orders-csv", exportOrdersCSV);
 router.get("/export/revenue-pdf", exportRevenuePDF);
 router.get("/export/users-xlsx", exportUsersXLSX);
+
 module.exports = router;
