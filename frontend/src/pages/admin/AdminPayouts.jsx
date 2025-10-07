@@ -1,50 +1,71 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { FaMoneyBillWave, FaCheck, FaClock } from "react-icons/fa";
+import { FaMoneyBillWave, FaCheck, FaClock, FaDownload } from "react-icons/fa";
+import API from "../../api/axios";
 
 const AdminPayouts = () => {
-  const payouts = [
-    {
-      id: 1,
-      restaurant: "Pizza Hub",
-      owner: "Elena Rossi",
-      amount: 12000,
-      status: "paid",
-      date: "Jul 5, 2025",
-    },
-    {
-      id: 2,
-      restaurant: "Sushi Express",
-      owner: "Akira Tanaka",
-      amount: 8900,
-      status: "pending",
-      date: "-",
-    },
-    {
-      id: 3,
-      restaurant: "Tandoori Nights",
-      owner: "Aman Kapoor",
-      amount: 10150,
-      status: "paid",
-      date: "Jul 1, 2025",
-    },
-    {
-      id: 4,
-      restaurant: "Burger Haven",
-      owner: "Priya Menon",
-      amount: 7250,
-      status: "pending",
-      date: "-",
-    },
-  ];
-
+  const [payouts, setPayouts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
   const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
+
+  // 🧾 Fetch all payouts (Admin)
+  useEffect(() => {
+    const fetchPayouts = async () => {
+      try {
+        const { data } = await API.get("/payouts/payouts");
+        setPayouts(data?.payouts || []);
+      } catch (err) {
+        console.error("❌ Error fetching payouts:", err);
+        setError("Failed to load payouts. Please try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPayouts();
+  }, []);
+
+  // 🪙 Update payout status (Mark Paid)
+  const markAsPaid = async (id) => {
+    try {
+      await API.put(`/payouts/payouts/${id}`, {
+        status: "paid",
+        note: "Marked paid by admin manually",
+      });
+      setPayouts((prev) =>
+        prev.map((p) =>
+          p._id === id ? { ...p, status: "paid", processedAt: new Date() } : p
+        )
+      );
+    } catch (err) {
+      console.error("❌ Error updating payout status:", err);
+      alert("Failed to update payout status.");
+    }
+  };
+
+  // 📄 Download invoice PDF
+  const downloadInvoice = async (id) => {
+    try {
+      const response = await API.get(`/payouts/payouts/invoice/${id}`, {
+        responseType: "blob",
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `payout_${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+    } catch (err) {
+      console.error("❌ Error downloading invoice:", err);
+      alert("Failed to download invoice.");
+    }
+  };
 
   const filtered = payouts.filter((p) => {
     const matchStatus = statusFilter ? p.status === statusFilter : true;
-    const matchSearch = p.restaurant
-      .toLowerCase()
+    const matchSearch = p?.payeeId?.name
+      ?.toLowerCase()
       .includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
@@ -53,7 +74,26 @@ const AdminPayouts = () => {
     paid: "text-green-600 bg-green-100 dark:bg-green-800 dark:text-green-300",
     pending:
       "text-yellow-600 bg-yellow-100 dark:bg-yellow-800 dark:text-yellow-300",
+    failed: "text-red-600 bg-red-100 dark:bg-red-800 dark:text-red-300",
   };
+
+  // 🌀 Loading
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-gray-500 dark:text-gray-300 animate-pulse">
+          Loading payouts...
+        </p>
+      </div>
+    );
+
+  // ⚠️ Error
+  if (error)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
 
   return (
     <motion.div
@@ -70,7 +110,7 @@ const AdminPayouts = () => {
         <div className="flex flex-wrap gap-2 sm:gap-4">
           <input
             type="text"
-            placeholder="Search restaurant..."
+            placeholder="Search restaurant or payee..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="px-3 py-2 w-full sm:w-64 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-secondary text-sm"
@@ -83,6 +123,7 @@ const AdminPayouts = () => {
             <option value="">All Statuses</option>
             <option value="paid">Paid</option>
             <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
           </select>
         </div>
       </div>
@@ -92,24 +133,28 @@ const AdminPayouts = () => {
         <table className="w-full text-sm text-left text-gray-700 dark:text-gray-300">
           <thead>
             <tr className="bg-gray-100 dark:bg-gray-800 text-sm">
-              <th className="px-4 py-3">Restaurant</th>
-              <th className="px-4 py-3">Owner</th>
+              <th className="px-4 py-3">Payee</th>
+              <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Amount</th>
               <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Payout Date</th>
-              <th className="px-4 py-3 text-right">Action</th>
+              <th className="px-4 py-3">Processed</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length > 0 ? (
               filtered.map((payout) => (
                 <tr
-                  key={payout.id}
+                  key={payout._id}
                   className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 even:bg-gray-50 dark:even:bg-secondary transition"
                 >
-                  <td className="px-4 py-3 font-medium">{payout.restaurant}</td>
-                  <td className="px-4 py-3">{payout.owner}</td>
-                  <td className="px-4 py-3 font-semibold">₹{payout.amount}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {payout?.payeeId?.name || "Unknown"}
+                  </td>
+                  <td className="px-4 py-3 capitalize">{payout.payeeType}</td>
+                  <td className="px-4 py-3 font-semibold">
+                    ₹{payout.payoutAmount?.toLocaleString()}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-1 text-xs rounded-full font-medium ${
@@ -119,17 +164,26 @@ const AdminPayouts = () => {
                       {payout.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{payout.date}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    {payout.processedAt
+                      ? new Date(payout.processedAt).toLocaleDateString()
+                      : "-"}
+                  </td>
+                  <td className="px-4 py-3 text-right flex justify-end gap-2">
                     {payout.status === "pending" ? (
-                      <button className="px-3 py-1 text-xs font-medium bg-primary text-white rounded hover:bg-orange-600 transition flex items-center gap-1">
+                      <button
+                        onClick={() => markAsPaid(payout._id)}
+                        className="px-3 py-1 text-xs font-medium bg-primary text-white rounded hover:bg-orange-600 transition flex items-center gap-1"
+                      >
                         <FaCheck /> Pay Now
                       </button>
                     ) : (
-                      <span className="text-sm text-gray-400 dark:text-gray-500">
-                        <FaCheck className="inline mr-1" />
-                        Paid
-                      </span>
+                      <button
+                        onClick={() => downloadInvoice(payout._id)}
+                        className="px-3 py-1 text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 dark:text-blue-300 rounded flex items-center gap-1"
+                      >
+                        <FaDownload /> Invoice
+                      </button>
                     )}
                   </td>
                 </tr>

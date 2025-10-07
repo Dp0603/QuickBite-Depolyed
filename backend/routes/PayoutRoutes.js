@@ -4,18 +4,18 @@ const {
   updatePayoutStatus,
   getPayoutsByPayee,
   getAllPayouts,
-  getPayoutInvoicePDF, // 👈 import
+  getPayoutInvoicePDF,
 } = require("../controllers/PayoutController");
 
 const router = express.Router();
 
-// 💸 Create a new payout (Admin)
+// 💸 Create a new payout (Admin only)
 router.post("/payouts", createPayout);
 
-// 🔁 Update payout status
+// 🔁 Update payout status (pending → paid / failed)
 router.put("/payouts/:payoutId", updatePayoutStatus);
 
-// 👤 Get payouts for a specific payee
+// 👤 Get payouts for a specific payee (restaurant / delivery)
 router.get("/payouts/payee/:payeeId", getPayoutsByPayee);
 
 // 🧾 Get all payouts (Admin dashboard)
