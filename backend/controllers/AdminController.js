@@ -4,6 +4,7 @@ const Order = require("../models/OrderModel");
 const Analytics = require("../models/AnalyticsModel");
 const Review = require("../models/ReviewModel");
 const Offer = require("../models/OfferModel");
+const { HelpTicket } = require("../models/HelpSupportModel");
 const PDFDocument = require("pdfkit");
 const ExcelJS = require("exceljs");
 
@@ -371,6 +372,55 @@ const deleteOfferAdmin = async (req, res) => {
   }
 };
 
+// 🧾 Get all complaints/tickets (admin)
+const getAllComplaints = async (req, res) => {
+  try {
+    const tickets = await HelpTicket.find()
+      .populate("userId", "name email")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      message: "All complaints fetched successfully",
+      data: tickets,
+    });
+  } catch (error) {
+    console.error("Error fetching complaints:", error);
+    res.status(500).json({ message: "Failed to fetch complaints" });
+  }
+};
+
+// 🔄 Update complaint/ticket status (admin)
+const updateComplaintStatus = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    if (!["pending", "in-progress", "resolved", "closed"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    // ✅ Update by ticketId instead of _id
+    const updatedTicket = await HelpTicket.findOneAndUpdate(
+      { ticketId },
+      { status },
+      { new: true }
+    );
+
+    if (!updatedTicket) {
+      return res.status(404).json({ message: "Ticket not found" });
+    }
+
+    res.status(200).json({
+      message: "Complaint status updated successfully",
+      data: updatedTicket,
+    });
+  } catch (error) {
+    console.error("Error updating complaint status:", error);
+    res.status(500).json({ message: "Failed to update complaint status" });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getAllRestaurants,
@@ -389,4 +439,6 @@ module.exports = {
   getAllOffersAdmin,
   toggleOfferStatusAdmin,
   deleteOfferAdmin,
+  getAllComplaints,
+  updateComplaintStatus,
 };

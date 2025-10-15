@@ -19,6 +19,8 @@ const {
   getAllOffersAdmin,
   toggleOfferStatusAdmin,
   deleteOfferAdmin,
+  getAllComplaints,
+  updateComplaintStatus,
 } = require("../controllers/AdminController");
 
 // 👥 Get all users
@@ -60,4 +62,7 @@ router.get("/export/orders-csv", exportOrdersCSV);
 router.get("/export/revenue-pdf", exportRevenuePDF);
 router.get("/export/users-xlsx", exportUsersXLSX);
 
+// // 🆘 Complaints / Help Tickets
+router.get("/complaints", getAllComplaints);
+router.put("/complaints/:ticketId/status", updateComplaintStatus);
 module.exports = router;
