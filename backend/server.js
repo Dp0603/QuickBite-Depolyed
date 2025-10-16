@@ -11,6 +11,7 @@ const { initSocket } = require("./utils/socket");
 // 🌐 Route Imports
 const AuthRoutes = require("./routes/AuthRoutes");
 const AdminRoutes = require("./routes/AdminRoutes");
+const ReportsRoutes = require("./routes/ReportsRoutes");
 const UserRoutes = require("./routes/UserRoutes");
 const AddressRoutes = require("./routes/AddressRoutes");
 const RestaurantRoutes = require("./routes/RestaurantRoutes");
@@ -68,6 +69,7 @@ app.use("/uploads", express.static(uploadsPath));
 
 // 🔗 Mount Routes
 app.use("/api/auth", AuthRoutes);
+app.use("/api/admin/reports", ReportsRoutes);
 app.use("/api/admin", AdminRoutes);
 app.use("/api/users", UserRoutes);
 app.use("/api/addresses", AddressRoutes);
