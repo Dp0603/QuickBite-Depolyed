@@ -12,7 +12,9 @@ import AdminComplaints from "../pages/admin/AdminComplaints";
 import AdminReviews from "../pages/admin/AdminReviews";
 import AdminOffers from "../pages/admin/AdminOffers";
 import AdminReports from "../pages/admin/AdminReports";
+import AdminProfile from "../pages/admin/AdminProfile";
 import AdminSettings from "../pages/admin/AdminSettings";
+import AdminChangePassword from "../pages/admin/AdminChangePassword";
 
 export const adminRoutes = (
   <>
@@ -25,6 +27,8 @@ export const adminRoutes = (
     <Route path="reviews" element={<AdminReviews />} />
     <Route path="offers" element={<AdminOffers />} />
     <Route path="reports" element={<AdminReports />} />
+    <Route path="profile" element={<AdminProfile />} />
     <Route path="settings" element={<AdminSettings />} />
+    <Route path="change-password" element={<AdminChangePassword />} />
   </>
 );

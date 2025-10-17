@@ -5,6 +5,7 @@ const Analytics = require("../models/AnalyticsModel");
 const Review = require("../models/ReviewModel");
 const Offer = require("../models/OfferModel");
 const { HelpTicket } = require("../models/HelpSupportModel");
+const Settings = require("../models/SettingModel");
 const PDFDocument = require("pdfkit");
 const ExcelJS = require("exceljs");
 
@@ -421,6 +422,77 @@ const updateComplaintStatus = async (req, res) => {
   }
 };
 
+// ⚙️ Get platform settings
+const getSettings = async (req, res) => {
+  try {
+    let settings = await Settings.findOne();
+    if (!settings) {
+      settings = await Settings.create({});
+    }
+    res.status(200).json({ message: "Settings fetched", data: settings });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch settings", error });
+  }
+};
+
+// 🔄 Update platform settings
+const updateSettings = async (req, res) => {
+  try {
+    const updates = req.body;
+    let settings = await Settings.findOne();
+    if (!settings) {
+      settings = await Settings.create(updates);
+    } else {
+      Object.assign(settings, updates);
+      await settings.save();
+    }
+    res.status(200).json({ message: "Settings updated", data: settings });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update settings", error });
+  }
+};
+// 👤 Get Admin Profile
+const getAdminProfile = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    const admin = await User.findById(adminId).select("-password");
+    if (!admin || admin.role !== "admin") {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+    res.status(200).json({ message: "Admin profile fetched", data: admin });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch admin profile", error });
+  }
+};
+
+// ✏️ Update Admin Profile
+const updateAdminProfile = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    const { name, email, phone, avatar } = req.body; // customize as needed
+
+    const admin = await User.findById(adminId);
+    if (!admin || admin.role !== "admin") {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    // ✅ Update fields safely
+    if (name) admin.name = name;
+    if (email) admin.email = email;
+    if (phone) admin.phone = phone;
+    if (avatar) admin.avatar = avatar;
+
+    await admin.save();
+
+    res.status(200).json({
+      message: "Admin profile updated successfully",
+      data: admin,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update admin profile", error });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getAllRestaurants,
@@ -441,4 +513,8 @@ module.exports = {
   deleteOfferAdmin,
   getAllComplaints,
   updateComplaintStatus,
+  getSettings,
+  updateSettings,
+  getAdminProfile,
+  updateAdminProfile,
 };
