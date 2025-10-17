@@ -21,6 +21,10 @@ const {
   deleteOfferAdmin,
   getAllComplaints,
   updateComplaintStatus,
+  getSettings,
+  updateSettings,
+  getAdminProfile,
+  updateAdminProfile,
 } = require("../controllers/AdminController");
 
 // 👥 Get all users
@@ -65,4 +69,12 @@ router.get("/export/users-xlsx", exportUsersXLSX);
 // // 🆘 Complaints / Help Tickets
 router.get("/complaints", getAllComplaints);
 router.put("/complaints/:ticketId/status", updateComplaintStatus);
+
+// ⚙️ Platform Settings (Admin)
+router.get("/settings", getSettings);
+router.put("/settings", updateSettings);
+
+// 👤 Admin Profile
+router.get("/profile/:adminId", getAdminProfile);
+router.put("/profile/:adminId", updateAdminProfile);
 module.exports = router;
