@@ -79,12 +79,48 @@ const updatePayoutStatus = async (req, res) => {
   }
 };
 
-// 👤 Get all payouts for a specific payee (restaurant or delivery agent)
+// 👤 Get all payouts for a specific restaurant owner or payee
 const getPayoutsByPayee = async (req, res) => {
   try {
-    const { payeeId } = req.params;
-    const payouts = await Payout.find({ payeeId }).sort({ createdAt: -1 });
-    res.status(200).json({ message: "Payouts fetched successfully", payouts });
+    const { payeeId } = req.params; // this is the user's _id
+
+    // ✅ Step 1: Find restaurant owned by this user
+    const restaurant = await require("../models/RestaurantModel").findOne({
+      owner: payeeId,
+    });
+
+    // Build query to match either direct payeeId (delivery agent) or owned restaurant
+    const query = {
+      $or: [
+        { payeeId, payeeType: /delivery/i }, // for delivery partners
+        ...(restaurant ? [{ payeeId: restaurant._id }] : []),
+      ],
+    };
+
+    // ✅ Step 2: Fetch payouts
+    const payouts = await Payout.find(query).sort({ createdAt: -1 });
+
+    // ✅ Step 3: Include payout bank info and restaurant info if available
+    let bankDetails = null;
+    let nextPayoutDate = null;
+
+    if (restaurant) {
+      bankDetails = restaurant.payoutSettings || null;
+
+      // Example: compute next payout based on frequency
+      if (restaurant.payoutSettings?.payoutFrequency === "weekly") {
+        const now = new Date();
+        const next = new Date(now.setDate(now.getDate() + (7 - now.getDay())));
+        nextPayoutDate = next;
+      }
+    }
+
+    res.status(200).json({
+      message: "Payouts fetched successfully",
+      payouts,
+      bankDetails,
+      nextPayoutDate,
+    });
   } catch (err) {
     console.error("❌ getPayoutsByPayee error:", err);
     res.status(500).json({ message: err.message });
