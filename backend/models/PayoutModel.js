@@ -9,7 +9,7 @@ const payoutSchema = new mongoose.Schema(
     },
     payeeType: {
       type: String,
-      enum: ["restaurant", "delivery"],
+      enum: ["Restaurant", "Delivery"],
       required: true,
     },
     payoutAmount: {

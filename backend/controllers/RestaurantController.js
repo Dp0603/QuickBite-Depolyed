@@ -50,6 +50,17 @@ const createProfile = async (req, res) => {
       await user.save();
     }
 
+    // 🏦 Auto-sync payout settings from bankAccount if provided
+    if (req.body.bankAccount && Object.keys(req.body.bankAccount).length > 0) {
+      restaurant.payoutSettings = {
+        preferredMethod: "bank",
+        bankAccount: req.body.bankAccount.accountNumber || "",
+        ifsc: req.body.bankAccount.ifsc || "",
+        accountHolder: req.body.bankAccount.holderName || "",
+      };
+      await restaurant.save();
+    }
+
     // Generate fresh token
     const token = generateToken(user);
 
@@ -78,6 +89,17 @@ const updateProfile = async (req, res) => {
 
     if (!restaurant) {
       return res.status(404).json({ message: "Restaurant profile not found" });
+    }
+
+    // 🏦 Keep payoutSettings updated if bankAccount changes
+    if (req.body.bankAccount && Object.keys(req.body.bankAccount).length > 0) {
+      restaurant.payoutSettings = {
+        preferredMethod: "bank",
+        bankAccount: req.body.bankAccount.accountNumber || "",
+        ifsc: req.body.bankAccount.ifsc || "",
+        accountHolder: req.body.bankAccount.holderName || "",
+      };
+      await restaurant.save();
     }
 
     res.json({

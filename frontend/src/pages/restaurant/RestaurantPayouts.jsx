@@ -10,9 +10,12 @@ import { AuthContext } from "../../context/AuthContext";
 
 const getStatusBadge = (status) => {
   const base = "inline-block px-3 py-1 rounded-full text-xs font-semibold";
-  if (status === "Paid") return `${base} bg-green-100 text-green-700`;
-  if (status === "Pending") return `${base} bg-yellow-100 text-yellow-700`;
-  if (status === "Failed") return `${base} bg-red-100 text-red-700`;
+  if (status.toLowerCase() === "paid")
+    return `${base} bg-green-100 text-green-700`;
+  if (status.toLowerCase() === "pending")
+    return `${base} bg-yellow-100 text-yellow-700`;
+  if (status.toLowerCase() === "failed")
+    return `${base} bg-red-100 text-red-700`;
   return `${base} bg-gray-100 text-gray-600`;
 };
 
@@ -27,6 +30,11 @@ const RestaurantPayouts = () => {
   // 📦 Fetch payouts + bank details
   const fetchPayouts = async () => {
     if (!user?._id) return;
+    console.log("🔍 Fetching payouts for user:", user._id, {
+      fromDate,
+      toDate,
+    });
+
     try {
       const res = await axios.get(`/api/payouts/payouts/payee/${user._id}`, {
         headers: {
@@ -38,23 +46,35 @@ const RestaurantPayouts = () => {
         },
       });
 
+      console.log("✅ API Response:", res.data);
+
       setPayouts(res.data.payouts || []);
       setBankDetails(res.data.bankDetails || null);
       setNextPayoutDate(res.data.nextPayoutDate || null);
+
+      console.log("📊 Payouts set:", res.data.payouts?.length || 0);
+      console.log("🏦 Bank Details:", res.data.bankDetails);
+      console.log("🗓️ Next Payout Date:", res.data.nextPayoutDate);
     } catch (err) {
-      console.error("Failed to fetch payouts", err);
+      console.error("❌ Failed to fetch payouts", err);
     }
   };
 
   useEffect(() => {
+    console.log("⚙️ useEffect triggered: fetching payouts...");
     fetchPayouts();
   }, [user, token]);
 
+  useEffect(() => {
+    console.log("📅 Date filters updated:", { fromDate, toDate });
+  }, [fromDate, toDate]);
+
   const totalPaid = payouts
-    .filter((p) => p.status === "Paid")
+    .filter((p) => p.status?.toLowerCase() === "paid")
     .reduce((sum, p) => sum + (p.amount || p.payoutAmount || 0), 0);
 
   const handleDownloadInvoice = async (payoutId) => {
+    console.log("⬇️ Downloading invoice for payout:", payoutId);
     try {
       const res = await axios.get(`/api/payouts/${payoutId}/invoice`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -68,8 +88,10 @@ const RestaurantPayouts = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+
+      console.log("✅ Invoice downloaded successfully:", payoutId);
     } catch (err) {
-      console.error("Failed to download invoice", err);
+      console.error("❌ Failed to download invoice", err);
     }
   };
 
@@ -112,12 +134,28 @@ const RestaurantPayouts = () => {
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 Bank Account
               </p>
-              <h4 className="text-base font-medium">
-                {bankDetails
-                  ? `${
-                      bankDetails.bankName
-                    } — ****${bankDetails.accountNumber?.slice(-4)}`
-                  : "Not Linked"}
+              <h4 className="text-base font-medium flex items-center gap-2">
+                {bankDetails ? (
+                  bankDetails.preferredMethod === "bank" ? (
+                    <>
+                      <FaUniversity className="text-blue-500" />
+                      {`${
+                        bankDetails.holderName || "Account"
+                      } — ****${bankDetails.bankAccount?.slice(-4)} (${
+                        bankDetails.ifsc || "N/A"
+                      })`}
+                    </>
+                  ) : bankDetails.preferredMethod === "upi" ? (
+                    <>
+                      <FaMoneyCheckAlt className="text-green-500" />
+                      {`UPI: ${bankDetails.upiId || "Not Linked"}`}
+                    </>
+                  ) : (
+                    "Linked via other method"
+                  )
+                ) : (
+                  "Not Linked"
+                )}
               </h4>
             </div>
           </div>
