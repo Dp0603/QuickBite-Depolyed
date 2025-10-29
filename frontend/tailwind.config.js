@@ -13,12 +13,31 @@ module.exports = {
         "fade-in": "fadeIn 0.2s ease-out forwards",
         shimmer: "shimmer 2.5s linear infinite",
         pulseDot: "pulseDot 1.6s ease-in-out infinite",
+
+        fadeIn: "fadeIn 0.8s ease-out",
+        slideInLeft: "slideInLeft 0.6s ease-out",
+        float: "float 3s ease-in-out infinite",
+        gradient: "gradient 3s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
-          "0%": { opacity: "0", transform: "scale(0.95)" },
-          "100%": { opacity: "1", transform: "scale(1)" },
+          "0%": { opacity: "0", transform: "translateY(20px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
         },
+        slideInLeft: {
+          "0%": { opacity: "0", transform: "translateX(-50px)" },
+          "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-20px)" },
+        },
+        gradient: {
+          "0%, 100%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+        },
+
+        // Keep your existing ones
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
