@@ -87,8 +87,12 @@ export default function Register() {
         ></div>
       </div>
 
-      {/* Page Content */}
-      <div className="relative z-10 pt-20 min-h-screen grid grid-cols-1 md:grid-cols-2 place-items-center px-6 lg:px-20 gap-10 transition-colors duration-500">
+      {/* Page Content
+          Key changes to make left/right cards equal size:
+          - Use items-stretch on the grid so columns stretch to the grid's height
+          - Ensure each column wrapper and the inner card use h-full so they fill the stretched column
+      */}
+      <div className="relative z-10 pt-20 min-h-screen grid grid-cols-1 md:grid-cols-2 items-stretch px-6 lg:px-20 gap-10 transition-colors duration-500">
         {/* Dark mode toggle */}
         <motion.button
           className="absolute top-24 right-8 z-50 w-12 h-12 rounded-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-orange-200 dark:border-white/10 flex items-center justify-center text-orange-600 dark:text-orange-400 shadow-lg hover:scale-110 transition-all duration-300"
@@ -106,7 +110,8 @@ export default function Register() {
 
         {/* LEFT SIDE */}
         <motion.div
-          className="flex items-center justify-center h-full"
+          // make this column stretch to the grid height and let inner card fill its height
+          className="flex items-stretch justify-center h-full"
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
@@ -186,7 +191,8 @@ export default function Register() {
 
         {/* RIGHT SIDE */}
         <motion.div
-          className="flex items-center justify-center h-full"
+          // same stretching behavior here so the card matches the left card
+          className="flex items-stretch justify-center h-full"
           initial={{ x: 100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
