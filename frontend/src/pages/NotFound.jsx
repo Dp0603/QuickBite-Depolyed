@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 const NotFound = () => {
   return (
     <div
-      className="relative flex flex-col items-center justify-center min-h-screen w-full bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-gray-900 dark:text-white px-6 md:px-8 lg:px-10 overflow-hidden text-center"
+      className="relative flex flex-col items-center w-full min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-gray-900 dark:text-white px-6 md:px-8 lg:px-10 overflow-hidden text-center pt-24 md:pt-32 pb-24"
       role="alert"
       aria-label="404 Page Not Found"
     >
@@ -66,15 +66,12 @@ const NotFound = () => {
           transition={{ duration: 0.8, type: "spring", bounce: 0.5 }}
         >
           <div className="relative inline-block">
-            {/* Glow effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500/30 to-pink-500/30 rounded-full blur-3xl"></div>
 
-            {/* 404 Text */}
             <h1 className="relative text-9xl md:text-[12rem] font-black bg-gradient-to-r from-orange-600 via-pink-600 to-purple-600 dark:from-orange-400 dark:via-pink-500 dark:to-purple-500 bg-clip-text text-transparent">
               404
             </h1>
 
-            {/* Sad food icon */}
             <motion.div
               className="absolute -top-8 -right-8 md:-top-12 md:-right-12 text-6xl md:text-8xl"
               animate={{ rotate: [0, -10, 10, 0] }}
@@ -172,10 +169,15 @@ const NotFound = () => {
 
         {/* Fun Fact */}
         <motion.div
-          className="mt-8 p-6 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-orange-200 dark:border-white/10 shadow-lg text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.2, duration: 0.6 }}
+          className="mt-10 p-6 rounded-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-orange-200 dark:border-white/10 shadow-lg text-center"
+          animate={{
+            y: [0, -6, 0],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
         >
           <div className="flex items-center justify-center gap-3 mb-2">
             <span className="text-2xl">💡</span>
