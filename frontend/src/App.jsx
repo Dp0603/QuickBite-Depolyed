@@ -12,6 +12,8 @@ import RestaurantStaffRegistration from "./pages/RestaurantStaffRegistrtion";
 import VerifyEmail from "./pages/VerifyEmail";
 import Unauthorized from "./pages/Unauthorized";
 import NotFound from "./pages/NotFound";
+import Contact from "./pages/Contact";
+import About from "./pages/About";
 
 import AdminLayout from "./layouts/AdminLayout";
 import CustomerLayout from "./layouts/CustomerLayout";
@@ -36,6 +38,9 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/verify-email/:token" element={<VerifyEmail />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/about" element={<About />} />
+
 
       {/* 🔐 Admin Routes */}
       <Route element={<PrivateRoute allowedRoles={["admin"]} />}>

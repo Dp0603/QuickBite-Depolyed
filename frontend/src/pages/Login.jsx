@@ -182,7 +182,7 @@ export default function Login() {
           className="hidden md:flex items-center justify-center p-6 w-full"
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.8 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
         >
           {/* wrapper: use same max width as Register (max-w-lg) so widths match */}
           <div
@@ -199,7 +199,7 @@ export default function Login() {
                 <div>
                   <motion.div
                     className="flex justify-center"
-                    animate={{ y: [0, -8, 0] }}
+                    animate={{ y: [0, -10, 0] }}
                     transition={{
                       duration: 2,
                       repeat: Infinity,
@@ -240,7 +240,14 @@ export default function Login() {
                       <motion.div
                         key={i}
                         className="p-4 rounded-2xl bg-gradient-to-br from-orange-100 to-pink-100 dark:from-orange-500/20 dark:to-pink-500/20 border border-orange-200 dark:border-orange-500/30 text-center"
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={{ scale: 1.05, rotate: 2 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          delay: i * 0.1 + 0.5,
+                          duration: 0.45,
+                          ease: "easeOut",
+                        }}
                       >
                         <div className="text-2xl mb-2 inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-500 text-white shadow-lg">
                           {feature.icon}

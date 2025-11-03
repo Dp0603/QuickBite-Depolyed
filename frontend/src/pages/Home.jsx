@@ -14,6 +14,7 @@ import {
   FaHeart,
 } from "react-icons/fa";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 export default function Home() {
   return (
@@ -328,27 +329,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-gray-900 py-10 w-full border-t border-orange-200 dark:border-white/10">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4 md:mb-0 text-center md:text-left">
-            © {new Date().getFullYear()} QuickBite. All rights reserved.
-          </p>
-          <div className="flex gap-4 justify-center md:justify-end">
-            {[FaFacebookF, FaTwitter, FaInstagram, FaLinkedinIn].map(
-              (Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-white/10 text-orange-600 dark:text-gray-400 hover:bg-gradient-to-br hover:from-orange-500 hover:to-pink-600 hover:text-white flex items-center justify-center transition-all duration-300 hover:scale-125 hover:-rotate-12"
-                  aria-label={`Social ${i}`}
-                >
-                  <Icon size={18} />
-                </a>
-              )
-            )}
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

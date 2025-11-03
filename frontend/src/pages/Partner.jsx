@@ -15,6 +15,7 @@ import {
   FaCrown,
 } from "react-icons/fa";
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 export default function Partner() {
   return (
@@ -370,13 +371,7 @@ export default function Partner() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-gray-900 py-10 w-full border-t border-orange-200 dark:border-white/10">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-12 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-600 dark:text-gray-400 mb-4 md:mb-0 text-center md:text-left">
-            © {new Date().getFullYear()} QuickBite. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
 
       <style jsx>{`
         @keyframes fadeIn {
