@@ -66,7 +66,7 @@ export default function Contact() {
     {
       icon: FaMapMarkerAlt,
       title: "Office",
-      value: "123 Food Street, Surat, Gujarat, India",
+      value: "123 Food Street, Ahmedabad, Gujarat, India",
       link: "#",
       color: "from-purple-500 to-blue-600",
       bgColor: "bg-purple-50 dark:bg-purple-900/20",
@@ -111,7 +111,6 @@ export default function Contact() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-20 left-10 w-96 h-96 bg-orange-400/10 dark:bg-orange-500/20 rounded-full blur-3xl animate-pulse"></div>
@@ -228,20 +227,23 @@ export default function Contact() {
                 ))}
               </div>
 
-              {/* Map Preview (Optional) */}
               <motion.div
                 className="rounded-2xl overflow-hidden border border-orange-200 dark:border-white/10 shadow-lg h-64 bg-gray-200 dark:bg-gray-800"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.8 }}
               >
-                <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
-                  <div className="text-center">
-                    <FaMapMarkerAlt className="text-5xl mx-auto mb-2 text-orange-500" />
-                    <p className="text-sm">Map Integration</p>
-                    <p className="text-xs">Add Google Maps embed here</p>
-                  </div>
-                </div>
+                <iframe
+                  title="QuickBite Office Location"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3672.276934002006!2d72.57136267524352!3d23.03386347916714!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e84f6b6c67e5f%3A0xf7b912fb234cb62c!2sFood%20Street%2C%20Ahmedabad%2C%20Gujarat!5e0!3m2!1sen!2sin!4v1730456473938!5m2!1sen!2sin"
+                  width="100%"
+                  height="100%"
+                  style={{ border: 0 }}
+                  allowFullScreen=""
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="w-full h-full"
+                ></iframe>
               </motion.div>
             </motion.div>
 

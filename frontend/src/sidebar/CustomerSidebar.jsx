@@ -13,6 +13,7 @@ import {
   FaUtensils,
   FaAddressBook,
 } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 
 const sidebarLinks = [
   { label: "Dashboard", to: "", icon: <FaHome />, end: true },
@@ -30,45 +31,147 @@ const sidebarLinks = [
 
 const CustomerSidebar = ({ isOpen, toggleSidebar }) => {
   return (
-    <aside
-      className={`bg-white dark:bg-gray-900 shadow-md fixed top-14 left-0 z-30 h-[calc(100vh-56px)] overflow-hidden transition-all duration-300 ease-in-out ${
-        isOpen ? "w-64" : "w-16"
-      }`}
-    >
-      <nav className="mt-4 flex flex-col space-y-1 px-1">
-        {sidebarLinks.map((link) => (
-          <NavLink
-            key={link.to}
-            to={`/customer/${link.to}`}
-            end={link.end}
-            onClick={() => toggleSidebar()}
-            className={({ isActive }) =>
-              `group relative flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                isActive
-                  ? "bg-orange-500 text-white"
-                  : "text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-600 hover:text-orange-700 dark:hover:text-white"
-              }`
-            }
+    <AnimatePresence>
+      {isOpen && (
+        <motion.aside
+          key="sidebar"
+          initial={{ x: -280, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: -280, opacity: 0 }}
+          transition={{
+            type: "spring",
+            stiffness: 220,
+            damping: 25,
+          }}
+          className="fixed top-0 left-0 h-full w-64 z-40"
+        >
+          <motion.div
+            className="h-full bg-white/30 dark:bg-gray-900/30 backdrop-blur-xl border-r border-white/20 dark:border-gray-800 shadow-2xl flex flex-col"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
           >
-            {/* Icon */}
-            <span className="text-lg">{link.icon}</span>
-
-            {/* Label or Tooltip */}
-            {isOpen ? (
-              <span>{link.label}</span>
-            ) : (
-              <span
-                className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-40"
-                style={{ top: "50%", transform: "translateY(-50%)" }}
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-4 border-b border-white/20 dark:border-gray-800">
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+                🍔 QuickBite
+              </h2>
+              <button
+                onClick={toggleSidebar}
+                className="text-gray-700 dark:text-gray-300 text-xl hover:text-orange-500 transition"
               >
-                {link.label}
-              </span>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-    </aside>
+                ✕
+              </button>
+            </div>
+
+            {/* Navigation Links */}
+            <nav className="flex-1 overflow-y-auto py-3">
+              {sidebarLinks.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={`/customer/${link.to}`}
+                  end={link.end}
+                  onClick={toggleSidebar}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-5 py-2.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? "bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-md"
+                        : "text-gray-800 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-600/40 hover:text-orange-700 dark:hover:text-white"
+                    }`
+                  }
+                >
+                  <span className="text-lg">{link.icon}</span>
+                  <span>{link.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-white/20 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400 text-center">
+              © {new Date().getFullYear()} QuickBite
+            </div>
+          </motion.div>
+        </motion.aside>
+      )}
+    </AnimatePresence>
   );
 };
 
 export default CustomerSidebar;
+
+// old
+// import React from "react";
+// import { NavLink } from "react-router-dom";
+// import {
+//   FaHome,
+//   FaShoppingCart,
+//   FaHistory,
+//   FaHeart,
+//   FaCrown,
+//   FaCog,
+//   FaTags,
+//   FaStar,
+//   FaQuestionCircle,
+//   FaUtensils,
+//   FaAddressBook,
+// } from "react-icons/fa";
+
+// const sidebarLinks = [
+//   { label: "Dashboard", to: "", icon: <FaHome />, end: true },
+//   { label: "Browse", to: "browse", icon: <FaUtensils /> },
+//   { label: "Cart", to: "cart", icon: <FaShoppingCart /> },
+//   { label: "Orders", to: "orders", icon: <FaHistory /> },
+//   { label: "Favorites", to: "favorites", icon: <FaHeart /> },
+//   { label: "Premium", to: "premium", icon: <FaCrown /> },
+//   { label: "Offers", to: "offers", icon: <FaTags /> },
+//   { label: "Reviews", to: "reviews", icon: <FaStar /> },
+//   { label: "Addresses", to: "addresses", icon: <FaAddressBook /> },
+//   { label: "Settings", to: "settings", icon: <FaCog /> },
+//   { label: "Help", to: "help", icon: <FaQuestionCircle /> },
+// ];
+
+// const CustomerSidebar = ({ isOpen, toggleSidebar }) => {
+//   return (
+//     <aside
+//       className={`bg-white dark:bg-gray-900 shadow-md fixed top-14 left-0 z-30 h-[calc(100vh-56px)] overflow-hidden transition-all duration-300 ease-in-out ${
+//         isOpen ? "w-64" : "w-16"
+//       }`}
+//     >
+//       <nav className="mt-4 flex flex-col space-y-1 px-1">
+//         {sidebarLinks.map((link) => (
+//           <NavLink
+//             key={link.to}
+//             to={`/customer/${link.to}`}
+//             end={link.end}
+//             onClick={() => toggleSidebar()}
+//             className={({ isActive }) =>
+//               `group relative flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+//                 isActive
+//                   ? "bg-orange-500 text-white"
+//                   : "text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-orange-600 hover:text-orange-700 dark:hover:text-white"
+//               }`
+//             }
+//           >
+//             {/* Icon */}
+//             <span className="text-lg">{link.icon}</span>
+
+//             {/* Label or Tooltip */}
+//             {isOpen ? (
+//               <span>{link.label}</span>
+//             ) : (
+//               <span
+//                 className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-40"
+//                 style={{ top: "50%", transform: "translateY(-50%)" }}
+//               >
+//                 {link.label}
+//               </span>
+//             )}
+//           </NavLink>
+//         ))}
+//       </nav>
+//     </aside>
+//   );
+// };
+
+// export default CustomerSidebar;
