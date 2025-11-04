@@ -14,8 +14,6 @@ import {
   FaStar,
   FaCrown,
 } from "react-icons/fa";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
 
 export default function Partner() {
   return (
@@ -28,9 +26,6 @@ export default function Partner() {
           content="Join QuickBite as a restaurant partner or staff member and grow your business."
         />
       </Helmet>
-
-      {/* Navbar */}
-      <Navbar />
 
       {/* Hero Section */}
       <header className="relative w-full min-h-[80vh] py-24 overflow-hidden">
@@ -369,9 +364,6 @@ export default function Partner() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <Footer />
 
       <style jsx>{`
         @keyframes fadeIn {

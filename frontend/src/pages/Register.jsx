@@ -19,7 +19,6 @@ import { LuSparkles } from "react-icons/lu";
 import { motion } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../context/ToastContext";
-import Navbar from "../components/Navbar";
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -71,8 +70,6 @@ export default function Register() {
     >
       {/* Overlay gradient for readability */}
       <div className="absolute inset-0 bg-gradient-to-br from-orange-50/90 via-pink-50/90 to-purple-50/90 dark:from-slate-950/90 dark:via-slate-900/90 dark:to-slate-950/90"></div>
-
-      <Navbar />
 
       {/* Animated Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">

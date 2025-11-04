@@ -23,7 +23,6 @@ import {
   FaHeart,
 } from "react-icons/fa6";
 import { motion } from "framer-motion";
-import Navbar from "../components/Navbar";
 import { AuthContext } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import { loginUser } from "../api/axios";
@@ -145,8 +144,6 @@ export default function Login() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-      <Navbar />
-
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <div className="absolute top-20 left-10 w-96 h-96 bg-orange-400/20 dark:bg-orange-500/20 rounded-full blur-3xl animate-pulse"></div>

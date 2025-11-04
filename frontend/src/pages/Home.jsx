@@ -13,8 +13,6 @@ import {
   FaBolt,
   FaHeart,
 } from "react-icons/fa";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
 
 export default function Home() {
   return (
@@ -27,9 +25,6 @@ export default function Home() {
           content="Get food delivered from top-rated restaurants at your doorstep. Try QuickBite now!"
         />
       </Helmet>
-
-      {/* Navbar */}
-      <Navbar />
 
       {/* Hero Section */}
       <header className="relative w-full min-h-[80vh] py-24 overflow-hidden">
@@ -327,9 +322,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }
