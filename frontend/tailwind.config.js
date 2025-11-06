@@ -13,11 +13,13 @@ module.exports = {
         "fade-in": "fadeIn 0.2s ease-out forwards",
         shimmer: "shimmer 2.5s linear infinite",
         pulseDot: "pulseDot 1.6s ease-in-out infinite",
-
         fadeIn: "fadeIn 0.8s ease-out",
         slideInLeft: "slideInLeft 0.6s ease-out",
         float: "float 3s ease-in-out infinite",
         gradient: "gradient 3s ease-in-out infinite",
+
+        // 💫 Added for QuickBite gradient shimmer backgrounds
+        gradientFlow: "gradientFlow 6s ease infinite",
       },
       keyframes: {
         fadeIn: {
@@ -37,7 +39,13 @@ module.exports = {
           "50%": { backgroundPosition: "100% 50%" },
         },
 
-        // Keep your existing ones
+        // 💫 Added gradientFlow keyframe for smooth animated gradients
+        gradientFlow: {
+          "0%": { backgroundPosition: "0% 50%" },
+          "50%": { backgroundPosition: "100% 50%" },
+          "100%": { backgroundPosition: "0% 50%" },
+        },
+
         shimmer: {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
@@ -54,7 +62,6 @@ module.exports = {
     },
   },
   plugins: [
-    // Hide scrollbars but keep scroll functionality
     function ({ addUtilities }) {
       addUtilities({
         ".scrollbar-hide": {
