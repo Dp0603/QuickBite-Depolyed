@@ -19,6 +19,7 @@ import {
   FaArrowLeft,
 } from "react-icons/fa";
 import Lottie from "lottie-react";
+import { useToast } from "../../context/ToastContext";
 import EmptyCartLottie from "../../assets/lottie icons/Shopping cart.json";
 import { AuthContext } from "../../context/AuthContext";
 import API from "../../api/axios";
@@ -27,7 +28,7 @@ import { useNavigate } from "react-router-dom";
 const CustomerCart = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-
+  const { success, error, warning } = useToast();
   const [cartItems, setCartItems] = useState([]);
   const [restaurantId, setRestaurantId] = useState(null);
   const [restaurantName, setRestaurantName] = useState("");
@@ -115,10 +116,48 @@ const CustomerCart = () => {
     fetchCart();
   };
 
-  // Remove
-  const removeItem = async (id) => {
-    await API.delete(`/cart/${user._id}/${restaurantId}/item/${id}`);
-    fetchCart();
+  // Remove with Undo Toast
+  const removeItem = async (id, itemData = null) => {
+    if (!id) return;
+
+    const removedItem =
+      itemData || cartItems.find((i) => i.menuItem._id === id);
+    if (!removedItem) return;
+
+    try {
+      // Instantly delete from backend
+      await API.delete(`/cart/${user._id}/${restaurantId}/item/${id}`);
+      fetchCart();
+
+      // Show Undo toast
+      warning(`Removed ${removedItem.menuItem?.name || removedItem.name}`, {
+        description: "Item removed from your cart.",
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            try {
+              await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
+                quantity: 1,
+                note: removedItem.note || "",
+                applyPremium: true,
+              });
+              fetchCart();
+              success(
+                `${
+                  removedItem.menuItem?.name || removedItem.name
+                } restored to cart.`
+              );
+            } catch (err) {
+              console.error("❌ Undo failed:", err);
+              error("Couldn't restore the item. Please try again.");
+            }
+          },
+        },
+      });
+    } catch (err) {
+      console.error("❌ Error removing item:", err);
+      toast.error("Failed to remove item. Try again later.");
+    }
   };
 
   // Pricing
@@ -336,7 +375,7 @@ const CustomerCart = () => {
                       decrement={() =>
                         decrement(item.menuItem._id, item.quantity, item.note)
                       }
-                      removeItem={() => removeItem(item.menuItem._id)}
+                      removeItem={() => removeItem(item.menuItem._id, item)}
                       index={index}
                     />
                   ))}

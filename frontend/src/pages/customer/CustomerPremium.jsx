@@ -5,8 +5,18 @@ import { useNavigate } from "react-router-dom";
 import moment from "moment";
 import CustomerPremiumLanding from "./CustomerPremiumLanding";
 import CustomerPremiumMember from "./CustomerPremiumMember";
-import { motion } from "framer-motion";
-import { FaTimes, FaCrown } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  FaTimes,
+  FaCrown,
+  FaGem,
+  FaStar,
+  FaCheckCircle,
+  FaFire,
+  FaBolt,
+  FaShieldAlt,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 
 // Base plan data
 const PLANS_BASE = [
@@ -56,7 +66,7 @@ const CustomerPremium = () => {
   const [loading, setLoading] = useState(true);
   const [showUpgradePage, setShowUpgradePage] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [billingPeriod, setBillingPeriod] = useState("yearly"); // "monthly" or "yearly"
+  const [billingPeriod, setBillingPeriod] = useState("yearly");
   const { token, user } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -98,7 +108,6 @@ const CustomerPremium = () => {
 
   useEffect(() => {
     if (user?._id && token) fetchPlan();
-    // eslint-disable-next-line
   }, [user?._id, token]);
 
   // Razorpay payment handler
@@ -189,79 +198,123 @@ const CustomerPremium = () => {
   const isSubscriptionActive = (endDate) =>
     endDate ? moment().isBefore(moment(endDate).endOf("day")) : false;
 
-  if (loading)
+  if (loading) {
     return (
-      <div className="flex justify-center items-center h-[60vh]">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-primary"></div>
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
+        >
+          <div className="relative inline-block mb-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-pink-600 rounded-full blur-2xl opacity-50 animate-pulse"></div>
+            <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center shadow-2xl">
+              <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            Loading Premium...
+          </p>
+        </motion.div>
       </div>
     );
+  }
 
-  if (!user?._id)
+  if (!user?._id) {
     return (
-      <div className="text-center text-red-600 mt-10">
-        ⚠️ User not authenticated. Please login.
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="text-center p-8 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-xl max-w-md"
+        >
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center mx-auto mb-4">
+            <FaExclamationTriangle className="text-white text-3xl" />
+          </div>
+          <h3 className="text-2xl font-bold text-red-600 mb-2">
+            Authentication Required
+          </h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6">
+            Please login to access Premium features
+          </p>
+          <motion.button
+            onClick={() => navigate("/login")}
+            className="px-8 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white font-bold shadow-lg hover:shadow-xl transition-all"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Login Now
+          </motion.button>
+        </motion.div>
       </div>
     );
+  }
 
   const subscriptionActive = planInfo && isSubscriptionActive(planInfo.endDate);
   const subscriptionExpired = planInfo && !subscriptionActive;
   const savedAmount = planInfo?.totalSavings || 0;
 
   return (
-    <div className="p-6 text-gray-800 dark:text-white min-h-[80vh]">
-      {subscriptionActive ? (
-        <CustomerPremiumMember
-          planInfo={planInfo}
-          onCancel={() => setShowCancelModal(true)}
-          onUpgrade={() => setShowUpgradePage(true)}
-          user={user}
-          isExpiredView={false}
-          savedAmount={savedAmount}
-        />
-      ) : subscriptionExpired ? (
-        <CustomerPremiumMember
-          planInfo={planInfo}
-          onCancel={() => setShowUpgradePage(true)}
-          onUpgrade={() => setShowUpgradePage(true)}
-          user={user}
-          isExpiredView={true}
-          savedAmount={savedAmount}
-        />
-      ) : (
-        <CustomerPremiumLanding
-          plans={PLANS}
-          billingPeriod={billingPeriod}
-          setBillingPeriod={setBillingPeriod}
-          onSubscribe={handlePayment}
-        />
-      )}
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <div className="px-4 sm:px-8 md:px-10 lg:px-12 py-8">
+        {subscriptionActive ? (
+          <CustomerPremiumMember
+            planInfo={planInfo}
+            onCancel={() => setShowCancelModal(true)}
+            onUpgrade={() => setShowUpgradePage(true)}
+            user={user}
+            isExpiredView={false}
+            savedAmount={savedAmount}
+          />
+        ) : subscriptionExpired ? (
+          <CustomerPremiumMember
+            planInfo={planInfo}
+            onCancel={() => setShowUpgradePage(true)}
+            onUpgrade={() => setShowUpgradePage(true)}
+            user={user}
+            isExpiredView={true}
+            savedAmount={savedAmount}
+          />
+        ) : (
+          <CustomerPremiumLanding
+            plans={PLANS}
+            billingPeriod={billingPeriod}
+            setBillingPeriod={setBillingPeriod}
+            onSubscribe={handlePayment}
+          />
+        )}
 
-      {/* Upgrade modal */}
-      {showUpgradePage && (
-        <UpgradePage
-          currentPlan={planInfo}
-          plans={PLANS}
-          billingPeriod={billingPeriod}
-          onClose={() => setShowUpgradePage(false)}
-          onSelectPlan={handlePayment}
-        />
-      )}
+        {/* Upgrade modal */}
+        <AnimatePresence>
+          {showUpgradePage && (
+            <UpgradePage
+              currentPlan={planInfo}
+              plans={PLANS}
+              billingPeriod={billingPeriod}
+              onClose={() => setShowUpgradePage(false)}
+              onSelectPlan={handlePayment}
+            />
+          )}
+        </AnimatePresence>
 
-      {/* Cancel confirmation modal */}
-      {showCancelModal && (
-        <CancelModal
-          planInfo={planInfo}
-          onClose={() => setShowCancelModal(false)}
-          onConfirm={handleCancelSubscription}
-        />
-      )}
+        {/* Cancel confirmation modal */}
+        <AnimatePresence>
+          {showCancelModal && (
+            <CancelModal
+              planInfo={planInfo}
+              onClose={() => setShowCancelModal(false)}
+              onConfirm={handleCancelSubscription}
+            />
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
 
 export default CustomerPremium;
 
-/* --------- UpgradePage (modal) --------- */
+/* ========== UpgradePage Modal ========== */
 const UpgradePage = ({
   currentPlan,
   plans,
@@ -270,27 +323,47 @@ const UpgradePage = ({
   onClose,
 }) => {
   const mostPopular = "Gold";
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex justify-center items-start overflow-auto py-10">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-center items-start overflow-auto py-10 px-4"
+      onClick={onClose}
+    >
       <motion.div
-        initial={{ scale: 0.98, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.18 }}
-        className="bg-white dark:bg-secondary rounded-2xl p-6 max-w-5xl w-full shadow-2xl border dark:border-gray-700"
+        initial={{ scale: 0.9, y: 50 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 50 }}
+        transition={{ type: "spring", stiffness: 200, damping: 25 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-6xl w-full shadow-2xl border border-orange-200 dark:border-white/10"
       >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Choose a Plan
-          </h2>
-          <button
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8 pb-6 border-b border-gray-200 dark:border-gray-700">
+          <div>
+            <h2 className="text-3xl font-black bg-gradient-to-r from-orange-600 to-pink-600 dark:from-orange-400 dark:to-pink-500 bg-clip-text text-transparent flex items-center gap-3">
+              <FaCrown className="text-yellow-500" />
+              Choose Your Plan
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Unlock premium benefits and save more
+            </p>
+          </div>
+          <motion.button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-900"
+            className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
           >
-            <FaTimes />
-          </button>
+            <FaTimes className="text-xl" />
+          </motion.button>
         </div>
+
+        {/* Plans Grid */}
         <div className="grid md:grid-cols-3 gap-6">
-          {plans.map((plan) => {
+          {plans.map((plan, index) => {
             const isCurrent =
               currentPlan?.planName?.toLowerCase() ===
               plan.planName.toLowerCase();
@@ -298,7 +371,6 @@ const UpgradePage = ({
             const showPopular =
               plan.tier === mostPopular && billingPeriod === "yearly";
 
-            // savings: compare to monthly * 12
             const monthlyEquivalent =
               plan.monthlyPrice * (billingPeriod === "yearly" ? 12 : 1);
             const savings = Math.max(0, monthlyEquivalent - plan.price);
@@ -306,115 +378,233 @@ const UpgradePage = ({
             return (
               <motion.div
                 key={plan.planName}
-                whileHover={{ scale: 1.03 }}
-                className={`relative p-6 border rounded-2xl shadow-md transition-all duration-200 bg-gradient-to-br from-white to-gray-50 dark:bg-secondary dark:border-gray-700`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="group relative flex flex-col h-full"
               >
-                {showPopular && (
-                  <span className="absolute top-3 left-3 bg-primary text-white text-xs px-2 py-1 rounded-full font-semibold shadow">
-                    Most Popular
-                  </span>
-                )}
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-pink-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-                <div className="flex items-center gap-3 mb-3">
-                  <PlanTierIcon tier={plan.tier} />
-                  <h3 className="text-xl font-bold text-primary">
-                    {plan.planName}
-                  </h3>
-                </div>
-
-                <div className="text-2xl font-semibold mb-1">
-                  {formatCurrency(plan.price)}
-                </div>
-                <p className="text-sm text-gray-500 mb-2">
-                  Valid for {plan.durationInDays} days
-                </p>
-
-                {savings > 0 && (
-                  <div className="text-sm text-green-600 mb-2">
-                    Save {formatCurrency(savings)} vs monthly
-                  </div>
-                )}
-                <ul className="mb-4 space-y-1 text-sm">
-                  {plan.perks.map((perk, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <span className="text-green-600">✔</span>
-                      <span>{perk}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => onSelectPlan(plan)}
-                  disabled={isCurrent}
-                  className={`w-full px-4 py-2 rounded-lg font-semibold transition ${
-                    isCurrent
-                      ? "bg-gray-400 text-white cursor-not-allowed"
-                      : "bg-primary text-white hover:brightness-95"
+                <div
+                  className={`relative flex flex-col justify-between p-6 rounded-3xl bg-white dark:bg-slate-900 border shadow-md hover:shadow-xl transition-all duration-300 h-full ${
+                    showPopular
+                      ? "border-yellow-500 ring-2 ring-yellow-500/30"
+                      : "border-orange-200 dark:border-white/10"
                   }`}
                 >
-                  {isCurrent ? "Current Plan" : `Get ${plan.planName}`}
-                </button>
+                  {/* Popular Badge */}
+                  {showPopular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <span className="inline-flex items-center gap-1 px-4 py-1.5 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold shadow-lg">
+                        <FaFire /> Most Popular
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Header + Price + Perks */}
+                  <div>
+                    <div className="flex items-center gap-3 mb-4 pt-2">
+                      <PlanTierIcon tier={plan.tier} />
+                      <h3 className="text-2xl font-black bg-gradient-to-r from-orange-600 to-pink-600 dark:from-orange-400 dark:to-pink-500 bg-clip-text text-transparent">
+                        {plan.planName}
+                      </h3>
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-black text-gray-900 dark:text-white">
+                          {formatCurrency(plan.price)}
+                        </span>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          /{billingPeriod === "yearly" ? "year" : "month"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Valid for {plan.durationInDays} days
+                      </p>
+                    </div>
+
+                    {savings > 0 && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="mb-4 p-3 rounded-xl bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-500/30"
+                      >
+                        <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+                          <FaBolt className="text-green-600 dark:text-green-400" />
+                          <span className="font-bold text-sm">
+                            Save {formatCurrency(savings)}
+                          </span>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    <ul className="space-y-3">
+                      {plan.perks.map((perk, i) => (
+                        <motion.li
+                          key={i}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 * i }}
+                          className="flex items-start gap-3"
+                        >
+                          <div className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <FaCheckCircle className="text-green-600 dark:text-green-400 text-xs" />
+                          </div>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            {perk}
+                          </span>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* CTA Button — sticks to bottom */}
+                  <motion.button
+                    onClick={() => onSelectPlan(plan)}
+                    disabled={isCurrent}
+                    className={`w-full mt-6 py-4 rounded-xl font-bold transition-all shadow-lg ${
+                      isCurrent
+                        ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                        : "bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white hover:shadow-xl"
+                    }`}
+                    whileHover={{ scale: isCurrent ? 1 : 1.05 }}
+                    whileTap={{ scale: isCurrent ? 1 : 0.95 }}
+                  >
+                    {isCurrent ? "Current Plan" : `Get ${plan.planName}`}
+                  </motion.button>
+                </div>
               </motion.div>
             );
           })}
         </div>
       </motion.div>
+    </motion.div>
+  );
+};
+
+/* ========== Plan Tier Icons ========== */
+const PlanTierIcon = ({ tier }) => {
+  const configs = {
+    Gold: {
+      icon: FaCrown,
+      gradient: "from-yellow-400 to-orange-500",
+      shadow: "shadow-yellow-500/30",
+    },
+    Platinum: {
+      icon: FaGem,
+      gradient: "from-slate-400 to-gray-600",
+      shadow: "shadow-slate-500/30",
+    },
+    Diamond: {
+      icon: FaStar,
+      gradient: "from-cyan-400 to-blue-600",
+      shadow: "shadow-cyan-500/30",
+    },
+  };
+
+  const config = configs[tier] || configs.Gold;
+  const Icon = config.icon;
+
+  return (
+    <div
+      className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white shadow-lg ${config.shadow}`}
+    >
+      <Icon className="text-xl" />
     </div>
   );
 };
 
-const PlanTierIcon = ({ tier }) => {
-  if (tier === "Gold") return <FaCrown className="text-yellow-500" />;
-  if (tier === "Platinum") return <FaCrown className="text-slate-400" />;
-  if (tier === "Diamond") return <FaCrown className="text-indigo-400" />;
-  return <FaCrown />;
-};
-
-/* --------- CancelModal (modal) --------- */
+/* ========== Cancel Modal ========== */
 const CancelModal = ({ planInfo, onClose, onConfirm }) => {
   const perks = Array.isArray(planInfo?.perks) ? planInfo.perks : [];
+
   return (
-    <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
       <motion.div
-        initial={{ y: 10, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white dark:bg-secondary rounded-2xl p-6 max-w-lg w-full shadow-lg border dark:border-gray-700"
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-orange-200 dark:border-white/10"
       >
-        <div className="flex justify-between items-start gap-4">
-          <div>
-            <h3 className="text-xl font-bold">
-              Are you sure you want to cancel?
+        {/* Header */}
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex-1">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center mb-4">
+              <FaExclamationTriangle className="text-white text-3xl" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Cancel Subscription?
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
-              You will lose the benefits of your {planInfo?.planName}{" "}
+            <p className="text-gray-600 dark:text-gray-400">
+              You will lose all the benefits of your{" "}
+              <span className="font-bold text-orange-600 dark:text-orange-400">
+                {planInfo?.planName}
+              </span>{" "}
               membership.
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-500">
+          <motion.button
+            onClick={onClose}
+            className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+          >
             <FaTimes />
-          </button>
+          </motion.button>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {perks.map((p, i) => (
-            <div key={i} className="p-3 bg-gray-50 dark:bg-gray-800 rounded">
-              <div className="text-sm">{p}</div>
-            </div>
-          ))}
+        {/* Benefits You'll Lose */}
+        <div className="mb-6">
+          <h4 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <FaShieldAlt className="text-orange-500" />
+            Benefits You'll Lose:
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {perks.map((perk, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30"
+              >
+                <p className="text-sm text-red-700 dark:text-red-300 font-semibold">
+                  {perk}
+                </p>
+              </motion.div>
+            ))}
+          </div>
         </div>
 
-        <div className="mt-6 flex gap-3 justify-end">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border">
+        {/* Actions */}
+        <div className="flex gap-3">
+          <motion.button
+            onClick={onClose}
+            className="flex-1 px-6 py-4 rounded-xl bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white font-bold shadow-lg hover:shadow-xl transition-all"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
             Keep Benefits
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             onClick={onConfirm}
-            className="px-4 py-2 rounded-lg bg-red-600 text-white"
+            className="flex-1 px-6 py-4 rounded-xl border-2 border-red-500 text-red-600 dark:text-red-400 font-bold hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
             Cancel Subscription
-          </button>
+          </motion.button>
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
 

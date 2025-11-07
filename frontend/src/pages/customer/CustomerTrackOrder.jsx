@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
+import { motion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import {
   FaCheckCircle,
@@ -8,20 +9,21 @@ import {
   FaComments,
   FaPhoneAlt,
   FaStar,
+  FaTimesCircle,
 } from "react-icons/fa";
 import API from "../../api/axios";
 import { io } from "socket.io-client";
 import { AuthContext } from "../../context/AuthContext";
 import CustomerSupportModal from "../customer/CustomerSupportModal";
 
-// Full order lifecycle
+// 🔹 Order lifecycle steps
 const orderStatusSteps = [
   { label: "Order Placed", icon: <FaStore /> },
   { label: "Preparing", icon: <FaClock /> },
   { label: "Ready", icon: <FaCheckCircle /> },
   { label: "Out for Delivery", icon: <FaMotorcycle /> },
   { label: "Delivered", icon: <FaCheckCircle /> },
-  { label: "Cancelled", icon: <FaCheckCircle /> },
+  { label: "Cancelled", icon: <FaTimesCircle /> },
 ];
 
 const CustomerTrackOrder = () => {
@@ -38,9 +40,9 @@ const CustomerTrackOrder = () => {
   const [comment, setComment] = useState("");
   const [showSupportModal, setShowSupportModal] = useState(false);
 
+  // 🔹 Fetch Order
   useEffect(() => {
     if (!orderId || !user) return;
-
     const fetchOrder = async () => {
       try {
         const res = await API.get(`/orders/orders/${orderId}`);
@@ -51,15 +53,16 @@ const CustomerTrackOrder = () => {
         setLoading(false);
       }
     };
-
     fetchOrder();
   }, [orderId, user]);
 
-  // Socket.io setup
+  // 🔹 Socket setup for live updates
   useEffect(() => {
     const newSocket = io(
       import.meta.env.VITE_SOCKET_URL || "http://localhost:5000",
-      { transports: ["websocket"] }
+      {
+        transports: ["websocket"],
+      }
     );
     setSocket(newSocket);
     newSocket.emit("joinOrderRoom", orderId);
@@ -82,9 +85,7 @@ const CustomerTrackOrder = () => {
   }, [orderId]);
 
   useEffect(() => {
-    if (order?.orderStatus === "Delivered") {
-      checkIfFeedbackAlreadyGiven();
-    }
+    if (order?.orderStatus === "Delivered") checkIfFeedbackAlreadyGiven();
   }, [order]);
 
   const checkIfFeedbackAlreadyGiven = async () => {
@@ -119,14 +120,13 @@ const CustomerTrackOrder = () => {
   };
 
   const handleReorder = async () => {
-    if (!order) return;
     try {
       const res = await API.post(`/cart/reorder/${user._id}/${order._id}`);
       if (res.data?.cart) {
         alert("✅ Items added to cart!");
         window.location.href = "/customer/cart";
       } else {
-        alert("Some items are not available to reorder.");
+        alert("Some items are unavailable for reorder.");
       }
     } catch (err) {
       console.error("❌ Error during reorder:", err);
@@ -134,9 +134,17 @@ const CustomerTrackOrder = () => {
     }
   };
 
-  if (loading) return <p className="p-6 text-center">Loading order...</p>;
+  if (loading)
+    return (
+      <div className="p-10 text-center text-gray-600 dark:text-gray-400">
+        Loading order...
+      </div>
+    );
+
   if (!order)
-    return <p className="p-6 text-center text-red-500">Order not found.</p>;
+    return (
+      <div className="p-10 text-center text-red-500">Order not found.</div>
+    );
 
   const normalizeStatus = (status) =>
     status === "Pending" ? "Order Placed" : status;
@@ -146,201 +154,647 @@ const CustomerTrackOrder = () => {
   const visibleSteps = isCancelled
     ? orderStatusSteps.slice(0, 1).concat(orderStatusSteps.slice(-1))
     : orderStatusSteps;
-
   const currentStepIndex = visibleSteps.findIndex(
     (step) => step.label === normalizedStatus
   );
 
   const deliveryAgent = order.deliveryDetails?.deliveryAgentId;
 
+  // ⏱️ ETA Countdown Timer Component
+  const ETAClock = ({ eta }) => {
+    const [remaining, setRemaining] = useState("");
+
+    useEffect(() => {
+      const updateCountdown = () => {
+        const etaTime = new Date(eta).getTime();
+        const now = Date.now();
+        const diff = etaTime - now;
+        if (diff <= 0) return setRemaining("Arriving soon 🚴‍♂️");
+        const mins = Math.floor(diff / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        setRemaining(`${mins} min${mins !== 1 ? "s" : ""} ${secs}s left`);
+      };
+      updateCountdown();
+      const interval = setInterval(updateCountdown, 1000);
+      return () => clearInterval(interval);
+    }, [eta]);
+
+    return (
+      <motion.div
+        className="text-sm mt-2 text-green-600 dark:text-green-400 font-semibold"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+      >
+        {remaining}
+      </motion.div>
+    );
+  };
+
   return (
-    <div className="p-6 text-gray-800 dark:text-white max-w-4xl mx-auto animate-fade-in">
-      <h1 className="text-3xl font-bold mb-6 text-primary">
-        📍 Track Your Order
-      </h1>
+    <motion.div
+      className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 text-gray-800 dark:text-white px-4 py-10"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="max-w-5xl mx-auto">
+        {/* Title */}
+        <motion.h1
+          className="text-4xl font-black mb-10 bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+        >
+          📍 Track Your Order
+        </motion.h1>
 
-      {/* Order Overview */}
-      <div className="bg-white dark:bg-secondary border dark:border-gray-700 shadow rounded-xl p-6 mb-10">
-        <div className="flex justify-between flex-wrap gap-6">
-          <div>
-            <h2 className="text-xl font-semibold">
-              {order.restaurantId?.name || "Restaurant"}
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              ETA:{" "}
-              <span className="text-green-500 font-medium">
-                {order.eta || "30 mins"}
-              </span>
-            </p>
-            <p className="text-sm mt-1">
-              <strong>Delivering To:</strong>{" "}
-              {order.deliveryAddress?.fullAddress || "N/A"}
-            </p>
-          </div>
-          <div className="text-sm">
-            <p>
-              <strong>Items:</strong>{" "}
-              {order.items
-                ?.map(
-                  (item) =>
-                    `${item.menuItemId?.name || "Item"} × ${item.quantity}`
-                )
-                .join(", ")}
-            </p>
-            <p className="mt-1 font-medium">
-              <strong>Total:</strong> ₹{order.totalAmount?.toFixed(2)}
-            </p>
-            {order.premiumApplied && order.savings > 0 && (
-              <p className="text-green-600 font-medium">
-                Premium Savings: -₹{order.savings?.toFixed(2)}
+        {/* Order Overview */}
+        <motion.div
+          className="rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-orange-200 dark:border-white/10 p-8 shadow-xl mb-10 relative"
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-pink-500/10 rounded-3xl blur-xl opacity-40"></div>
+          <div className="relative z-10 flex flex-wrap justify-between gap-6">
+            <div>
+              <h2 className="text-xl font-bold">
+                {order.restaurantId?.name || "Restaurant"}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                ETA:{" "}
+                <span className="text-green-500 font-semibold">
+                  {order.eta || "30 mins"}
+                </span>
               </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Tracker */}
-      <div className="mb-10">
-        <h2 className="text-xl font-semibold mb-4">Order Status</h2>
-        <div className="flex justify-between items-center gap-3 relative">
-          {visibleSteps.map((step, index) => {
-            const isDone = index <= currentStepIndex;
-            const stepColor =
-              isCancelled && step.label === "Cancelled"
-                ? "bg-rose-500 text-white"
-                : isDone
-                ? "bg-primary text-white"
-                : "bg-gray-300 text-gray-600";
-
-            const lineColor =
-              index < currentStepIndex
-                ? "bg-primary"
-                : isCancelled && step.label === "Cancelled"
-                ? "bg-rose-500"
-                : "bg-gray-300";
-
-            return (
-              <div
-                key={step.label}
-                className="flex flex-col items-center flex-1 relative"
-              >
-                <div
-                  className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 ${stepColor}`}
-                >
-                  {step.icon}
-                </div>
-                <p
-                  className={`mt-2 text-sm text-center ${
-                    isDone ? "font-medium" : "text-gray-500"
-                  } ${
-                    isCancelled && step.label === "Cancelled"
-                      ? "text-rose-500"
-                      : "text-primary"
-                  }`}
-                >
-                  {step.label}
+              <p className="text-sm mt-1">
+                <strong>Delivering To:</strong>{" "}
+                {order.deliveryAddress?.fullAddress || "N/A"}
+              </p>
+            </div>
+            <div className="text-sm">
+              <p>
+                <strong>Items:</strong>{" "}
+                {order.items
+                  ?.map(
+                    (i) => `${i.menuItemId?.name || "Item"} × ${i.quantity}`
+                  )
+                  .join(", ")}
+              </p>
+              <p className="mt-1 font-semibold">
+                <strong>Total:</strong> ₹{order.totalAmount?.toFixed(2)}
+              </p>
+              {order.premiumApplied && order.savings > 0 && (
+                <p className="text-green-600 font-medium">
+                  Premium Savings: ₹{order.savings?.toFixed(2)}
                 </p>
-                {index < visibleSteps.length - 1 && (
-                  <div
-                    className={`absolute top-5 right-0 w-full h-1 z-[-1] ${lineColor}`}
-                  ></div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
 
-      {/* Delivery Partner Info */}
-      {deliveryAgent && !isCancelled && (
-        <div className="bg-white dark:bg-secondary border dark:border-gray-700 shadow rounded-xl p-6 mb-10">
-          <h2 className="text-xl font-semibold mb-4">Your Delivery Partner</h2>
-          <div className="flex items-center gap-4">
-            <img
-              src={deliveryAgent.avatar || "https://i.pravatar.cc/100?img=12"}
-              alt={deliveryAgent.name}
-              className="w-16 h-16 rounded-full object-cover border-2 border-primary"
+        {/* 🚦 Enhanced Progress Tracker with 🛵 Animation */}
+        <motion.div
+          className="mb-14 relative"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h2 className="text-xl font-semibold mb-6">Order Status</h2>
+
+          {/* Live Progress Bar */}
+          <div className="relative h-3 bg-gray-200 dark:bg-gray-800 rounded-full mb-14 overflow-hidden shadow-inner">
+            {/* Gradient Fill */}
+            <motion.div
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-500 to-pink-600 rounded-full"
+              initial={{ width: "0%" }}
+              animate={{
+                width: `${
+                  ((currentStepIndex + 1) / visibleSteps.length) * 100
+                }%`,
+              }}
+              transition={{ duration: 1, ease: "easeInOut" }}
             />
-            <div className="flex-1">
-              <p className="font-medium text-lg">{deliveryAgent.name}</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Vehicle: {deliveryAgent.vehicle || "Not specified"}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Phone: {deliveryAgent.phone || "N/A"}
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => alert("Opening chat...")}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-orange-600 transition"
-              >
-                <FaComments /> Chat
-              </button>
-              <button
-                onClick={() => alert("Calling...")}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-md text-sm hover:bg-gray-800 transition"
-              >
-                <FaPhoneAlt /> Call
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* ⭐ Feedback Form */}
-      {showFeedbackForm && !feedbackSubmitted && (
-        <div className="bg-white dark:bg-secondary border dark:border-gray-700 shadow rounded-xl p-6 mb-10">
-          <h2 className="text-xl font-semibold mb-4">How was your order?</h2>
-          <div className="flex gap-1 mb-4">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <FaStar
-                key={s}
-                onClick={() => setRating(s)}
-                className={`w-7 h-7 cursor-pointer ${
-                  s <= rating ? "text-yellow-400" : "text-gray-300"
-                }`}
-              />
-            ))}
+            {/* Subtle reflection effect */}
+            <div className="absolute top-0 left-0 w-full h-full bg-white/10 blur-[2px]"></div>
+
+            {/* 🛵 Moving Bike Icon */}
+            <motion.div
+              className="absolute -top-6 text-3xl"
+              animate={{
+                left: `${
+                  ((currentStepIndex + 1) / visibleSteps.length) * 100
+                }%`,
+              }}
+              transition={{ duration: 1, ease: "easeInOut" }}
+            >
+              <FaMotorcycle className="text-orange-600 drop-shadow-md animate-bounce-slow" />
+            </motion.div>
           </div>
-          <textarea
-            placeholder="Write a short review (optional)..."
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            className="w-full p-3 border rounded-md mb-4 dark:bg-gray-800 dark:border-gray-600"
-          ></textarea>
-          <button
-            onClick={handleFeedbackSubmit}
-            className="bg-primary text-white px-5 py-2 rounded hover:bg-orange-600 transition"
+
+          {/* Steps */}
+          <div className="flex justify-between items-center gap-3 relative">
+            {visibleSteps.map((step, i) => {
+              const isDone = i <= currentStepIndex;
+              const isActive = i === currentStepIndex;
+              const stepColor = isDone
+                ? "bg-gradient-to-r from-orange-500 to-pink-600 text-white"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-600";
+
+              return (
+                <motion.div
+                  key={step.label}
+                  className="flex flex-col items-center flex-1 relative"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                >
+                  <motion.div
+                    className={`w-12 h-12 flex items-center justify-center rounded-full font-bold shadow-md transition-all ${
+                      isActive ? "scale-110 ring-4 ring-orange-400/40" : ""
+                    } ${stepColor}`}
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    {step.icon}
+                  </motion.div>
+                  <p
+                    className={`mt-2 text-xs md:text-sm text-center font-medium ${
+                      isActive ? "text-orange-600 dark:text-orange-400" : ""
+                    }`}
+                  >
+                    {step.label}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          {/* Live ETA Countdown */}
+          {!isCancelled && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mt-10 text-center"
+            >
+              <p className="text-gray-700 dark:text-gray-300 text-lg font-medium flex items-center justify-center gap-2">
+                <FaClock className="text-orange-500" />
+                <span>
+                  {order.eta
+                    ? `Estimated Arrival: ${order.eta}`
+                    : "Estimated Arrival: 30 mins"}
+                </span>
+              </p>
+              {order.eta && <ETAClock eta={order.eta} />}
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* Delivery Partner */}
+        {deliveryAgent && !isCancelled && (
+          <motion.div
+            className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-orange-200 dark:border-white/10 rounded-3xl shadow-xl p-8 mb-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
           >
-            Submit Feedback
+            <h2 className="text-xl font-semibold mb-5">
+              Your Delivery Partner
+            </h2>
+            <div className="flex items-center gap-5 flex-wrap">
+              <img
+                src={deliveryAgent.avatar || "https://i.pravatar.cc/100?img=12"}
+                alt={deliveryAgent.name}
+                className="w-16 h-16 rounded-full object-cover border-2 border-orange-500"
+              />
+              <div className="flex-1">
+                <p className="font-semibold text-lg">{deliveryAgent.name}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Vehicle: {deliveryAgent.vehicle || "Not specified"}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Phone: {deliveryAgent.phone || "N/A"}
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-md text-sm hover:bg-orange-600 transition">
+                  <FaComments /> Chat
+                </button>
+                <button className="flex items-center gap-2 bg-gray-700 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800 transition">
+                  <FaPhoneAlt /> Call
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Feedback */}
+        {showFeedbackForm && !feedbackSubmitted && (
+          <motion.div
+            className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-orange-200 dark:border-white/10 rounded-3xl shadow-xl p-8 mb-10"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h2 className="text-xl font-semibold mb-4">How was your order?</h2>
+            <div className="flex gap-1 mb-4">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <motion.div whileHover={{ scale: 1.2 }} key={s}>
+                  <FaStar
+                    onClick={() => setRating(s)}
+                    className={`w-8 h-8 cursor-pointer transition-all ${
+                      s <= rating ? "text-yellow-400" : "text-gray-400"
+                    }`}
+                  />
+                </motion.div>
+              ))}
+            </div>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Write a short review (optional)..."
+              className="w-full p-3 border rounded-md dark:bg-gray-800 dark:border-gray-600 mb-4"
+            />
+            <button
+              onClick={handleFeedbackSubmit}
+              className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
+            >
+              Submit Feedback
+            </button>
+          </motion.div>
+        )}
+
+        {/* Support + Reorder */}
+        <div className="flex flex-wrap gap-4 mt-8 justify-between">
+          <button
+            onClick={() => setShowSupportModal(true)}
+            className="w-full md:w-auto px-6 py-3 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-sm font-semibold transition"
+          >
+            Need Help?
+          </button>
+          <button
+            onClick={handleReorder}
+            className="w-full md:w-auto px-6 py-3 rounded-lg bg-gradient-to-r from-orange-500 to-pink-600 text-white text-sm font-semibold hover:brightness-110 transition"
+          >
+            Reorder This Meal
           </button>
         </div>
-      )}
 
-      {/* Help + Reorder */}
-      <div className="flex justify-between flex-wrap gap-4 mt-6">
-        <button
-          onClick={() => setShowSupportModal(true)}
-          className="w-full md:w-auto bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white px-5 py-3 rounded-lg shadow hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm font-medium"
-        >
-          Need Help?
-        </button>
         {showSupportModal && (
           <CustomerSupportModal
             order={order}
             onClose={() => setShowSupportModal(false)}
           />
         )}
-        <button
-          onClick={handleReorder}
-          className="w-full md:w-auto bg-primary text-white px-5 py-3 rounded-lg shadow hover:bg-orange-600 transition text-sm font-medium"
-        >
-          Reorder This Meal
-        </button>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
 export default CustomerTrackOrder;
+
+//old
+// import React, { useEffect, useState, useContext } from "react";
+// import { useParams } from "react-router-dom";
+// import {
+//   FaCheckCircle,
+//   FaClock,
+//   FaMotorcycle,
+//   FaStore,
+//   FaComments,
+//   FaPhoneAlt,
+//   FaStar,
+// } from "react-icons/fa";
+// import API from "../../api/axios";
+// import { io } from "socket.io-client";
+// import { AuthContext } from "../../context/AuthContext";
+// import CustomerSupportModal from "../customer/CustomerSupportModal";
+
+// // Full order lifecycle
+// const orderStatusSteps = [
+//   { label: "Order Placed", icon: <FaStore /> },
+//   { label: "Preparing", icon: <FaClock /> },
+//   { label: "Ready", icon: <FaCheckCircle /> },
+//   { label: "Out for Delivery", icon: <FaMotorcycle /> },
+//   { label: "Delivered", icon: <FaCheckCircle /> },
+//   { label: "Cancelled", icon: <FaCheckCircle /> },
+// ];
+
+// const CustomerTrackOrder = () => {
+//   const { orderId } = useParams();
+//   const [order, setOrder] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   const [socket, setSocket] = useState(null);
+//   const { user } = useContext(AuthContext);
+
+//   // Feedback states
+//   const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+//   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+//   const [rating, setRating] = useState(0);
+//   const [comment, setComment] = useState("");
+//   const [showSupportModal, setShowSupportModal] = useState(false);
+
+//   useEffect(() => {
+//     if (!orderId || !user) return;
+
+//     const fetchOrder = async () => {
+//       try {
+//         const res = await API.get(`/orders/orders/${orderId}`);
+//         setOrder(res.data.order);
+//       } catch (err) {
+//         console.error("❌ Error fetching order:", err);
+//       } finally {
+//         setLoading(false);
+//       }
+//     };
+
+//     fetchOrder();
+//   }, [orderId, user]);
+
+//   // Socket.io setup
+//   useEffect(() => {
+//     const newSocket = io(
+//       import.meta.env.VITE_SOCKET_URL || "http://localhost:5000",
+//       { transports: ["websocket"] }
+//     );
+//     setSocket(newSocket);
+//     newSocket.emit("joinOrderRoom", orderId);
+
+//     newSocket.on("orderStatusUpdated", (updatedOrder) => {
+//       if (updatedOrder._id === orderId) {
+//         setOrder((prev) => ({
+//           ...prev,
+//           orderStatus: updatedOrder.orderStatus,
+//           eta: updatedOrder.eta,
+//           deliveryDetails: updatedOrder.deliveryDetails || prev.deliveryDetails,
+//         }));
+//       }
+//     });
+
+//     return () => {
+//       newSocket.emit("leaveOrderRoom", orderId);
+//       newSocket.disconnect();
+//     };
+//   }, [orderId]);
+
+//   useEffect(() => {
+//     if (order?.orderStatus === "Delivered") {
+//       checkIfFeedbackAlreadyGiven();
+//     }
+//   }, [order]);
+
+//   const checkIfFeedbackAlreadyGiven = async () => {
+//     try {
+//       const res = await API.get("/feedback/check", {
+//         params: { userId: user._id, orderId: order._id },
+//       });
+//       if (!res.data.alreadyGiven) setShowFeedbackForm(true);
+//     } catch (err) {
+//       console.error("Error checking feedback:", err);
+//     }
+//   };
+
+//   const handleFeedbackSubmit = async () => {
+//     if (!rating) return alert("Please select a rating!");
+//     try {
+//       await API.post("/feedback", {
+//         userId: user._id,
+//         orderId: order._id,
+//         restaurantId: order.restaurantId?._id,
+//         rating,
+//         comment,
+//         feedbackType: "order",
+//       });
+//       setFeedbackSubmitted(true);
+//       setShowFeedbackForm(false);
+//       alert("✅ Thanks for your feedback!");
+//     } catch (err) {
+//       console.error("Error submitting feedback:", err);
+//       alert("Something went wrong. Try again.");
+//     }
+//   };
+
+//   const handleReorder = async () => {
+//     if (!order) return;
+//     try {
+//       const res = await API.post(`/cart/reorder/${user._id}/${order._id}`);
+//       if (res.data?.cart) {
+//         alert("✅ Items added to cart!");
+//         window.location.href = "/customer/cart";
+//       } else {
+//         alert("Some items are not available to reorder.");
+//       }
+//     } catch (err) {
+//       console.error("❌ Error during reorder:", err);
+//       alert("Failed to reorder. Please try again.");
+//     }
+//   };
+
+//   if (loading) return <p className="p-6 text-center">Loading order...</p>;
+//   if (!order)
+//     return <p className="p-6 text-center text-red-500">Order not found.</p>;
+
+//   const normalizeStatus = (status) =>
+//     status === "Pending" ? "Order Placed" : status;
+//   const normalizedStatus = normalizeStatus(order.orderStatus);
+//   const isCancelled = normalizedStatus === "Cancelled";
+
+//   const visibleSteps = isCancelled
+//     ? orderStatusSteps.slice(0, 1).concat(orderStatusSteps.slice(-1))
+//     : orderStatusSteps;
+
+//   const currentStepIndex = visibleSteps.findIndex(
+//     (step) => step.label === normalizedStatus
+//   );
+
+//   const deliveryAgent = order.deliveryDetails?.deliveryAgentId;
+
+//   return (
+//     <div className="p-6 text-gray-800 dark:text-white max-w-4xl mx-auto animate-fade-in">
+//       <h1 className="text-3xl font-bold mb-6 text-primary">
+//         📍 Track Your Order
+//       </h1>
+
+//       {/* Order Overview */}
+//       <div className="bg-white dark:bg-secondary border dark:border-gray-700 shadow rounded-xl p-6 mb-10">
+//         <div className="flex justify-between flex-wrap gap-6">
+//           <div>
+//             <h2 className="text-xl font-semibold">
+//               {order.restaurantId?.name || "Restaurant"}
+//             </h2>
+//             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+//               ETA:{" "}
+//               <span className="text-green-500 font-medium">
+//                 {order.eta || "30 mins"}
+//               </span>
+//             </p>
+//             <p className="text-sm mt-1">
+//               <strong>Delivering To:</strong>{" "}
+//               {order.deliveryAddress?.fullAddress || "N/A"}
+//             </p>
+//           </div>
+//           <div className="text-sm">
+//             <p>
+//               <strong>Items:</strong>{" "}
+//               {order.items
+//                 ?.map(
+//                   (item) =>
+//                     `${item.menuItemId?.name || "Item"} × ${item.quantity}`
+//                 )
+//                 .join(", ")}
+//             </p>
+//             <p className="mt-1 font-medium">
+//               <strong>Total:</strong> ₹{order.totalAmount?.toFixed(2)}
+//             </p>
+//             {order.premiumApplied && order.savings > 0 && (
+//               <p className="text-green-600 font-medium">
+//                 Premium Savings: -₹{order.savings?.toFixed(2)}
+//               </p>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Progress Tracker */}
+//       <div className="mb-10">
+//         <h2 className="text-xl font-semibold mb-4">Order Status</h2>
+//         <div className="flex justify-between items-center gap-3 relative">
+//           {visibleSteps.map((step, index) => {
+//             const isDone = index <= currentStepIndex;
+//             const stepColor =
+//               isCancelled && step.label === "Cancelled"
+//                 ? "bg-rose-500 text-white"
+//                 : isDone
+//                 ? "bg-primary text-white"
+//                 : "bg-gray-300 text-gray-600";
+
+//             const lineColor =
+//               index < currentStepIndex
+//                 ? "bg-primary"
+//                 : isCancelled && step.label === "Cancelled"
+//                 ? "bg-rose-500"
+//                 : "bg-gray-300";
+
+//             return (
+//               <div
+//                 key={step.label}
+//                 className="flex flex-col items-center flex-1 relative"
+//               >
+//                 <div
+//                   className={`w-10 h-10 flex items-center justify-center rounded-full transition-all duration-300 ${stepColor}`}
+//                 >
+//                   {step.icon}
+//                 </div>
+//                 <p
+//                   className={`mt-2 text-sm text-center ${
+//                     isDone ? "font-medium" : "text-gray-500"
+//                   } ${
+//                     isCancelled && step.label === "Cancelled"
+//                       ? "text-rose-500"
+//                       : "text-primary"
+//                   }`}
+//                 >
+//                   {step.label}
+//                 </p>
+//                 {index < visibleSteps.length - 1 && (
+//                   <div
+//                     className={`absolute top-5 right-0 w-full h-1 z-[-1] ${lineColor}`}
+//                   ></div>
+//                 )}
+//               </div>
+//             );
+//           })}
+//         </div>
+//       </div>
+
+//       {/* Delivery Partner Info */}
+//       {deliveryAgent && !isCancelled && (
+//         <div className="bg-white dark:bg-secondary border dark:border-gray-700 shadow rounded-xl p-6 mb-10">
+//           <h2 className="text-xl font-semibold mb-4">Your Delivery Partner</h2>
+//           <div className="flex items-center gap-4">
+//             <img
+//               src={deliveryAgent.avatar || "https://i.pravatar.cc/100?img=12"}
+//               alt={deliveryAgent.name}
+//               className="w-16 h-16 rounded-full object-cover border-2 border-primary"
+//             />
+//             <div className="flex-1">
+//               <p className="font-medium text-lg">{deliveryAgent.name}</p>
+//               <p className="text-sm text-gray-500 dark:text-gray-400">
+//                 Vehicle: {deliveryAgent.vehicle || "Not specified"}
+//               </p>
+//               <p className="text-sm text-gray-500 dark:text-gray-400">
+//                 Phone: {deliveryAgent.phone || "N/A"}
+//               </p>
+//             </div>
+//             <div className="flex gap-3">
+//               <button
+//                 onClick={() => alert("Opening chat...")}
+//                 className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-orange-600 transition"
+//               >
+//                 <FaComments /> Chat
+//               </button>
+//               <button
+//                 onClick={() => alert("Calling...")}
+//                 className="flex items-center gap-2 px-4 py-2 bg-gray-700 text-white rounded-md text-sm hover:bg-gray-800 transition"
+//               >
+//                 <FaPhoneAlt /> Call
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+//       )}
+
+//       {/* ⭐ Feedback Form */}
+//       {showFeedbackForm && !feedbackSubmitted && (
+//         <div className="bg-white dark:bg-secondary border dark:border-gray-700 shadow rounded-xl p-6 mb-10">
+//           <h2 className="text-xl font-semibold mb-4">How was your order?</h2>
+//           <div className="flex gap-1 mb-4">
+//             {[1, 2, 3, 4, 5].map((s) => (
+//               <FaStar
+//                 key={s}
+//                 onClick={() => setRating(s)}
+//                 className={`w-7 h-7 cursor-pointer ${
+//                   s <= rating ? "text-yellow-400" : "text-gray-300"
+//                 }`}
+//               />
+//             ))}
+//           </div>
+//           <textarea
+//             placeholder="Write a short review (optional)..."
+//             value={comment}
+//             onChange={(e) => setComment(e.target.value)}
+//             className="w-full p-3 border rounded-md mb-4 dark:bg-gray-800 dark:border-gray-600"
+//           ></textarea>
+//           <button
+//             onClick={handleFeedbackSubmit}
+//             className="bg-primary text-white px-5 py-2 rounded hover:bg-orange-600 transition"
+//           >
+//             Submit Feedback
+//           </button>
+//         </div>
+//       )}
+
+//       {/* Help + Reorder */}
+//       <div className="flex justify-between flex-wrap gap-4 mt-6">
+//         <button
+//           onClick={() => setShowSupportModal(true)}
+//           className="w-full md:w-auto bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white px-5 py-3 rounded-lg shadow hover:bg-gray-200 dark:hover:bg-gray-700 transition text-sm font-medium"
+//         >
+//           Need Help?
+//         </button>
+//         {showSupportModal && (
+//           <CustomerSupportModal
+//             order={order}
+//             onClose={() => setShowSupportModal(false)}
+//           />
+//         )}
+//         <button
+//           onClick={handleReorder}
+//           className="w-full md:w-auto bg-primary text-white px-5 py-3 rounded-lg shadow hover:bg-orange-600 transition text-sm font-medium"
+//         >
+//           Reorder This Meal
+//         </button>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default CustomerTrackOrder;

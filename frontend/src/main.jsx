@@ -19,8 +19,8 @@ createRoot(document.getElementById("root")).render(
           <CartProvider>
             <OrderProvider>
               <ToastProvider>
-                <App />
                 <CustomToaster />
+                <App />
               </ToastProvider>
             </OrderProvider>
           </CartProvider>

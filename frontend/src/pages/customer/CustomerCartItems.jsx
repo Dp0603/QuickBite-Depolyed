@@ -1,6 +1,7 @@
 import React, { useRef } from "react";
 import { motion } from "framer-motion";
 import Lottie from "lottie-react";
+import { useToast } from "../../context/ToastContext";
 import AddLottie from "../../assets/lottie icons/Plus.json";
 import RemoveLottie from "../../assets/lottie icons/Minus.json";
 import DeleteLottie from "../../assets/lottie icons/Bin side open.json";
@@ -9,15 +10,17 @@ const CustomerCartItems = ({ item, increment, decrement, removeItem }) => {
   const addRef = useRef();
   const removeRef = useRef();
   const deleteRef = useRef();
-
+  const { success, error, warning } = useToast();
   const food = item;
 
+  // Increment item
   const handleIncrement = () => {
     increment();
     addRef.current?.stop();
     addRef.current?.play();
   };
 
+  // Decrement (only if quantity > 1)
   const handleDecrement = () => {
     if (food.quantity > 1) {
       decrement();
@@ -26,10 +29,27 @@ const CustomerCartItems = ({ item, increment, decrement, removeItem }) => {
     }
   };
 
+  // Handle Delete (with Undo toast)
   const handleRemove = () => {
+    if (!food) return;
     deleteRef.current?.stop();
     deleteRef.current?.play();
-    setTimeout(() => removeItem(), 600);
+
+    const removedItem = { ...food };
+
+    // Instantly remove visually
+    setTimeout(() => removeItem(), 500);
+
+    warning(`Removed ${removedItem.name} from cart.`, {
+      description: "You can undo this action within a few seconds.",
+      action: {
+        label: "Undo",
+        onClick: () => {
+          increment();
+          success(`${removedItem.name} restored to cart.`);
+        },
+      },
+    });
   };
 
   return (
