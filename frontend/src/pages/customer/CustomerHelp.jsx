@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   FaSearch,
   FaPhoneAlt,
@@ -15,6 +16,11 @@ import {
   FaExclamationCircle,
   FaRegClock,
   FaCheckCircle,
+  FaTimes,
+  FaTicketAlt,
+  FaHeadset,
+  FaLightbulb,
+  FaRocket,
 } from "react-icons/fa";
 
 // ===== Icon Mapping =====
@@ -27,26 +33,34 @@ const iconMap = {
 
 // ===== Status Badge =====
 const StatusBadge = React.memo(({ status = "pending" }) => {
-  const styling =
-    {
-      pending: "bg-yellow-100 text-yellow-800",
-      "in-progress": "bg-blue-100 text-blue-800",
-      resolved: "bg-green-100 text-green-800",
-      closed: "bg-gray-100 text-gray-800",
-    }[status] || "bg-gray-100 text-gray-800";
+  const configs = {
+    pending: {
+      bg: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-600/30",
+      icon: FaRegClock,
+    },
+    "in-progress": {
+      bg: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-600/30",
+      icon: FaRocket,
+    },
+    resolved: {
+      bg: "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-600/30",
+      icon: FaCheckCircle,
+    },
+    closed: {
+      bg: "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600",
+      icon: FaTimes,
+    },
+  };
 
-  const Icon =
-    status === "resolved"
-      ? FaCheckCircle
-      : status === "pending"
-      ? FaRegClock
-      : FaExclamationCircle;
+  const config = configs[status] || configs.pending;
+  const Icon = config.icon;
 
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${styling}`}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${config.bg}`}
     >
-      <Icon /> {status.replace("-", " ")}
+      <Icon />
+      {status.replace("-", " ").toUpperCase()}
     </span>
   );
 });
@@ -57,7 +71,16 @@ const FAQAccordion = React.memo(({ data = [], searchTerm = "" }) => {
   const toggle = (cat) => setExpanded((p) => ({ ...p, [cat]: !p[cat] }));
 
   if (!data.length) {
-    return <p className="text-sm text-gray-500">No FAQs available.</p>;
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="text-center py-12 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md"
+      >
+        <div className="text-6xl mb-4">❓</div>
+        <p className="text-gray-500 dark:text-gray-400">No FAQs available.</p>
+      </motion.div>
+    );
   }
 
   const highlight = (text) => {
@@ -65,7 +88,7 @@ const FAQAccordion = React.memo(({ data = [], searchTerm = "" }) => {
     const regex = new RegExp(`(${searchTerm})`, "gi");
     return text.split(regex).map((part, i) =>
       regex.test(part) ? (
-        <span key={i} className="bg-yellow-200">
+        <span key={i} className="bg-yellow-200 dark:bg-yellow-600 font-bold">
           {part}
         </span>
       ) : (
@@ -76,53 +99,86 @@ const FAQAccordion = React.memo(({ data = [], searchTerm = "" }) => {
 
   return (
     <div className="space-y-4">
-      {data.map((cat, idx) => (
-        <div
-          key={`${cat.category}-${idx}`}
-          className="bg-white dark:bg-secondary rounded-lg border dark:border-gray-700 shadow"
-        >
-          <button
-            onClick={() => toggle(cat.category)}
-            className="flex justify-between items-center w-full p-4 text-left"
-            aria-expanded={!!expanded[cat.category]}
-            aria-controls={`faq-${idx}`}
+      {data.map((cat, idx) => {
+        const isExpanded = !!expanded[cat.category];
+        return (
+          <motion.div
+            key={`${cat.category}-${idx}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.05 }}
+            className="group relative"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-xl text-primary">
-                {iconMap[cat.icon] || <FaQuestionCircle />}
-              </span>
-              <span className="font-semibold">
-                {highlight(cat.category)}
-                {cat.items?.length ? (
-                  <span className="ml-2 text-xs text-gray-400">
-                    ({cat.items.length})
-                  </span>
-                ) : null}
-              </span>
-            </div>
-            <FaChevronDown
-              className={`transition-transform ${
-                expanded[cat.category] ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-          {expanded[cat.category] && (
-            <div id={`faq-${idx}`} className="border-t dark:border-gray-600">
-              {cat.items?.map((item, i) => (
-                <div
-                  key={i}
-                  className="p-4 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  <p className="font-medium">{highlight(item.question)}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    {highlight(item.answer)}
-                  </p>
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-pink-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+            <div className="relative bg-white dark:bg-slate-900 rounded-3xl border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+              <motion.button
+                onClick={() => toggle(cat.category)}
+                className="flex justify-between items-center w-full p-6 text-left"
+                whileHover={{ x: 5 }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-white text-xl shadow-md group-hover:scale-110 transition-transform">
+                    {iconMap[cat.icon] || <FaQuestionCircle />}
+                  </div>
+                  <div>
+                    <span className="font-bold text-lg text-gray-900 dark:text-white">
+                      {highlight(cat.category)}
+                    </span>
+                    {cat.items?.length ? (
+                      <span className="ml-2 px-2 py-0.5 rounded-full bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 text-xs font-bold">
+                        {cat.items.length}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
-              ))}
+                <motion.div
+                  animate={{ rotate: isExpanded ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <FaChevronDown className="text-orange-500 text-xl" />
+                </motion.div>
+              </motion.button>
+
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="border-t border-gray-200 dark:border-gray-700 overflow-hidden"
+                  >
+                    {cat.items?.map((item, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="p-6 hover:bg-orange-50 dark:hover:bg-orange-500/10 transition-colors"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-1">
+                            <FaLightbulb />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-bold text-gray-900 dark:text-white mb-2">
+                              {highlight(item.question)}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+                              {highlight(item.answer)}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          )}
-        </div>
-      ))}
+          </motion.div>
+        );
+      })}
     </div>
   );
 });
@@ -207,7 +263,7 @@ export default function CustomerHelp({ currentUser }) {
     };
   }, []);
 
-  // Filter FAQs with debounced search
+  // Filter FAQs
   const filteredFaqs = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     if (!q) return faqs;
@@ -225,7 +281,7 @@ export default function CustomerHelp({ currentUser }) {
       .filter(Boolean);
   }, [faqs, debouncedSearch]);
 
-  // ===== File attachment handler =====
+  // File handler
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -253,7 +309,7 @@ export default function CustomerHelp({ currentUser }) {
     setPreview(null);
   };
 
-  // ===== Form submission =====
+  // Form submit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitStatus(null);
@@ -306,7 +362,7 @@ export default function CustomerHelp({ currentUser }) {
     }
   };
 
-  // ===== Load Tickets =====
+  // Load Tickets
   const loadTickets = useCallback(async () => {
     setTicketsLoading(true);
     setTicketsError(null);
@@ -334,262 +390,448 @@ export default function CustomerHelp({ currentUser }) {
     if (activeTab === "tickets") loadTickets();
   }, [activeTab, loadTickets]);
 
-  // ===== Render =====
   return (
-    <div className="p-6 max-w-5xl mx-auto text-gray-800 dark:text-white">
-      {/* Hero */}
-      <div className="bg-gradient-to-r from-primary to-primary-dark text-white p-6 rounded-lg mb-6 shadow-lg">
-        <h1 className="text-3xl font-bold">Help & Support</h1>
-        <p className="text-sm text-white/80">
-          Find answers, track your tickets, or contact support
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-pink-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+      <motion.div
+        className="px-4 sm:px-8 md:px-10 lg:px-12 py-8"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {/* Hero */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative mb-8 overflow-hidden rounded-3xl shadow-2xl border border-orange-200 dark:border-white/10"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500 via-pink-600 to-purple-600"></div>
+          <div className="relative z-10 p-8 md:p-10 text-white">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center ring-4 ring-white/30">
+                <FaHeadset className="text-3xl" />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-5xl font-black drop-shadow-lg">
+                  Help & Support
+                </h1>
+                <p className="text-white/90 text-lg">
+                  Find answers, track tickets, or contact our team
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {[
-          { key: "faqs", label: "FAQs" },
-          { key: "tickets", label: "My Tickets" },
-        ].map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setActiveTab(t.key)}
-            className={`px-4 py-2 rounded-full border text-sm ${
-              activeTab === t.key
-                ? "bg-primary text-white border-primary"
-                : "bg-white dark:bg-secondary border-gray-300 dark:border-gray-700"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Search Bar */}
-      {activeTab === "faqs" && (
-        <div className="flex items-center bg-white dark:bg-secondary rounded-lg p-2 mb-6 border dark:border-gray-700 shadow">
-          <FaSearch className="text-gray-400 mr-2" />
-          <input
-            type="text"
-            placeholder="Search help topics..."
-            className="flex-1 bg-transparent outline-none"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search help topics"
-          />
+        {/* Tabs */}
+        <div className="flex flex-wrap gap-3 mb-8">
+          {[
+            { key: "faqs", label: "FAQs", icon: FaQuestionCircle },
+            { key: "tickets", label: "My Tickets", icon: FaTicketAlt },
+          ].map((t, i) => {
+            const Icon = t.icon;
+            const isActive = activeTab === t.key;
+            return (
+              <motion.button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                className={`relative flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${
+                  isActive
+                    ? "bg-gradient-to-r from-orange-500 to-pink-600 text-white shadow-lg"
+                    : "bg-white dark:bg-slate-900 text-gray-700 dark:text-gray-300 border-2 border-gray-200 dark:border-gray-700 hover:border-orange-500"
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <Icon />
+                {t.label}
+              </motion.button>
+            );
+          })}
         </div>
-      )}
 
-      {/* FAQs */}
-      {activeTab === "faqs" && (
-        <section className="mb-10">
-          {faqLoading ? (
-            <p className="text-sm text-gray-500">Loading FAQs…</p>
-          ) : faqError ? (
-            <p className="text-sm text-red-500">{faqError}</p>
-          ) : (
-            <FAQAccordion data={filteredFaqs} searchTerm={debouncedSearch} />
-          )}
-        </section>
-      )}
-
-      {/* Tickets */}
-      {activeTab === "tickets" && (
-        <section className="mb-10">
-          {ticketsLoading ? (
-            <p className="text-sm text-gray-500">Loading your tickets…</p>
-          ) : ticketsError ? (
-            <p className="text-sm text-red-500">{ticketsError}</p>
-          ) : tickets.length ? (
-            <div className="space-y-3">
-              {tickets.map((t) => (
-                <div
-                  key={t.ticketId || t._id}
-                  className="p-4 bg-white dark:bg-secondary rounded-lg border dark:border-gray-700 shadow"
-                >
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold">
-                        #{t.ticketId || t._id}
-                      </span>
-                      <StatusBadge status={t.status} />
-                    </div>
-                    <span className="text-xs text-gray-500">
-                      {t.createdAt
-                        ? new Intl.DateTimeFormat("en-US", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          }).format(new Date(t.createdAt))
-                        : ""}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-sm">
-                    <p className="font-medium">Issue: {t.issue}</p>
-                    {t.message && (
-                      <p className="text-gray-600 dark:text-gray-300">
-                        Message: {t.message}
-                      </p>
-                    )}
-                  </div>
-                  {t.attachmentUrl && (
-                    <a
-                      href={t.attachmentUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-primary underline mt-2 inline-block"
-                    >
-                      View attachment
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">No tickets yet.</p>
-          )}
-        </section>
-      )}
-
-      {/* Support Form */}
-      <section className="mb-10">
-        <div className="bg-white dark:bg-secondary p-4 rounded-lg border dark:border-gray-700 shadow">
-          {submitStatus && (
-            <div
-              aria-live="polite"
-              className={`mb-4 p-3 rounded text-sm ${
-                submitStatus.type === "success"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {submitStatus.text}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Search Bar */}
+        {activeTab === "faqs" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="relative mb-8"
+          >
+            <div className="relative">
+              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Your Name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600"
-                required
+                placeholder="Search help topics..."
+                className="w-full pl-12 pr-12 py-4 border-2 border-gray-200 dark:border-gray-700 rounded-2xl bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all shadow-lg"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
-              <input
-                type="email"
-                placeholder="Your Email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600"
-                required
-              />
-            </div>
-
-            <select
-              value={form.issueType}
-              onChange={(e) => setForm({ ...form, issueType: e.target.value })}
-              className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600"
-              required
-            >
-              <option value="">Select Issue Type</option>
-              <option value="account">Account</option>
-              <option value="general">General</option>
-              <option value="payment">Payment</option>
-              <option value="offers">Offers</option>
-              <option value="technical">Technical</option>
-              <option value="other">Other</option>
-            </select>
-
-            <textarea
-              placeholder="Your Message"
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
-              className="w-full p-2 border rounded dark:bg-gray-800 dark:border-gray-600"
-              rows="4"
-              required
-            />
-
-            <div className="flex items-center justify-between gap-4">
-              <label
-                htmlFor="fileInput"
-                className="inline-flex items-center gap-2 cursor-pointer"
-              >
-                <FaPaperclip />
-                <span className="text-sm">Attach file (image/pdf)</span>
-              </label>
-              <input
-                id="fileInput"
-                type="file"
-                className="hidden"
-                accept="image/*,.pdf"
-                onChange={handleFileChange}
-              />
-              {attachment && (
-                <span className="text-xs text-gray-500 truncate max-w-xs flex items-center gap-1">
-                  {attachment.name}{" "}
-                  <button
-                    type="button"
-                    onClick={removeAttachment}
-                    className="text-red-500"
-                  >
-                    x
-                  </button>
-                </span>
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-orange-500"
+                >
+                  <FaTimes />
+                </button>
               )}
             </div>
+          </motion.div>
+        )}
 
-            {preview && (
-              <img
-                src={preview}
-                alt="Attachment preview"
-                className="mt-2 max-h-40 rounded border"
-              />
+        {/* FAQs */}
+        {activeTab === "faqs" && (
+          <section className="mb-10">
+            {faqLoading ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Loading FAQs...
+                </p>
+              </div>
+            ) : faqError ? (
+              <div className="p-6 rounded-3xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-center">
+                <FaExclamationCircle className="text-red-500 text-4xl mx-auto mb-3" />
+                <p className="text-red-600 dark:text-red-400 font-semibold">
+                  {faqError}
+                </p>
+              </div>
+            ) : (
+              <FAQAccordion data={filteredFaqs} searchTerm={debouncedSearch} />
+            )}
+          </section>
+        )}
+
+        {/* Tickets */}
+        {activeTab === "tickets" && (
+          <section className="mb-10">
+            {ticketsLoading ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Loading tickets...
+                </p>
+              </div>
+            ) : ticketsError ? (
+              <div className="p-6 rounded-3xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-center">
+                <p className="text-red-600 dark:text-red-400 font-semibold">
+                  {ticketsError}
+                </p>
+              </div>
+            ) : tickets.length ? (
+              <div className="space-y-4">
+                {tickets.map((ticket, i) => (
+                  <motion.div
+                    key={ticket.ticketId || ticket._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="group relative"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-pink-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                    <div className="relative p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
+                      <div className="flex items-start justify-between flex-wrap gap-4 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white font-bold">
+                            <FaTicketAlt />
+                          </div>
+                          <div>
+                            <span className="font-bold text-lg text-gray-900 dark:text-white">
+                              #{ticket.ticketId || ticket._id}
+                            </span>
+                            <div className="mt-1">
+                              <StatusBadge status={ticket.status} />
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                          <FaRegClock />
+                          {ticket.createdAt
+                            ? new Intl.DateTimeFormat("en-US", {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              }).format(new Date(ticket.createdAt))
+                            : ""}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="font-bold text-gray-900 dark:text-white">
+                          Issue:{" "}
+                          <span className="text-orange-600 dark:text-orange-400">
+                            {ticket.issue}
+                          </span>
+                        </p>
+                        {ticket.message && (
+                          <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                            {ticket.message}
+                          </p>
+                        )}
+                      </div>
+
+                      {ticket.attachmentUrl && (
+                        <a
+                          href={ticket.attachmentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 mt-4 text-sm text-orange-600 dark:text-orange-400 hover:underline font-semibold"
+                        >
+                          <FaPaperclip />
+                          View attachment
+                        </a>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md">
+                <div className="text-6xl mb-4">🎫</div>
+                <p className="text-gray-500 dark:text-gray-400">
+                  No tickets yet.
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Support Form */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-10 relative"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-pink-500/20 rounded-3xl blur-xl opacity-50"></div>
+
+          <div className="relative p-8 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-xl">
+            <h2 className="text-2xl font-black bg-gradient-to-r from-orange-600 to-pink-600 dark:from-orange-400 dark:to-pink-500 bg-clip-text text-transparent mb-6 flex items-center gap-3">
+              <FaPaperPlane />
+              Submit a Request
+            </h2>
+
+            {submitStatus && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className={`mb-6 p-4 rounded-2xl flex items-center gap-3 ${
+                  submitStatus.type === "success"
+                    ? "bg-green-100 dark:bg-green-900/30 border border-green-200 dark:border-green-500/30 text-green-700 dark:text-green-300"
+                    : "bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-300"
+                }`}
+              >
+                {submitStatus.type === "success" ? (
+                  <FaCheckCircle className="text-2xl" />
+                ) : (
+                  <FaExclamationCircle className="text-2xl" />
+                )}
+                <span className="font-semibold">{submitStatus.text}</span>
+              </motion.div>
             )}
 
-            <button
-              type="submit"
-              disabled={submitLoading}
-              className="bg-primary text-white px-4 py-2 rounded shadow disabled:opacity-50"
-            >
-              {submitLoading ? (
-                "Submitting…"
-              ) : (
-                <>
-                  <FaPaperPlane className="inline mr-2" /> Submit
-                </>
-              )}
-            </button>
-          </form>
-        </div>
-      </section>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    Your Name
+                  </label>
+                  <input
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all"
+                    required
+                    placeholder="John Doe"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    Your Email
+                  </label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all"
+                    required
+                    placeholder="you@example.com"
+                  />
+                </div>
+              </div>
 
-      {/* Contact Section */}
-      <section className="bg-white dark:bg-secondary p-4 rounded-lg border dark:border-gray-700 shadow">
-        <h2 className="font-semibold text-lg mb-2">Contact Us Directly</h2>
-        <div className="flex flex-wrap gap-4">
-          <a
-            href="tel:+123456789"
-            className="flex items-center gap-2 text-primary hover:underline"
-          >
-            <FaPhoneAlt /> +91XXXXX-XXXXX
-          </a>
-          <a
-            href="https://wa.me/123456789"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-green-500 hover:underline"
-          >
-            <FaWhatsapp /> WhatsApp
-          </a>
-          <a
-            href="mailto:support@example.com"
-            className="flex items-center gap-2 text-blue-500 hover:underline"
-          >
-            <FaEnvelope /> support@quickbite.com
-          </a>
-        </div>
-      </section>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  Issue Type
+                </label>
+                <select
+                  value={form.issueType}
+                  onChange={(e) =>
+                    setForm({ ...form, issueType: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all"
+                  required
+                >
+                  <option value="">Select Issue Type</option>
+                  <option value="account">Account</option>
+                  <option value="general">General</option>
+                  <option value="payment">Payment</option>
+                  <option value="offers">Offers</option>
+                  <option value="technical">Technical</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={form.message}
+                  onChange={(e) =>
+                    setForm({ ...form, message: e.target.value })
+                  }
+                  className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all resize-none"
+                  rows="5"
+                  required
+                  placeholder="Describe your issue..."
+                />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <label
+                  htmlFor="fileInput"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer transition-all"
+                >
+                  <FaPaperclip />
+                  <span className="text-sm font-semibold">Attach File</span>
+                </label>
+                <input
+                  id="fileInput"
+                  type="file"
+                  className="hidden"
+                  accept="image/*,.pdf"
+                  onChange={handleFileChange}
+                />
+                {attachment && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-100 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 text-sm">
+                    <span className="truncate max-w-xs">{attachment.name}</span>
+                    <button
+                      type="button"
+                      onClick={removeAttachment}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {preview && (
+                <motion.img
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  src={preview}
+                  alt="Preview"
+                  className="mt-4 max-h-48 rounded-2xl border-2 border-gray-200 dark:border-gray-700 shadow-lg"
+                />
+              )}
+
+              <motion.button
+                type="submit"
+                disabled={submitLoading}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-orange-500 to-pink-600 hover:from-orange-600 hover:to-pink-700 text-white font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                whileHover={{ scale: submitLoading ? 1 : 1.02 }}
+                whileTap={{ scale: submitLoading ? 1 : 0.98 }}
+              >
+                {submitLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <FaPaperPlane />
+                    Submit Request
+                  </>
+                )}
+              </motion.button>
+            </form>
+          </div>
+        </motion.section>
+
+        {/* Contact Section */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="relative"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-pink-500/20 rounded-3xl blur-xl opacity-50"></div>
+
+          <div className="relative p-8 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-xl">
+            <h2 className="text-2xl font-black bg-gradient-to-r from-orange-600 to-pink-600 dark:from-orange-400 dark:to-pink-500 bg-clip-text text-transparent mb-6 flex items-center gap-3">
+              <FaHeadset />
+              Contact Us Directly
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                {
+                  icon: FaPhoneAlt,
+                  label: "Call Us",
+                  value: "+91 XXXXX-XXXXX",
+                  href: "tel:+123456789",
+                  gradient: "from-blue-500 to-cyan-600",
+                },
+                {
+                  icon: FaWhatsapp,
+                  label: "WhatsApp",
+                  value: "Chat with us",
+                  href: "https://wa.me/123456789",
+                  gradient: "from-green-500 to-emerald-600",
+                },
+                {
+                  icon: FaEnvelope,
+                  label: "Email",
+                  value: "support@quickbite.com",
+                  href: "mailto:support@quickbite.com",
+                  gradient: "from-purple-500 to-pink-600",
+                },
+              ].map((contact, i) => {
+                const Icon = contact.icon;
+                return (
+                  <motion.a
+                    key={i}
+                    href={contact.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group p-6 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600 hover:border-orange-300 dark:hover:border-orange-500 shadow-md hover:shadow-xl transition-all duration-300"
+                    whileHover={{ scale: 1.05, y: -5 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-xl bg-gradient-to-br ${contact.gradient} flex items-center justify-center text-white text-xl shadow-lg mb-4 group-hover:scale-110 transition-transform`}
+                    >
+                      <Icon />
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                      {contact.label}
+                    </div>
+                    <div className="font-bold text-gray-900 dark:text-white">
+                      {contact.value}
+                    </div>
+                  </motion.a>
+                );
+              })}
+            </div>
+          </div>
+        </motion.section>
+      </motion.div>
     </div>
   );
 }
