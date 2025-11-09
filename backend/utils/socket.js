@@ -7,7 +7,7 @@ let io;
 const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: "http://localhost:3000", // Update this for production
+      origin: "http://localhost:5000", // Update this for production
       methods: ["GET", "POST"],
     },
   });
