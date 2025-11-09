@@ -16,32 +16,41 @@ const validateIds = (ids) => {
   return null;
 };
 
-/**
- * Helper: Calculate Premium benefits
- */
 const calculatePremiumBenefits = (cartItems, premiumPlan) => {
-  if (!premiumPlan || !premiumPlan.isActive) return null;
+  if (!premiumPlan || !premiumPlan.isActive)
+    return {
+      freeDelivery: 0,
+      extraDiscount: 0,
+      cashback: 0,
+      totalSavings: 0,
+    };
 
   let subtotal = 0;
   cartItems.forEach((item) => {
-    subtotal += item.menuItem.price * item.quantity;
+    const price = Number(item.menuItem?.price) || 0;
+    const qty = Number(item.quantity) || 0;
+    subtotal += price * qty;
   });
 
-  // Delivery fee logic: only apply free delivery if subtotal < 500 normally
   const normalDeliveryFee = subtotal >= 500 ? 0 : 40;
 
-  // 🟢 Premium perks
   const freeDelivery = premiumPlan.perks?.freeDelivery ? normalDeliveryFee : 0;
-  const extraDiscount = premiumPlan.perks?.extraDiscount
-    ? (subtotal * premiumPlan.perks.extraDiscount) / 100
-    : 0;
-  const cashback = premiumPlan.perks?.cashback
-    ? (subtotal * premiumPlan.perks.cashback) / 100
-    : 0;
+
+  const extraDiscountPercent = Number(premiumPlan.perks?.extraDiscount) || 0;
+  const cashbackPercent = Number(premiumPlan.perks?.cashback) || 0;
+
+  const extraDiscount = (subtotal * extraDiscountPercent) / 100;
+  const cashback = (subtotal * cashbackPercent) / 100;
 
   const totalSavings = freeDelivery + extraDiscount + cashback;
 
-  return { freeDelivery, extraDiscount, cashback, totalSavings };
+  // ✅ Always return valid numbers
+  return {
+    freeDelivery: Number.isFinite(freeDelivery) ? freeDelivery : 0,
+    extraDiscount: Number.isFinite(extraDiscount) ? extraDiscount : 0,
+    cashback: Number.isFinite(cashback) ? cashback : 0,
+    totalSavings: Number.isFinite(totalSavings) ? totalSavings : 0,
+  };
 };
 
 /**

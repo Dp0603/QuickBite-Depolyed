@@ -69,13 +69,15 @@ const createRazorpayOrder = async (req, res) => {
   }
 };
 
-// ✅ Verify Razorpay Signature & Create Order
+// ✅ Safe number helper
+const safeNum = (val) => (isNaN(val) || val === null ? 0 : Number(val));
+
 const verifyRazorpaySignature = async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } =
       req.body.paymentDetails;
 
-    // 1. Verify Razorpay signature
+    // 1️⃣ Verify Razorpay signature
     const generatedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -87,7 +89,7 @@ const verifyRazorpaySignature = async (req, res) => {
         .json({ success: false, message: "❌ Invalid Razorpay signature" });
     }
 
-    // 2. Fetch menu item details
+    // 2️⃣ Fetch menu item details
     const detailedItems = await Promise.all(
       req.body.items.map(async (item) => {
         const menu = await Menu.findById(item.menuItemId).lean();
@@ -97,18 +99,18 @@ const verifyRazorpaySignature = async (req, res) => {
         return {
           menuItemId: item.menuItemId,
           name: menu.name,
-          price: menu.price,
-          quantity: item.quantity || 1,
+          price: safeNum(menu.price),
+          quantity: safeNum(item.quantity || 1),
           note: item.note || "",
         };
       })
     );
 
-    // 3. Fetch address
+    // 3️⃣ Fetch address
     const address = await Address.findById(req.body.addressId).lean();
     if (!address) throw new Error("Address not found");
 
-    // 4. PREMIUM LOGIC: calculate premium savings if user is premium
+    // 4️⃣ PREMIUM LOGIC: calculate premium savings if user is premium
     let premiumApplied = false;
     let savings = 0;
     let premiumBreakdown = {
@@ -117,7 +119,6 @@ const verifyRazorpaySignature = async (req, res) => {
       cashback: 0,
     };
 
-    // Fetch active premium subscription
     const subscription = await PremiumSubscription.findOne({
       subscriberId: req.body.customerId,
       subscriberType: "User",
@@ -126,29 +127,34 @@ const verifyRazorpaySignature = async (req, res) => {
     });
 
     // Use original delivery fee instead of client’s fee
-    // (fetch from restaurant config or set default)
-    const originalDeliveryFee = req.body.originalDeliveryFee || 40;
+    const originalDeliveryFee = safeNum(req.body.originalDeliveryFee || 40);
     let deliveryFee = originalDeliveryFee;
-    let discount = req.body.discount;
+    let discount = safeNum(req.body.discount);
+    const subtotal = safeNum(req.body.subtotal);
 
     if (subscription) {
       premiumApplied = true;
 
-      // Free Delivery
+      // ✅ Free Delivery
       const deliverySavings = subscription.perks.freeDelivery
         ? originalDeliveryFee
         : 0;
       deliveryFee = subscription.perks.freeDelivery ? 0 : originalDeliveryFee;
 
-      // Extra Discount
-      const extraDiscountRate = subscription.perks.extraDiscount || 0;
-      const discountSavings = (req.body.subtotal * extraDiscountRate) / 100;
+      // ✅ Extra Discount
+      const extraDiscountRate = safeNum(
+        subscription.perks.extraDiscount?.value ||
+          subscription.perks.extraDiscount ||
+          0
+      );
+      const discountSavings = (subtotal * extraDiscountRate) / 100;
       discount = discount + discountSavings;
 
-      // Cashback (if any)
-      const cashback = subscription.perks.cashback
-        ? (req.body.subtotal * subscription.perks.cashback) / 100
-        : 0;
+      // ✅ Cashback
+      const cashbackRate = safeNum(
+        subscription.perks.cashback?.value || subscription.perks.cashback || 0
+      );
+      const cashback = (subtotal * cashbackRate) / 100;
 
       premiumBreakdown = {
         freeDelivery: deliverySavings,
@@ -156,27 +162,30 @@ const verifyRazorpaySignature = async (req, res) => {
         cashback,
       };
 
-      savings = deliverySavings + discountSavings + cashback;
+      savings =
+        safeNum(deliverySavings) + safeNum(discountSavings) + safeNum(cashback);
 
-      // Update subscription’s total savings
-      subscription.totalSavings = (subscription.totalSavings || 0) + savings;
+      // ✅ Update subscription’s total savings safely
+      subscription.totalSavings =
+        safeNum(subscription.totalSavings) + safeNum(savings);
       await subscription.save();
     }
 
-    // Compute totalAmount with updated deliveryFee & discount
-    const totalAmount =
-      req.body.subtotal + req.body.tax + deliveryFee - discount;
+    // ✅ Compute totalAmount with updated deliveryFee & discount
+    const totalAmount = safeNum(
+      subtotal + safeNum(req.body.tax) + deliveryFee - discount
+    );
 
-    // 6. Prepare order object (add premium fields)
+    // 6️⃣ Prepare order object
     const orderData = {
       customerId: req.body.customerId,
       restaurantId: req.body.restaurantId,
       items: detailedItems,
-      subtotal: req.body.subtotal,
-      tax: req.body.tax,
-      deliveryFee, // already updated above
-      discount, // already updated above
-      totalAmount, // already computed above
+      subtotal,
+      tax: safeNum(req.body.tax),
+      deliveryFee,
+      discount,
+      totalAmount,
       offerId: req.body.offerId || null,
       deliveryAddress: {
         addressLine: address.addressLine,
@@ -204,10 +213,10 @@ const verifyRazorpaySignature = async (req, res) => {
       premiumBreakdown,
     };
 
-    // 7. Create the order
+    // 7️⃣ Create the order
     const createdOrder = await Order.create(orderData);
 
-    // 8. Clear cart after successful payment
+    // 8️⃣ Clear cart after successful payment
     await Cart.deleteOne({
       userId: req.body.customerId,
       restaurantId: req.body.restaurantId,
