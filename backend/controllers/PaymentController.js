@@ -6,7 +6,7 @@ const Menu = require("../models/MenuModel");
 const Address = require("../models/AddressModel");
 const PremiumSubscription = require("../models/PremiumSubscriptionModel");
 const generateInvoice = require("../utils/generateInvoice");
-const SubscriptionHistory = require("../models/SubscriptionHistorymodel");
+const SubscriptionHistory = require("../models/SubscriptionHistoryModel");
 
 // 🔹 Normalize perks so it always matches schema
 const normalizePerks = (perks = {}) => {
