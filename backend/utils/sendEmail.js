@@ -2,6 +2,11 @@ const axios = require("axios");
 
 const sendEmail = async ({ to, subject, name = "User", body }) => {
   try {
+    console.log(
+      "🔑 Resend key loaded:",
+      process.env.RESEND_API_KEY ? "✅ Yes" : "❌ No"
+    );
+
     const html = `
       <h2 style="color:#FF5722;">Welcome to QuickBite, ${name}!</h2>
       <p>${
@@ -31,11 +36,15 @@ const sendEmail = async ({ to, subject, name = "User", body }) => {
 
     console.log(`📧 Email sent to ${to}: ${res.data.id}`);
   } catch (error) {
-    console.error("❌ Email send failed:", error.message);
+    console.error(
+      "❌ Email send failed:",
+      error.response?.data || error.message
+    );
   }
 };
 
 module.exports = sendEmail;
+
 // const nodemailer = require("nodemailer");
 // const dotenv = require("dotenv");
 
@@ -84,15 +93,15 @@ module.exports = sendEmail;
 //         </div>
 
 //         <div class="container" style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; padding: 2rem;">
-          
+
 //           <!-- Logo -->
 //         <div style="text-align: center; margin-bottom: 1rem;">
-//         <img 
-//             src="https://res.cloudinary.com/dqi8cb2gn/image/upload/v1752342525/Quickbite_i9bwmv.png" 
-//             alt="QuickBite Logo" 
-//             width="48" 
-//             height="48" 
-//             style="border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" 
+//         <img
+//             src="https://res.cloudinary.com/dqi8cb2gn/image/upload/v1752342525/Quickbite_i9bwmv.png"
+//             alt="QuickBite Logo"
+//             width="48"
+//             height="48"
+//             style="border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
 //         />
 //         </div>
 //           <!-- Heading -->
@@ -110,7 +119,7 @@ module.exports = sendEmail;
 //           <div style="text-align: center; margin: 2rem 0;">
 //             <a href="${
 //               process.env.CLIENT_URL || "http://localhost:5173/login"
-//             }" 
+//             }"
 //                style="background-color: #FF5722; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
 //               Login to Your Account
 //             </a>

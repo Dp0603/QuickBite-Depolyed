@@ -2,13 +2,31 @@ const axios = require("axios");
 
 const sendEmail = async ({ to, subject, html }) => {
   try {
+    // Log to confirm the API key is actually being loaded
+    console.log(
+      "🔑 Resend key loaded:",
+      process.env.RESEND_API_KEY ? "✅ Yes" : "❌ No"
+    );
+
+    // Fallback HTML in case none is provided
+    const emailHTML =
+      html ||
+      `
+      <h2 style="color:#FF5722;">Welcome to QuickBite!</h2>
+      <p>We're excited to have you on board. 🎉</p>
+      <a href="${process.env.CLIENT_URL || "http://localhost:5173/login"}" 
+      style="background-color:#FF5722;color:white;padding:10px 20px;
+      border-radius:5px;text-decoration:none;">Login to QuickBite</a>
+    `;
+
+    // Send the email using Resend API
     const res = await axios.post(
       "https://api.resend.com/emails",
       {
         from: "QuickBite 🍔 <onboarding@resend.dev>",
         to,
         subject,
-        html,
+        html: emailHTML,
       },
       {
         headers: {
@@ -20,11 +38,16 @@ const sendEmail = async ({ to, subject, html }) => {
 
     console.log(`📧 Email sent to ${to}: ${res.data.id}`);
   } catch (err) {
-    console.error("❌ Email sending failed:", err.message);
+    // Improved error logging
+    console.error(
+      "❌ Email sending failed:",
+      err.response?.data || err.message || err
+    );
   }
 };
 
 module.exports = sendEmail;
+
 // const nodemailer = require("nodemailer");
 // const dotenv = require("dotenv");
 
