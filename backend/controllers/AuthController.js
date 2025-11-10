@@ -14,12 +14,15 @@ const register = async (req, res) => {
   try {
     console.log("📩 /api/auth/register called");
     console.log("Request body:", req.body);
+
+    // ✅ Show all relevant environment variables
     console.log("Checking environment variables...");
     console.log({
       MONGO_URI: process.env.MONGO_URI ? "✅ Set" : "❌ Missing",
       JWT_SECRET: process.env.JWT_SECRET ? "✅ Set" : "❌ Missing",
-      BREVO_API_KEY: process.env.BREVO_API_KEY ? "✅ Set" : "❌ Missing",
-      FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:5173",
+      EMAIL_USER: process.env.EMAIL_USER ? "✅ Set" : "❌ Missing",
+      EMAIL_PASS: process.env.EMAIL_PASS ? "✅ Set" : "❌ Missing",
+      FRONTEND_URL,
     });
 
     const { name, email, password, role } = req.body;
@@ -49,16 +52,17 @@ const register = async (req, res) => {
       to: user.email,
       subject: "Verify your QuickBite email",
       name: user.name,
-      body: `<p>Click below to verify:</p><a href="${verifyLink}">Verify Email</a>`,
+      body: `<p>Click below to verify your account:</p>
+             <a href="${verifyLink}" target="_blank">Verify Email</a>`,
     });
-    console.log("✅ Email sent successfully!");
 
+    console.log("✅ Email sent successfully!");
     res.status(201).json({
       message: "Registered successfully. Check your email to verify account.",
     });
   } catch (error) {
-    console.error("❌ Error in register controller:", error);
-    res.status(500).json({ message: error.message });
+    console.error("❌ Error in register controller:", error.message);
+    res.status(500).json({ message: "Registration failed: " + error.message });
   }
 };
 
