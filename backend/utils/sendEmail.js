@@ -1,22 +1,11 @@
-// Brevo
-const nodemailer = require("nodemailer");
+// Brevo API Email Sender
+const axios = require("axios");
 const dotenv = require("dotenv");
 
 dotenv.config();
 
-// ✅ Configure Brevo SMTP transporter
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false, // must be false for Brevo (Render supports port 587)
-  auth: {
-    user: process.env.EMAIL_USER, // your Brevo login email
-    pass: process.env.EMAIL_PASS, // your generated SMTP key
-  },
-});
-
 /**
- * Send Email via Brevo SMTP
+ * Send Email via Brevo API
  * @param {Object} options
  * @param {string} options.to - Recipient email
  * @param {string} options.subject - Email subject
@@ -42,14 +31,11 @@ const sendEmail = async ({ to, subject, name = "User", body }) => {
           </style>
         </head>
         <body style="margin:0;padding:0;background-color:#fceeea;font-family:'Segoe UI',sans-serif;">
-
-          <!-- Hidden Preheader -->
           <div style="display:none;max-height:0;overflow:hidden;">
             Welcome to QuickBite! Your account is ready 🍔
           </div>
 
           <div class="container" style="max-width:600px;margin:0 auto;background:#fff;border-radius:10px;padding:2rem;">
-            <!-- Logo -->
             <div style="text-align:center;margin-bottom:1rem;">
               <img
                 src="https://res.cloudinary.com/dqi8cb2gn/image/upload/v1752342525/Quickbite_i9bwmv.png"
@@ -60,12 +46,10 @@ const sendEmail = async ({ to, subject, name = "User", body }) => {
               />
             </div>
 
-            <!-- Heading -->
             <h2 style="text-align:center;color:#FF5722;">
               Welcome to QuickBite, ${name}!
             </h2>
 
-            <!-- Body -->
             <p style="font-size:16px;color:#333;">
               ${
                 body ||
@@ -73,7 +57,6 @@ const sendEmail = async ({ to, subject, name = "User", body }) => {
               }
             </p>
 
-            <!-- CTA -->
             <div style="text-align:center;margin:2rem 0;">
               <a href="${
                 process.env.FRONTEND_URL || "http://localhost:5173/login"
@@ -83,7 +66,6 @@ const sendEmail = async ({ to, subject, name = "User", body }) => {
               </a>
             </div>
 
-            <!-- Footer -->
             <p style="font-size:12px;color:#999;text-align:center;">
               © ${new Date().getFullYear()} QuickBite. All rights reserved.
             </p>
@@ -92,23 +74,34 @@ const sendEmail = async ({ to, subject, name = "User", body }) => {
       </html>
     `;
 
-    const mailOptions = {
-      from: `"QuickBite 🍔" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    };
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: { name: "QuickBite 🍔", email: "pateldevam100@gmail.com" },
+        to: [{ email: to, name }],
+        subject,
+        htmlContent: html,
+      },
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY, 
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`📧 Email sent successfully to ${to}: ${info.messageId}`);
+    console.log(`📧 Email sent successfully to ${to}`);
+    return response.data;
   } catch (error) {
-    console.error("❌ Email send failed:", error.message);
+    console.error(
+      "❌ Email send failed:",
+      error.response?.data || error.message
+    );
     throw new Error("Email failed to send");
   }
 };
 
 module.exports = sendEmail;
-
 
 //Resned
 // const axios = require("axios");

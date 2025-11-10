@@ -1,37 +1,47 @@
-//Brevo
-
-const nodemailer = require("nodemailer");
+// Brevo API Email Sender
+const axios = require("axios");
 require("dotenv").config();
 
-// 🔥 Brevo SMTP configuration
-const transporter = nodemailer.createTransport({
-  host: "smtp-relay.brevo.com",
-  port: 587,
-  secure: false, // important for Brevo
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-// 📧 Reusable sendEmail function
+/**
+ * Send Email via Brevo API
+ * @param {Object} options
+ * @param {string} options.to - Recipient email
+ * @param {string} options.subject - Email subject
+ * @param {string} options.html - Email HTML content
+ */
 const sendEmail = async ({ to, subject, html }) => {
   try {
-    const info = await transporter.sendMail({
-      from: `"QuickBite 🍔" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-    });
-    console.log(`📧 Email sent successfully to ${to}: ${info.messageId}`);
+    const response = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: {
+          name: "QuickBite 🍔",
+          email: "pateldevam100@gmail.com", // ✅ you can replace with your verified sender
+        },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html,
+      },
+      {
+        headers: {
+          "api-key": process.env.BREVO_API_KEY, // ✅ your Brevo API key here
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log(`📧 Email sent successfully to ${to}`);
+    return response.data;
   } catch (error) {
-    console.error("❌ Email sending failed:", error.message);
+    console.error(
+      "❌ Email sending failed:",
+      error.response?.data || error.message
+    );
     throw new Error("Failed to send email");
   }
 };
 
 module.exports = sendEmail;
-
 
 //Resend
 // const axios = require("axios");
@@ -50,7 +60,7 @@ module.exports = sendEmail;
 //       `
 //       <h2 style="color:#FF5722;">Welcome to QuickBite!</h2>
 //       <p>We're excited to have you on board. 🎉</p>
-//       <a href="${process.env.CLIENT_URL || "http://localhost:5173/login"}" 
+//       <a href="${process.env.CLIENT_URL || "http://localhost:5173/login"}"
 //       style="background-color:#FF5722;color:white;padding:10px 20px;
 //       border-radius:5px;text-decoration:none;">Login to QuickBite</a>
 //     `;
@@ -83,10 +93,6 @@ module.exports = sendEmail;
 // };
 
 // module.exports = sendEmail;
-
-
-
-
 
 //Nodemailer
 // const nodemailer = require("nodemailer");
