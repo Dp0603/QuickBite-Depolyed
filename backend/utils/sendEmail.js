@@ -110,7 +110,6 @@ const sendEmail = async ({ to, subject, name = "User", body }) => {
 module.exports = sendEmail;
 
 
-
 //Resned
 // const axios = require("axios");
 
