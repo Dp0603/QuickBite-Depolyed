@@ -12,13 +12,26 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 // ✅ Register a new user
 const register = async (req, res) => {
   try {
+    console.log("📩 /api/auth/register called");
+    console.log("Request body:", req.body);
+    console.log("Checking environment variables...");
+    console.log({
+      MONGO_URI: process.env.MONGO_URI ? "✅ Set" : "❌ Missing",
+      JWT_SECRET: process.env.JWT_SECRET ? "✅ Set" : "❌ Missing",
+      BREVO_API_KEY: process.env.BREVO_API_KEY ? "✅ Set" : "❌ Missing",
+      FRONTEND_URL: process.env.FRONTEND_URL || "http://localhost:5173",
+    });
+
     const { name, email, password, role } = req.body;
 
     const existingUser = await User.findOne({ email });
-    if (existingUser)
+    if (existingUser) {
+      console.log("❌ User already exists:", email);
       return res.status(400).json({ message: "User already exists" });
+    }
 
     const emailToken = crypto.randomBytes(32).toString("hex");
+    console.log("Generated email token:", emailToken);
 
     const user = await User.create({
       name,
@@ -29,18 +42,22 @@ const register = async (req, res) => {
     });
 
     const verifyLink = `${FRONTEND_URL}/verify-email/${emailToken}`;
+    console.log("Verification link:", verifyLink);
 
+    console.log("📤 Sending verification email to:", user.email);
     await sendEmail({
       to: user.email,
       subject: "Verify your QuickBite email",
       name: user.name,
       body: `<p>Click below to verify:</p><a href="${verifyLink}">Verify Email</a>`,
     });
+    console.log("✅ Email sent successfully!");
 
     res.status(201).json({
       message: "Registered successfully. Check your email to verify account.",
     });
   } catch (error) {
+    console.error("❌ Error in register controller:", error);
     res.status(500).json({ message: error.message });
   }
 };
