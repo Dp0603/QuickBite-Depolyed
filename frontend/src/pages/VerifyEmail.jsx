@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import axios from "axios";
 import {
   FaEnvelope,
   FaCheckCircle,
@@ -10,6 +9,7 @@ import {
   FaExclamationTriangle,
 } from "react-icons/fa";
 import { motion } from "framer-motion";
+import API from "../api/axios";
 
 const VerifyEmail = () => {
   const { token } = useParams();
@@ -23,7 +23,7 @@ const VerifyEmail = () => {
     setClicked(true);
     setLoading(true);
     try {
-      const res = await axios.get(`/api/auth/verify-email/${token}`);
+      const res = await API.get(`/auth/verify-email/${token}`);
       setMessage(res.data.message || "Email verified successfully!");
       setVerified(true);
     } catch (err) {
@@ -314,7 +314,6 @@ const VerifyEmail = () => {
 };
 
 export default VerifyEmail;
-
 
 // old
 // // import React, { useState } from "react";
