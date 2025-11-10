@@ -52,10 +52,17 @@ app.set("io", io);
 // 🛡 Middleware
 app.use(
   cors({
-    origin: "*",
+    origin: [
+      "http://localhost:5173", // ✅ local dev
+      "https://quickbite-frontend.onrender.com", // ✅ your Render frontend URL (update if different)
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
     exposedHeaders: ["x-rtb-fingerprint-id"],
   })
 );
+
 app.use(express.json());
 
 // ✅ Ensure uploads folder exists
