@@ -24,12 +24,12 @@ const PerkCard = ({ icon, title, desc, gradient, delay }) => (
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
     transition={{ delay }}
-    className="group relative"
+    className="group relative h-full"
   >
     <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-pink-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-    <div className="relative p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
-      <div className="flex items-start gap-4">
+    <div className="relative h-full min-h-[240px] flex flex-col justify-between p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
+      <div className="flex flex-col flex-1 items-start gap-4">
         <div
           className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-white text-2xl shadow-lg group-hover:scale-110 transition-transform flex-shrink-0`}
         >
@@ -39,7 +39,9 @@ const PerkCard = ({ icon, title, desc, gradient, delay }) => (
           <h3 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">
             {title}
           </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">{desc}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+            {desc}
+          </p>
         </div>
       </div>
     </div>
@@ -204,7 +206,6 @@ const CustomerPremiumMember = ({
 
           {/* Progress Section */}
           <div className="grid md:grid-cols-2 gap-8 mb-8">
-            {/* Left: Timeline */}
             <div>
               <div className="flex items-center gap-3 mb-4">
                 <FaCalendarAlt className="text-2xl text-white/80" />
@@ -307,7 +308,7 @@ const CustomerPremiumMember = ({
         </div>
       </motion.div>
 
-      {/* Benefits Section */}
+      {/* ✅ Benefits Section (Equal Height Fixed) */}
       <div className="mb-8">
         <motion.h3
           initial={{ opacity: 0, y: 20 }}
@@ -318,7 +319,7 @@ const CustomerPremiumMember = ({
           Your Premium Benefits
         </motion.h3>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-6 items-stretch">
           <PerkCard
             icon={<FaTruck />}
             title="Unlimited Free Delivery"
@@ -344,33 +345,35 @@ const CustomerPremiumMember = ({
       </div>
 
       {/* Stats Grid */}
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-3 gap-6 items-stretch">
         {/* Total Savings */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
-          className="relative group"
+          className="relative group h-full"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-          <div className="relative p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-2xl shadow-lg">
-                <FaGift />
-              </div>
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Total Savings
+          <div className="relative h-full min-h-[230px] flex flex-col justify-between p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
+            <div>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-2xl shadow-lg">
+                  <FaGift />
                 </div>
-                <div className="text-3xl font-black bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-500 bg-clip-text text-transparent">
-                  ₹<CountUp end={savedAmount} duration={1.6} separator="," />
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Total Savings
+                  </div>
+                  <div className="text-3xl font-black bg-gradient-to-r from-green-600 to-emerald-600 dark:from-green-400 dark:to-emerald-500 bg-clip-text text-transparent">
+                    ₹<CountUp end={savedAmount} duration={1.6} separator="," />
+                  </div>
                 </div>
               </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                You've saved this much since joining Premium!
+              </p>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              You've saved this much since joining Premium!
-            </p>
           </div>
         </motion.div>
 
@@ -379,33 +382,35 @@ const CustomerPremiumMember = ({
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.5 }}
-          className="relative group"
+          className="relative group h-full"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-          <div className="relative p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-2xl shadow-lg">
-                <FaCrown />
-              </div>
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Membership Tier
+          <div className="relative h-full min-h-[230px] flex flex-col justify-between p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
+            <div>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center text-white text-2xl shadow-lg">
+                  <FaCrown />
                 </div>
-                <div className="text-2xl font-black text-gray-900 dark:text-white">
-                  {planInfo.planName}
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Membership Tier
+                  </div>
+                  <div className="text-2xl font-black text-gray-900 dark:text-white">
+                    {planInfo.planName}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <FaStar key={i} className="text-yellow-500 text-sm" />
-                ))}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <FaStar key={i} className="text-yellow-500 text-sm" />
+                  ))}
+                </div>
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  Premium Member
+                </span>
               </div>
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                Premium Member
-              </span>
             </div>
           </div>
         </motion.div>
@@ -415,29 +420,31 @@ const CustomerPremiumMember = ({
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.6 }}
-          className="relative group"
+          className="relative group h-full"
         >
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-          <div className="relative p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white text-2xl shadow-lg">
-                <FaCalendarAlt />
-              </div>
-              <div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  {isExpiredView ? "Was Active For" : "Days Remaining"}
+          <div className="relative h-full min-h-[230px] flex flex-col justify-between p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
+            <div>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white text-2xl shadow-lg">
+                  <FaCalendarAlt />
                 </div>
-                <div className="text-3xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-500 bg-clip-text text-transparent">
-                  {isExpiredView ? totalDays : remainingDays}
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {isExpiredView ? "Was Active For" : "Days Remaining"}
+                  </div>
+                  <div className="text-3xl font-black bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-500 bg-clip-text text-transparent">
+                    {isExpiredView ? totalDays : remainingDays}
+                  </div>
                 </div>
               </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {isExpiredView
+                  ? "Your membership duration"
+                  : `Out of ${totalDays} total days`}
+              </p>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {isExpiredView
-                ? "Your membership duration"
-                : `Out of ${totalDays} total days`}
-            </p>
           </div>
         </motion.div>
       </div>

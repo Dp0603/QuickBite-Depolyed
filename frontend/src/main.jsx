@@ -16,14 +16,14 @@ createRoot(document.getElementById("root")).render(
     <HelmetProvider>
       <BrowserRouter>
         <AuthProvider>
-          <CartProvider>
-            <OrderProvider>
-              <ToastProvider>
+          <ToastProvider>
+            <CartProvider>
+              <OrderProvider>
                 <CustomToaster />
                 <App />
-              </ToastProvider>
-            </OrderProvider>
-          </CartProvider>
+              </OrderProvider>
+            </CartProvider>
+          </ToastProvider>
         </AuthProvider>
       </BrowserRouter>
     </HelmetProvider>

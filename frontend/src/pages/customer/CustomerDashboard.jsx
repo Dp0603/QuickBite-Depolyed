@@ -434,7 +434,7 @@ const RecommendedSection = ({
 
 const RestaurantCard = ({ restaurant, navigate, delay }) => (
   <motion.div
-    onClick={() => navigate(`/restaurant/${restaurant._id}/menu`)}
+    onClick={() => navigate(`/customer/menu/restaurant/${restaurant._id}`)}
     className="group min-w-[280px] snap-start rounded-2xl overflow-hidden bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl cursor-pointer transition-all duration-300 flex flex-col justify-between"
     initial={{ opacity: 0, scale: 0.9 }}
     animate={{ opacity: 1, scale: 1 }}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useContext, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FaShoppingCart,
@@ -22,72 +22,40 @@ import Lottie from "lottie-react";
 import { useToast } from "../../context/ToastContext";
 import EmptyCartLottie from "../../assets/lottie icons/Shopping cart.json";
 import { AuthContext } from "../../context/AuthContext";
-import API from "../../api/axios";
+import { CartContext } from "../../context/CartContext"; // ✅ NEW import
 import { useNavigate } from "react-router-dom";
 
 const CustomerCart = () => {
-  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const { success, error, warning } = useToast();
-  const [cartItems, setCartItems] = useState([]);
-  const [restaurantId, setRestaurantId] = useState(null);
-  const [restaurantName, setRestaurantName] = useState("");
+
+  // ✅ Use global CartContext instead of local state
+  const {
+    cartItems,
+    restaurantId,
+    restaurantName,
+    premiumSummary,
+    fetchCart,
+    increment,
+    decrement,
+    removeItem,
+  } = useContext(CartContext);
+
+  // ✅ Local UI-only states (offers, promos, etc.)
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoError, setPromoError] = useState("");
   const [availableOffers, setAvailableOffers] = useState([]);
   const [selectedOfferId, setSelectedOfferId] = useState("");
-  const [premiumSummary, setPremiumSummary] = useState({
-    freeDelivery: false,
-    extraDiscount: 0,
-    cashback: 0,
-    totalSavings: 0,
-  });
 
-  // Fetch cart
-  const fetchCart = async () => {
-    if (!user?._id) return;
-    try {
-      const res = await API.get(`/cart/${user._id}`);
-      const items = res.data.cart?.items || [];
-      setCartItems(items);
-
-      const restId = res.data.cart?.restaurantId?._id || null;
-      const restName = res.data.cart?.restaurantId?.name || "";
-      setRestaurantId(restId);
-      setRestaurantName(restName);
-
-      const premium = res.data.cart?.premiumSummary || {
-        freeDelivery: false,
-        extraDiscount: 0,
-        cashback: 0,
-        totalSavings: 0,
-      };
-      setPremiumSummary(premium);
-    } catch (err) {
-      console.error("❌ Error fetching cart:", err.response?.data || err);
-      setCartItems([]);
-      setRestaurantId(null);
-      setRestaurantName("");
-      setPremiumSummary({
-        freeDelivery: false,
-        extraDiscount: 0,
-        cashback: 0,
-        totalSavings: 0,
-      });
-    }
-  };
-
-  useEffect(() => {
-    fetchCart();
-  }, [user]);
-
-  // Fetch offers
+  // Fetch offers when restaurant changes
   useEffect(() => {
     if (restaurantId) {
-      API.get(`/offers/offers/valid/${restaurantId}`)
-        .then((res) => setAvailableOffers(res.data.offers || []))
+      fetch(`/api/offers/offers/valid/${restaurantId}`)
+        .then((res) => res.json())
+        .then((data) => setAvailableOffers(data.offers || []))
         .catch((err) => {
-          console.error("❌ Error fetching offers:", err.response?.data || err);
+          console.error("❌ Error fetching offers:", err);
           setAvailableOffers([]);
         });
     } else {
@@ -95,82 +63,23 @@ const CustomerCart = () => {
     }
   }, [restaurantId]);
 
-  // Increment
-  const increment = async (id, currentQty, note = "") => {
-    await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
-      quantity: currentQty + 1,
-      note,
-      applyPremium: true,
-    });
-    fetchCart();
-  };
+  // ✅ Ensure cart is fetched when user logs in
+  useEffect(() => {
+    if (user?._id) fetchCart();
+  }, [user]);
 
-  // Decrement
-  const decrement = async (id, currentQty, note = "") => {
-    if (currentQty === 1) return;
-    await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
-      quantity: currentQty - 1,
-      note,
-      applyPremium: true,
-    });
-    fetchCart();
-  };
-
-  // Remove with Undo Toast
-  const removeItem = async (id, itemData = null) => {
-    if (!id) return;
-
-    const removedItem =
-      itemData || cartItems.find((i) => i.menuItem._id === id);
-    if (!removedItem) return;
-
-    try {
-      // Instantly delete from backend
-      await API.delete(`/cart/${user._id}/${restaurantId}/item/${id}`);
-      fetchCart();
-
-      // Show Undo toast
-      warning(`Removed ${removedItem.menuItem?.name || removedItem.name}`, {
-        description: "Item removed from your cart.",
-        action: {
-          label: "Undo",
-          onClick: async () => {
-            try {
-              await API.post(`/cart/${user._id}/${restaurantId}/item/${id}`, {
-                quantity: 1,
-                note: removedItem.note || "",
-                applyPremium: true,
-              });
-              fetchCart();
-              success(
-                `${
-                  removedItem.menuItem?.name || removedItem.name
-                } restored to cart.`
-              );
-            } catch (err) {
-              console.error("❌ Undo failed:", err);
-              error("Couldn't restore the item. Please try again.");
-            }
-          },
-        },
-      });
-    } catch (err) {
-      console.error("❌ Error removing item:", err);
-      toast.error("Failed to remove item. Try again later.");
-    }
-  };
-
-  // Pricing
+  // 🧮 Cart calculations
   const subtotal = cartItems.reduce(
     (acc, item) => acc + item.menuItem.price * item.quantity,
     0
   );
 
+  const totalItems = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const tax = parseFloat((subtotal * 0.08).toFixed(2));
   const baseDeliveryFee = subtotal >= 500 ? 0 : 40;
-  const deliveryFee = premiumSummary.freeDelivery ? 0 : baseDeliveryFee;
+  const deliveryFee = premiumSummary?.freeDelivery ? 0 : baseDeliveryFee;
 
-  const premiumExtraDiscount = premiumSummary.extraDiscount
+  const premiumExtraDiscount = premiumSummary?.extraDiscount
     ? parseFloat(((subtotal * premiumSummary.extraDiscount) / 100).toFixed(2))
     : 0;
 
@@ -180,10 +89,6 @@ const CustomerCart = () => {
     0
   ).toFixed(2);
 
-  // Total items count
-  const totalItems = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-
-  // Free delivery progress
   const freeDeliveryThreshold = 500;
   const amountToFreeDelivery = Math.max(freeDeliveryThreshold - subtotal, 0);
   const deliveryProgress = Math.min(

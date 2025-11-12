@@ -1,28 +1,30 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import {
   FaBars,
-  FaSearch,
+  // FaSearch,
   FaBell,
   FaShoppingCart,
   FaUser,
   FaSignOutAlt,
-  FaTimes,
+  // FaTimes,
   FaCog,
   FaHistory,
 } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { CartContext } from "../context/CartContext";
 
 const CustomerNavbar = ({ toggleSidebar }) => {
   const [isSolid, setIsSolid] = useState(false);
   const [hidden, setHidden] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
+  // const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showCart, setShowCart] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
+  // const [searchQuery, setSearchQuery] = useState("");
+  const { cartItems, totalItems, fetchCart, cartUpdated } =
+    useContext(CartContext);
   const notifRef = useRef(null);
   const cartRef = useRef(null);
   const profileRef = useRef(null);
@@ -30,14 +32,19 @@ const CustomerNavbar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
   const { logout, user } = useContext(AuthContext);
 
-  const dummyCart = [
-    { id: 1, name: "Pizza", quantity: 2, price: 299 },
-    { id: 2, name: "Burger", quantity: 1, price: 199 },
-  ];
+  // const dummyCart = [
+  //   { id: 1, name: "Pizza", quantity: 2, price: 299 },
+  //   { id: 2, name: "Burger", quantity: 1, price: 199 },
+  // ];
   const notifications = [
     { id: 1, text: "Order delivered!", unread: true },
     { id: 2, text: "50% off on Pizza!", unread: false },
   ];
+
+  // ✅ Fetch cart when user logs in or changes
+  useEffect(() => {
+    if (user?._id) fetchCart();
+  }, [user, cartUpdated]);
 
   // 🧭 Hide on scroll + bounce reappear
   useEffect(() => {
@@ -66,7 +73,7 @@ const CustomerNavbar = ({ toggleSidebar }) => {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const totalCart = dummyCart.reduce((sum, i) => sum + i.quantity, 0);
+  const totalCart = totalItems;
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   return (
@@ -116,14 +123,14 @@ const CustomerNavbar = ({ toggleSidebar }) => {
         {/* 🎛️ Right Section */}
         <div className="flex items-center gap-3">
           {/* 🔍 Search */}
-          <motion.button
+          {/* <motion.button
             onClick={() => setShowSearch(true)}
             className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center hover:text-orange-500 transition"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <FaSearch />
-          </motion.button>
+          </motion.button> */}
 
           {/* 🔔 Notifications */}
           <div className="relative" ref={notifRef}>
@@ -196,15 +203,22 @@ const CustomerNavbar = ({ toggleSidebar }) => {
                   <div className="px-4 py-3 font-semibold border-b dark:border-gray-700">
                     Cart Preview
                   </div>
-                  {dummyCart.map((item) => (
-                    <div
-                      key={item.id}
-                      className="px-4 py-2 text-sm flex justify-between hover:bg-gray-100 dark:hover:bg-gray-800"
-                    >
-                      <span>{item.name}</span>
-                      <span className="text-gray-500">x{item.quantity}</span>
+                  {cartItems.length > 0 ? (
+                    cartItems.map((item) => (
+                      <div
+                        key={item.menuItem?._id}
+                        className="px-4 py-2 text-sm flex justify-between hover:bg-gray-100 dark:hover:bg-gray-800"
+                      >
+                        <span>{item.menuItem?.name || "Item"}</span>
+                        <span className="text-gray-500">x{item.quantity}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-sm text-gray-500 text-center">
+                      Your cart is empty 🍽️
                     </div>
-                  ))}
+                  )}
+
                   <div className="p-3 border-t dark:border-gray-700">
                     <button
                       onClick={() => navigate("/customer/cart")}
@@ -286,7 +300,7 @@ const CustomerNavbar = ({ toggleSidebar }) => {
       </motion.header>
 
       {/* 🔍 Search Modal */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {showSearch && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -327,7 +341,7 @@ const CustomerNavbar = ({ toggleSidebar }) => {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
     </>
   );
 };

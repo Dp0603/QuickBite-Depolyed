@@ -13,10 +13,21 @@ import {
 } from "react-icons/fa";
 import API from "../../api/axios";
 import { AuthContext } from "../../context/AuthContext";
+import { CartContext } from "../../context/CartContext";
 
 const CustomerRestaurantMenu = () => {
   const { id: restaurantId } = useParams();
   const { user } = useContext(AuthContext);
+  const {
+    addToCart,
+    increment,
+    decrement,
+    removeItem,
+    cartItems,
+    cartUpdated,
+    setCartUpdated,
+  } = useContext(CartContext);
+
   const navigate = useNavigate();
 
   const [restaurant, setRestaurant] = useState(null);
@@ -140,10 +151,17 @@ const CustomerRestaurantMenu = () => {
 
   const isAvailable = restaurant?.isOnline && restaurant?.status === "approved";
 
-  const handleAdd = (itemId) => {
+  const handleAdd = async (itemId) => {
     if (!isAvailable) return alert("Restaurant is offline right now.");
     if (!user?._id) return alert("Please login to add to cart.");
-    addItemToCart(itemId, false);
+
+    try {
+      await addToCart(itemId, restaurantId, 1);
+      setCartUpdated((prev) => !prev); // Trigger Navbar sync
+      fetchCart(); // Optional extra sync for local UI
+    } catch (err) {
+      console.error("❌ Error adding item to cart:", err);
+    }
   };
 
   const addItemToCart = async (itemId, clearOldCart) => {
@@ -184,19 +202,17 @@ const CustomerRestaurantMenu = () => {
     if (!isAvailable) return;
     const currentQty = cart[itemId]?.quantity || 0;
     if (currentQty <= 0) return;
+
     try {
       if (currentQty > 1) {
-        await API.post(`/cart/${user._id}/${restaurantId}/item/${itemId}`, {
-          quantity: currentQty - 1,
-        });
+        await decrement(itemId, restaurantId, currentQty);
       } else {
-        await API.delete(`/cart/${user._id}/${restaurantId}/item/${itemId}`);
+        await removeItem(itemId);
       }
-      fetchCart();
-      fetchActiveCart();
-    } catch {
-      fetchCart();
-      fetchActiveCart();
+      setCartUpdated((prev) => !prev); // Notify Navbar
+      fetchCart(); // Refresh local display
+    } catch (err) {
+      console.error("❌ Error removing item:", err);
     }
   };
 

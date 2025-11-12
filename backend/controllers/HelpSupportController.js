@@ -51,6 +51,10 @@ const generateTicketId = () =>
 // Submit ticket
 const submitTicket = (role) => async (req, res) => {
   try {
+    if (!req.user?._id) {
+      return res.status(401).json({ message: "Unauthorized: user not found" });
+    }
+
     const { name, email, issue, message } = req.body;
     if (!name || !email || !issue || !message) {
       return res.status(400).json({ message: "All fields are required" });
@@ -59,7 +63,7 @@ const submitTicket = (role) => async (req, res) => {
     const attachmentUrl = req.file ? req.file.path : null;
 
     const ticket = new HelpTicket({
-      userId: req.user?.userId || null,
+      userId: req.user?._id || null,
       name,
       email,
       issue,
@@ -85,8 +89,12 @@ const submitTicket = (role) => async (req, res) => {
 // Get user's tickets
 const getUserTickets = (role) => async (req, res) => {
   try {
+    if (!req.user?._id) {
+      return res.status(401).json({ message: "Unauthorized: user not found" });
+    }
+
     const tickets = await HelpTicket.find({
-      userId: req.user.userId,
+      userId: req.user._id,
       role,
     }).sort({ createdAt: -1 });
 

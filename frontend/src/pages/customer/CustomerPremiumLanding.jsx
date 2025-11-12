@@ -337,20 +337,21 @@ const Testimonials = () => {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 * i }}
-            className="group relative"
+            className="group relative flex flex-col h-full"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-pink-500/20 rounded-3xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-            <div className="relative p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
+            <div className="relative flex flex-col h-full p-6 rounded-3xl bg-white dark:bg-slate-900 border border-orange-200 dark:border-white/10 shadow-md hover:shadow-xl transition-all duration-300">
               <div className="flex items-center gap-1 mb-3">
                 {[...Array(t.rating)].map((_, i) => (
                   <FaStar key={i} className="text-yellow-500" />
                 ))}
               </div>
-              <p className="italic text-gray-700 dark:text-gray-300 mb-4">
+              <p className="italic text-gray-700 dark:text-gray-300 mb-4 flex-grow">
                 "{t.text}"
               </p>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 mt-auto">
+                {" "}
                 <img
                   src={t.avatar}
                   alt={t.name}
