@@ -160,7 +160,7 @@ const CustomerSidebar = ({ isOpen, toggleSidebar }) => {
                   </div>
                   <motion.button
                     onClick={toggleSidebar}
-                    className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-gray-100 hover:bg-red-500/20 hover:text-red-300 transition-all"
+                    className="w-8 h-8 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center text-gray-100 hover:bg-white/30 hover:text-black transition-all"
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
                     aria-label="Close Sidebar"
