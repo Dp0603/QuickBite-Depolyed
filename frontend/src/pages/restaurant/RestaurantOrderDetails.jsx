@@ -9,17 +9,16 @@ import {
   FaTimesCircle,
   FaTruck,
   FaUtensils,
-  FaBox,
   FaRedo,
   FaFire,
   FaHourglassHalf,
   FaUser,
   FaMapMarkerAlt,
   FaClock,
-  FaRupeeSign,
   FaCreditCard,
   FaStickyNote,
   FaPhone,
+  FaRupeeSign,
 } from "react-icons/fa";
 
 const getStatusMeta = (status) => {
@@ -118,17 +117,13 @@ const RestaurantOrderDetails = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 flex items-center justify-center">
-        <motion.div
-          className="text-center"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
+        <motion.div className="text-center">
           <motion.div
-            className="w-16 h-16 border-4 border-rose-500 border-t-transparent rounded-full mx-auto mb-4"
+            className="w-20 h-20 border-4 border-rose-500 border-t-transparent rounded-full mx-auto mb-4"
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
           />
-          <p className="text-gray-600 font-semibold">
+          <p className="text-lg text-gray-700 font-semibold">
             Loading order details...
           </p>
         </motion.div>
@@ -139,11 +134,7 @@ const RestaurantOrderDetails = () => {
   if (!order) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 flex items-center justify-center">
-        <motion.div
-          className="text-center"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
+        <motion.div className="text-center">
           <motion.div
             className="text-8xl mb-4"
             animate={{ rotate: [0, 10, -10, 0] }}
@@ -151,12 +142,10 @@ const RestaurantOrderDetails = () => {
           >
             ❌
           </motion.div>
-          <h2 className="text-2xl font-bold mb-2">Order not found</h2>
+          <h2 className="text-3xl font-bold mb-2">Order not found</h2>
           <motion.button
             onClick={() => navigate("/restaurant/orders")}
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white font-bold shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
           >
             <FaArrowLeft className="inline mr-2" /> Back to Orders
           </motion.button>
@@ -170,33 +159,25 @@ const RestaurantOrderDetails = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50">
       <motion.div
-        className="max-w-7xl mx-auto px-4 sm:px-8 py-8"
+        className="max-w-[1700px] mx-auto px-8 py-10"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
       >
         {/* Header */}
-        <motion.div
-          className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-8 gap-4"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
+        <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between mb-10 gap-4">
           <div className="flex items-center gap-4">
-            <motion.button
+            <button
+              className="w-14 h-14 rounded-xl bg-white shadow-lg flex items-center justify-center text-xl hover:bg-gray-50"
               onClick={() => navigate("/restaurant/orders")}
-              className="w-12 h-12 rounded-xl bg-white shadow-lg flex items-center justify-center text-gray-700 hover:bg-gray-50 transition-all"
-              whileHover={{ scale: 1.05, x: -5 }}
-              whileTap={{ scale: 0.95 }}
             >
               <FaArrowLeft />
-            </motion.button>
+            </button>
             <div>
-              <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
+              <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
                 Order #{order._id.slice(-6).toUpperCase()}
               </h1>
-              <p className="text-gray-600 flex items-center gap-2 mt-1">
-                <FaClock />
+              <p className="text-lg text-gray-700 flex items-center gap-2 mt-1">
+                <FaClock />{" "}
                 {dayjs(order.createdAt).format("DD MMM YYYY, hh:mm A")}
               </p>
             </div>
@@ -204,252 +185,131 @@ const RestaurantOrderDetails = () => {
 
           <motion.button
             onClick={fetchOrder}
-            className="px-5 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-bold shadow-lg flex items-center gap-2"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 text-white text-lg font-bold shadow-lg flex items-center gap-2"
           >
-            <motion.div
-              animate={{ rotate: updating ? 360 : 0 }}
-              transition={{
-                duration: 1,
-                repeat: updating ? Infinity : 0,
-                ease: "linear",
-              }}
-            >
-              <FaRedo />
-            </motion.div>
-            Refresh
+            <FaRedo /> Refresh
           </motion.button>
-        </motion.div>
+        </div>
 
         {/* Status Card */}
         <motion.div
-          className={`p-6 rounded-2xl ${statusMeta.bg} border-2 ${statusMeta.border} mb-8 shadow-lg`}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3 }}
-          whileHover={{ scale: 1.01 }}
+          className={`p-8 rounded-2xl text-xl ${statusMeta.bg} border-2 ${statusMeta.border} mb-10 shadow-lg`}
         >
-          <div className="flex items-center gap-4">
-            <motion.div
-              className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${statusMeta.gradient} flex items-center justify-center text-white shadow-xl text-2xl`}
-              animate={{ rotate: [0, 5, -5, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
+          <div className="flex items-center gap-6">
+            <div
+              className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${statusMeta.gradient} flex items-center justify-center text-white shadow-xl text-4xl`}
             >
               {statusMeta.icon}
-            </motion.div>
-            <div className="flex-1">
-              <h3 className="text-2xl font-black text-gray-900 mb-1">
+            </div>
+            <div>
+              <h3 className="text-3xl font-black">
                 Order Status: {order.orderStatus}
               </h3>
-              <p className="text-sm text-gray-600">
+              <p className="text-lg text-gray-700">
                 Last updated: {dayjs(order.updatedAt).format("DD MMM, hh:mm A")}
               </p>
             </div>
           </div>
         </motion.div>
 
-        {/* 2×2 Grid Layout - FIXED & ALIGNED */}
-        <motion.div
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, staggerChildren: 0.1 }}
-        >
-          {/* Customer Information */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
+        {/* Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+          {/* CUSTOMER INFO */}
+          <InfoCard
+            title="Customer Information"
+            icon={<FaUser />}
+            gradient="from-indigo-500 to-purple-600"
           >
-            <InfoCard
-              title="Customer Information"
-              icon={<FaUser />}
-              gradient="from-indigo-500 to-purple-600"
-            >
-              <div className="space-y-3">
-                <InfoRow label="Name" value={order.customerId?.name || "N/A"} />
-                <InfoRow
-                  label="Phone"
-                  value={order.customerId?.phone || "N/A"}
-                  icon={<FaPhone />}
-                />
-                <InfoRow
-                  label="Delivery Address"
-                  value={`${order.deliveryAddress?.addressLine}, ${order.deliveryAddress?.city}, ${order.deliveryAddress?.state} - ${order.deliveryAddress?.pincode}`}
-                  icon={<FaMapMarkerAlt />}
-                />
-                {order.customerNote && (
-                  <InfoRow
-                    label="Special Note"
-                    value={order.customerNote}
-                    icon={<FaStickyNote />}
-                    highlight
-                  />
-                )}
-              </div>
-            </InfoCard>
-          </motion.div>
-
-          {/* Payment Details */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.6 }}
-          >
-            <InfoCard
-              title="Payment Details"
-              icon={<FaCreditCard />}
-              gradient="from-teal-500 to-emerald-600"
-            >
-              <div className="space-y-3">
-                <InfoRow label="Method" value={order.paymentMethod || "N/A"} />
-                <InfoRow label="Status" value={order.paymentStatus || "N/A"} />
-                {order.subtotal && (
-                  <InfoRow label="Subtotal" value={`₹${order.subtotal}`} />
-                )}
-                {order.deliveryFee && (
-                  <InfoRow label="Delivery" value={`₹${order.deliveryFee}`} />
-                )}
-                {order.discount && (
-                  <InfoRow
-                    label="Discount"
-                    value={`-₹${order.discount}`}
-                    highlight
-                  />
-                )}
-              </div>
-            </InfoCard>
-          </motion.div>
-
-          {/* Order Items */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.7 }}
-          >
-            <InfoCard
-              title="Order Items"
-              icon={<FaUtensils />}
-              gradient="from-rose-500 to-pink-600"
-            >
-              <div className="space-y-3">
-                {order.items.map((item, i) => (
-                  <motion.div
-                    key={i}
-                    className="flex justify-between items-center p-4 bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl border border-gray-200 hover:shadow-md transition-all"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.8 + i * 0.1 }}
-                    whileHover={{ scale: 1.02, x: 5 }}
-                  >
-                    <div className="flex-1">
-                      <h4 className="font-bold text-gray-900">
-                        {item.menuItemId?.name || item.name}
-                      </h4>
-                      <p className="text-sm text-gray-600">
-                        Quantity:{" "}
-                        <span className="font-bold">{item.quantity}</span>
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500">
-                        @ ₹{item.price || item.menuItemId?.price}
-                      </p>
-                      <p className="text-lg font-black text-rose-700">
-                        ₹
-                        {(item.price || item.menuItemId?.price) * item.quantity}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </InfoCard>
-          </motion.div>
-
-          {/* Total Amount Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.8 }}
-          >
-            <motion.div
-              className="h-full p-8 rounded-2xl bg-gradient-to-br from-rose-600 via-pink-600 to-purple-600 text-white shadow-2xl relative overflow-hidden"
-              whileHover={{ scale: 1.02 }}
-            >
-              {/* Animated Background */}
-              <motion.div
-                className="absolute inset-0 opacity-20"
-                animate={{
-                  background: [
-                    "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.8) 0%, transparent 50%)",
-                    "radial-gradient(circle at 80% 50%, rgba(255,255,255,0.8) 0%, transparent 50%)",
-                    "radial-gradient(circle at 20% 50%, rgba(255,255,255,0.8) 0%, transparent 50%)",
-                  ],
-                }}
-                transition={{ duration: 4, repeat: Infinity }}
+            <div className="space-y-4 text-lg md:text-xl">
+              <InfoRow label="Name" value={order.customerId?.name || "N/A"} />
+              <InfoRow label="Phone" value={order.customerId?.phone || "N/A"} />
+              <InfoRow
+                label="Delivery Address"
+                value={`${order.deliveryAddress?.addressLine}, ${order.deliveryAddress?.city}, ${order.deliveryAddress?.state} - ${order.deliveryAddress?.pincode}`}
               />
+              {order.customerNote && (
+                <InfoRow
+                  label="Special Note"
+                  value={order.customerNote}
+                  icon={<FaStickyNote />}
+                  highlight
+                />
+              )}
+            </div>
+          </InfoCard>
 
-              <div className="relative z-10">
-                <div className="flex items-center gap-3 mb-6">
-                  <motion.div
-                    className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30"
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                  >
-                    <FaRupeeSign className="text-2xl" />
-                  </motion.div>
-                  <h3 className="text-xl font-black">Total Amount</h3>
-                </div>
-                <motion.p
-                  className="text-6xl font-black drop-shadow-lg mb-4"
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 1, type: "spring", stiffness: 200 }}
-                >
+          {/* PAYMENT INFO */}
+          <InfoCard
+            title="Payment Details"
+            icon={<FaCreditCard />}
+            gradient="from-teal-500 to-emerald-600"
+          >
+            <div className="space-y-4 text-lg md:text-xl">
+              <InfoRow label="Method" value={order.paymentMethod || "N/A"} />
+              <InfoRow label="Status" value={order.paymentStatus || "N/A"} />
+
+              {/* TOTAL */}
+              <div className="pt-4 border-t border-gray-300">
+                <h4 className="text-2xl font-black flex items-center gap-2">
+                  <FaRupeeSign /> Total Amount
+                </h4>
+                <p className="text-5xl md:text-6xl font-black text-rose-600 mt-2">
                   ₹{Number(order.totalAmount).toFixed(2)}
-                </motion.p>
-                <div className="pt-4 border-t border-white/30">
-                  <p className="text-white/80 text-sm">
-                    Payment:{" "}
-                    <span className="font-bold">{order.paymentMethod}</span>
+                </p>
+              </div>
+            </div>
+          </InfoCard>
+        </div>
+
+        {/* ORDER ITEMS - FULL WIDTH */}
+        <InfoCard
+          title="Order Items"
+          icon={<FaUtensils />}
+          gradient="from-rose-500 to-pink-600"
+        >
+          <div className="space-y-4 text-lg md:text-xl">
+            {order.items.map((item, i) => (
+              <div
+                key={i}
+                className="flex justify-between items-center p-5 bg-gray-50 rounded-xl border"
+              >
+                <div>
+                  <h4 className="font-bold text-2xl">
+                    {item.menuItemId?.name || item.name}
+                  </h4>
+                  <p className="text-lg text-gray-700">
+                    Quantity:{" "}
+                    <span className="font-semibold">{item.quantity}</span>
                   </p>
-                  <p className="text-white/80 text-sm mt-1">
-                    Status:{" "}
-                    <span className="font-bold">{order.paymentStatus}</span>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg text-gray-600">
+                    @ ₹{item.price || item.menuItemId?.price}
+                  </p>
+                  <p className="text-3xl font-black text-rose-600">
+                    ₹{(item.price || item.menuItemId?.price) * item.quantity}
                   </p>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        </motion.div>
+            ))}
+          </div>
+        </InfoCard>
 
-        {/* Action Buttons */}
-        <motion.div
-          className="flex flex-wrap gap-3"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-        >
+        {/* ACTION BUTTONS */}
+        <div className="flex flex-wrap gap-4 mt-10">
           {order.orderStatus === "Pending" && (
             <>
               <ActionButton
                 onClick={() => updateStatus("Preparing")}
-                disabled={updating}
+                gradient="from-emerald-500 to-teal-600"
                 icon={<FaCheckCircle />}
                 label="Accept Order"
-                gradient="from-emerald-500 to-teal-600"
               />
               <ActionButton
                 onClick={() => updateStatus("Cancelled")}
-                disabled={updating}
+                gradient="from-rose-500 to-pink-600"
                 icon={<FaTimesCircle />}
                 label="Reject Order"
-                gradient="from-rose-500 to-pink-600"
               />
             </>
           )}
@@ -457,98 +317,77 @@ const RestaurantOrderDetails = () => {
           {order.orderStatus === "Preparing" && (
             <ActionButton
               onClick={() => updateStatus("Ready")}
-              disabled={updating}
+              gradient="from-orange-500 to-red-600"
               icon={<FaFire />}
               label="Mark as Ready"
-              gradient="from-orange-500 to-red-600"
             />
           )}
 
           {order.orderStatus === "Ready" && (
             <ActionButton
               onClick={() => updateStatus("Out for Delivery")}
-              disabled={updating}
+              gradient="from-indigo-500 to-purple-600"
               icon={<FaTruck />}
               label="Out for Delivery"
-              gradient="from-indigo-500 to-purple-600"
             />
           )}
 
           {order.orderStatus === "Out for Delivery" && (
             <ActionButton
               onClick={() => updateStatus("Delivered")}
-              disabled={updating}
-              icon={<FaBox />}
-              label="Mark as Delivered"
               gradient="from-emerald-600 to-teal-700"
+              icon={<FaCheckCircle />}
+              label="Mark as Delivered"
             />
           )}
-        </motion.div>
+        </div>
       </motion.div>
     </div>
   );
 };
 
 const InfoCard = ({ title, icon, gradient, children }) => (
-  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden h-full flex flex-col">
-    <motion.div
-      className={`p-5 flex items-center bg-gradient-to-r ${gradient} text-white`}
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
+  <div className="bg-white rounded-2xl shadow-lg border p-8 flex flex-col">
+    <div
+      className={`p-5 text-white bg-gradient-to-r ${gradient} rounded-xl mb-6 flex items-center gap-3`}
     >
-      <h3 className="font-black text-lg flex items-center gap-2">
-        <motion.div
-          className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-sm"
-          whileHover={{ rotate: 360 }}
-          transition={{ duration: 0.5 }}
-        >
-          {icon}
-        </motion.div>
-        {title}
-      </h3>
-    </motion.div>
-    <div className="p-6 flex-1">{children}</div>
+      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center text-2xl">
+        {icon}
+      </div>
+      <h3 className="text-2xl font-black">{title}</h3>
+    </div>
+    {children}
   </div>
 );
 
 const InfoRow = ({ label, value, icon, highlight }) => (
-  <motion.div
-    className={`flex justify-between items-start gap-4 ${
-      highlight ? "p-3 bg-amber-50 border border-amber-200 rounded-xl" : ""
+  <div
+    className={`flex justify-between items-start gap-6 ${
+      highlight ? "p-4 bg-amber-50 border rounded-xl" : ""
     }`}
-    initial={{ opacity: 0, x: -10 }}
-    animate={{ opacity: 1, x: 0 }}
-    whileHover={{ x: 4 }}
   >
-    <span className="text-sm text-gray-600 font-semibold flex items-center gap-2">
-      {icon && <span className="text-gray-500">{icon}</span>}
+    <span className="text-lg md:text-xl text-gray-700 font-semibold flex items-center gap-2">
+      {icon && <span className="text-gray-600">{icon}</span>}
       {label}:
     </span>
-    <span
-      className={`text-sm text-right flex-1 ${
-        highlight ? "text-amber-800 font-bold" : "text-gray-900 font-medium"
-      }`}
-    >
+    <span className="text-lg md:text-xl font-medium text-gray-900 text-right">
       {value}
     </span>
-  </motion.div>
+  </div>
 );
 
 const ActionButton = ({ onClick, disabled, icon, label, gradient }) => (
-  <motion.button
+  <button
     onClick={onClick}
     disabled={disabled}
-    className={`flex items-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r ${gradient} text-white font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
-    whileHover={{ scale: disabled ? 1 : 1.05, y: disabled ? 0 : -2 }}
-    whileTap={{ scale: disabled ? 1 : 0.95 }}
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
+    className={`px-8 py-4 text-xl font-bold rounded-xl flex items-center gap-3 bg-gradient-to-r ${gradient} text-white shadow-lg disabled:opacity-50`}
   >
     {icon} {label}
-  </motion.button>
+  </button>
 );
 
 export default RestaurantOrderDetails;
+
 // import React, { useEffect, useState } from "react";
 // import { useParams, useNavigate } from "react-router-dom";
 // import API from "../../api/axios";
