@@ -43,8 +43,8 @@ import RestaurantHelp from "../pages/restaurant/RestaurantHelp";
 
 // Delivery
 import RestaurantDelivery from "../pages/restaurant/RestaurantDelivery";
-import RestaurantDeliveryStatus from "../pages/restaurant/RestaurantDeliveryStatus";
-import RestaurantDeliverySettings from "../pages/restaurant/RestaurantDeliverySettings";
+// import RestaurantDeliveryStatus from "../pages/restaurant/RestaurantDeliveryStatus";
+// import RestaurantDeliverySettings from "../pages/restaurant/RestaurantDeliverySettings";
 
 // Offers
 import RestaurantOffersManager from "../pages/restaurant/RestaurantOffersManager";
@@ -156,17 +156,17 @@ export const restaurantRoutes = (isOwnerMode) => [
     element={<RestaurantDelivery />}
   />,
 
-  <Route
-    key="restaurant-delivery"
-    path="delivery-status"
-    element={<RestaurantDeliveryStatus />}
-  />,
+  // <Route
+  //   key="restaurant-delivery"
+  //   path="delivery-status"
+  //   element={<RestaurantDeliveryStatus />}
+  // />,
 
-  <Route
-    key="restaurant-delivery-settings"
-    path="delivery-settings"
-    element={<RestaurantDeliverySettings />}
-  />,
+  // <Route
+  //   key="restaurant-delivery-settings"
+  //   path="delivery-settings"
+  //   element={<RestaurantDeliverySettings />}
+  // />,
 
   // Profile & Settings
   <Route
