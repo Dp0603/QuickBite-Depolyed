@@ -16,8 +16,16 @@ const protect = async (req, res, next) => {
 
     // Fetch full user by ID from token payload, excluding password
     const user = await User.findById(decoded.userId).select("-password");
+
     if (!user) {
       return res.status(401).json({ message: "Unauthorized: User not found" });
+    }
+
+    // 🚫 BLOCKED USER CHECK (THIS IS THE IMPORTANT PART)
+    if (!user.isActive) {
+      return res.status(403).json({
+        message: "Your account has been blocked. Please contact support.",
+      });
     }
 
     req.user = user; // Attach user to request object
