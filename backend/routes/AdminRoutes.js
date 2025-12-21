@@ -25,6 +25,7 @@ const {
   updateSettings,
   getAdminProfile,
   updateAdminProfile,
+  updateRestaurantApprovalStatus,
 } = require("../controllers/AdminController");
 
 // 👥 Get all users
@@ -77,4 +78,8 @@ router.put("/settings", updateSettings);
 // 👤 Admin Profile
 router.get("/profile/:adminId", getAdminProfile);
 router.put("/profile/:adminId", updateAdminProfile);
+
+// 🏬 Restaurant approval (Admin)
+router.put("/restaurants/:id/approval", updateRestaurantApprovalStatus);
+
 module.exports = router;
