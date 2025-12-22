@@ -620,7 +620,19 @@ const RestaurantCard = ({
       whileHover={{ y: -5 }}
     >
       {/* Header with Logo */}
-      <div className="relative h-32 bg-gradient-to-br from-slate-700 via-slate-800 to-zinc-900 p-4">
+      <div
+        className="relative h-32 p-4"
+        style={{
+          backgroundImage: restaurant.coverImage
+            ? `url(${restaurant.coverImage})`
+            : "linear-gradient(135deg, #334155, #1e293b, #09090b)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          filter: "saturate(1.1) contrast(1.05)"  
+        }}
+      >
+      <div className="absolute inset-0 bg-black/30"></div>
+
         {/* Pattern */}
         <div
           className="absolute inset-0 opacity-20"

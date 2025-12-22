@@ -398,6 +398,17 @@ const RestaurantProfile = () => {
     };
   };
 
+  const uploadImage = async (file, type) => {
+    const formData = new FormData();
+    formData.append(type, file);
+
+    const res = await API.post(`/upload/${type}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    return res.data.data.url; // Cloudinary URL
+  };
+
   /* --------------------- Handlers --------------------- */
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -428,11 +439,31 @@ const RestaurantProfile = () => {
     e.preventDefault();
     setUpdating(true);
 
+    // TODO: Upload images to cloud storage first if files exist
+    // For now, using the preview URLs
     try {
-      // TODO: Upload images to cloud storage first if files exist
-      // For now, using the preview URLs
+      let logoUrl = profile.logoUrl;
+      let bannerUrl = profile.bannerUrl;
 
-      const payload = buildPayload();
+      // ⬆️ Upload logo if changed
+      if (logoFile) {
+        logoUrl = await uploadImage(logoFile, "logo");
+      }
+
+      // ⬆️ Upload banner if changed
+      if (bannerFile) {
+        bannerUrl = await uploadImage(bannerFile, "banner");
+      }
+
+      const payload = {
+        name: profile.restaurantName,
+        phoneNumber: profile.phone,
+        address: `${profile.address.street}, ${profile.address.city}, ${profile.address.state} - ${profile.address.zip}`,
+        cuisines: profile.cuisine ? [profile.cuisine] : [],
+        logo: logoUrl, // ✅ Cloudinary URL
+        coverImage: bannerUrl, // ✅ Cloudinary URL
+      };
+
       await API.put("/restaurants/restaurants/update", payload);
 
       pushToast({
@@ -442,8 +473,9 @@ const RestaurantProfile = () => {
         icon: <FaCheckCircle />,
       });
 
-      // Refresh profile
       await fetchProfile();
+      setLogoFile(null);
+      setBannerFile(null);
     } catch (err) {
       console.error("Update failed", err);
       pushToast({
@@ -730,7 +762,6 @@ const LoadingState = () => (
 );
 
 export default RestaurantProfile;
-
 
 // import React, { useState, useEffect, useContext } from "react";
 // import API from "../../api/axios";

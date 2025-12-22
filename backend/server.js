@@ -4,8 +4,8 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
-const path = require("path");
-const fs = require("fs");
+// const path = require("path");
+// const fs = require("fs");
 
 const connectDB = require("./config/db");
 const { initSocket } = require("./utils/socket");
@@ -33,6 +33,7 @@ const SupportRoutes = require("./routes/SupportRoutes");
 const ReviewRoutes = require("./routes/ReviewRoutes");
 const HelpSupportRoutes = require("./routes/HelpSupportRoutes");
 const testOfferRoutes = require("./routes/TestOfferRoutes");
+const UploadRoutes = require("./routes/UploadRoutes");
 
 // ⚙️ Connect MongoDB (auto local/prod switch)
 connectDB();
@@ -72,13 +73,13 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 
 // ✅ Ensure uploads folder exists (local only)
-const uploadsPath = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsPath)) {
-  fs.mkdirSync(uploadsPath);
-}
+// const uploadsPath = path.join(__dirname, "uploads");
+// if (!fs.existsSync(uploadsPath)) {
+//   fs.mkdirSync(uploadsPath);
+// }
 
 // ✅ Serve uploads folder as static (temporary for local)
-app.use("/uploads", express.static(uploadsPath));
+// app.use("/uploads", express.static(uploadsPath));
 
 // 🔗 Mount Routes
 app.use("/api/auth", AuthRoutes);
@@ -103,6 +104,7 @@ app.use("/api/support", SupportRoutes);
 app.use("/api/reviews", ReviewRoutes);
 app.use("/api/helpsupport", HelpSupportRoutes);
 app.use("/api", testOfferRoutes);
+app.use("/api/upload", UploadRoutes);
 
 // 🏠 Root route
 app.get("/", (req, res) => {
