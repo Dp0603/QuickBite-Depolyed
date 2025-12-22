@@ -26,11 +26,9 @@ const createOrder = async (req, res) => {
         .json({ message: "Restaurant not found or not approved" });
     }
     if (!restaurant.isOnline) {
-      return res
-        .status(400)
-        .json({
-          message: "Restaurant is currently offline. Please try later.",
-        });
+      return res.status(400).json({
+        message: "Restaurant is currently offline. Please try later.",
+      });
     }
 
     let premiumApplied = false;
@@ -278,7 +276,7 @@ const getOrderById = async (req, res) => {
     const { orderId } = req.params;
 
     const order = await Order.findById(orderId)
-      .populate("restaurantId", "name")
+      .populate("restaurantId", "name phoneNumber address")
       .populate("customerId", "name")
       .populate("items.menuItemId", " image")
       .populate("deliveryDetails.deliveryAgentId", "name")

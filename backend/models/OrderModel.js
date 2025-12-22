@@ -99,7 +99,7 @@ const orderSchema = new mongoose.Schema(
 );
 
 // Virtual for full address string
-orderSchema.virtual("deliveryAddress.fullAddress").get(function () {
+orderSchema.virtual("fullDeliveryAddress").get(function () {
   const addr = this.deliveryAddress;
   if (!addr) return "";
   return `${

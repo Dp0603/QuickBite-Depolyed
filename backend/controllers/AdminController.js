@@ -40,7 +40,7 @@ const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
       .populate("customerId", "name email")
-      .populate("restaurantId", "name")
+      .populate("restaurantId", "name phoneNumber")
       .sort({ createdAt: -1 });
     res.status(200).json({ message: "All orders fetched", data: orders });
   } catch (error) {
@@ -211,7 +211,7 @@ const exportOrdersCSV = async (req, res) => {
   try {
     const orders = await Order.find()
       .populate("customerId", "name email")
-      .populate("restaurantId", "name")
+      .populate("restaurantId", "name phoneNumber")
       .lean();
 
     const csvData = orders.map((o) => ({
