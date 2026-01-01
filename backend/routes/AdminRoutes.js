@@ -21,6 +21,7 @@ const {
   deleteOfferAdmin,
   getAllComplaints,
   updateComplaintStatus,
+  deleteComplaintByAdmin,
   getSettings,
   updateSettings,
   getAdminProfile,
@@ -70,6 +71,7 @@ router.get("/export/users-xlsx", exportUsersXLSX);
 // // 🆘 Complaints / Help Tickets
 router.get("/complaints", getAllComplaints);
 router.put("/complaints/:ticketId/status", updateComplaintStatus);
+router.delete("/complaints/:ticketId", deleteComplaintByAdmin);
 
 // ⚙️ Platform Settings (Admin)
 router.get("/settings", getSettings);

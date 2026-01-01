@@ -426,6 +426,27 @@ const updateComplaintStatus = async (req, res) => {
   }
 };
 
+// ❌ Delete complaint/ticket (admin)
+const deleteComplaintByAdmin = async (req, res) => {
+  try {
+    const { ticketId } = req.params;
+
+    const deletedTicket = await HelpTicket.findOneAndDelete({ ticketId });
+
+    if (!deletedTicket) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    res.status(200).json({
+      message: "Complaint deleted successfully",
+      data: deletedTicket,
+    });
+  } catch (error) {
+    console.error("Error deleting complaint:", error);
+    res.status(500).json({ message: "Failed to delete complaint" });
+  }
+};
+
 // ⚙️ Get platform settings
 const getSettings = async (req, res) => {
   try {
@@ -563,6 +584,7 @@ module.exports = {
   deleteOfferAdmin,
   getAllComplaints,
   updateComplaintStatus,
+  deleteComplaintByAdmin,
   getSettings,
   updateSettings,
   getAdminProfile,
