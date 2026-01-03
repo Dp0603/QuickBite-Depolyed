@@ -260,6 +260,7 @@ import {
   FaSun,
   FaDesktop,
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import API from "../../api/axios";
 
 /* -------------------------------------------------------------- */
@@ -267,6 +268,8 @@ import API from "../../api/axios";
 /* -------------------------------------------------------------- */
 
 const AdminProfile = () => {
+  const navigate = useNavigate();
+
   const [profile, setProfile] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
@@ -279,8 +282,7 @@ const AdminProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [activeTab, setActiveTab] = useState("profile");
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  // const [activeTab, setActiveTab] = useState("profile");
   const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [notification, setNotification] = useState(null);
   const fileInputRef = useRef(null);
@@ -389,9 +391,9 @@ const AdminProfile = () => {
         <HeroHeader profile={profile} formData={formData} />
 
         {/* Profile Content */}
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="grid lg:grid-cols-3 gap-8 items-stretch">
           {/* Left Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 flex flex-col gap-6 h-full">
             <ProfileCard
               profile={profile}
               formData={formData}
@@ -401,13 +403,13 @@ const AdminProfile = () => {
 
             <QuickStats profile={profile} />
 
-            <NavigationTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+            {/* <NavigationTabs activeTab={activeTab} setActiveTab={setActiveTab} /> */}
           </div>
 
           {/* Right Content */}
-          <div className="lg:col-span-2">
-            <AnimatePresence mode="wait">
-              {activeTab === "profile" && (
+          <div className="lg:col-span-2 h-full">
+            {/* <AnimatePresence mode="wait">
+              {activeTab === "profile" && ( 
                 <ProfileDetails
                   key="profile"
                   profile={profile}
@@ -422,27 +424,24 @@ const AdminProfile = () => {
               {activeTab === "security" && (
                 <SecuritySettings
                   key="security"
-                  onChangePassword={() => setShowPasswordModal(true)}
+                  onChangePassword={() => navigate("/admin/change-password")}
                 />
               )}
+
               {activeTab === "activity" && <ActivityLog key="activity" />}
               {activeTab === "preferences" && <Preferences key="preferences" />}
-            </AnimatePresence>
+            </AnimatePresence> */}
+            <ProfileDetails
+              profile={profile}
+              formData={formData}
+              editing={editing}
+              saving={saving}
+              handleChange={handleChange}
+              handleUpdate={handleUpdate}
+              setEditing={setEditing}
+            />
           </div>
         </div>
-
-        {/* Password Change Modal */}
-        <AnimatePresence>
-          {showPasswordModal && (
-            <PasswordChangeModal
-              onClose={() => setShowPasswordModal(false)}
-              onSuccess={() => {
-                setShowPasswordModal(false);
-                showNotification("success", "Password changed successfully!");
-              }}
-            />
-          )}
-        </AnimatePresence>
 
         {/* Avatar Upload Modal */}
         <AnimatePresence>
@@ -643,7 +642,7 @@ const HeroHeader = ({ profile, formData }) => (
 /* Profile Card */
 const ProfileCard = ({ profile, formData, editing, onEditAvatar }) => (
   <motion.div
-    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 p-6 mb-6"
+    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 p-6"
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: 0.2 }}
@@ -685,7 +684,7 @@ const ProfileCard = ({ profile, formData, editing, onEditAvatar }) => (
 /* Quick Stats */
 const QuickStats = ({ profile }) => (
   <motion.div
-    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 p-6 mb-6"
+    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 p-6"
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: 0.3 }}
@@ -784,7 +783,7 @@ const ProfileDetails = ({
   setEditing,
 }) => (
   <motion.div
-    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 overflow-hidden"
+    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 overflow-hidden h-full flex flex-col"
     initial={{ opacity: 0, x: 20 }}
     animate={{ opacity: 1, x: 0 }}
     exit={{ opacity: 0, x: -20 }}
@@ -846,7 +845,7 @@ const ProfileDetails = ({
     </div>
 
     {/* Form */}
-    <div className="p-6">
+    <div className="p-6 flex-1 overflow-y-auto">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Name */}
         <FormField
@@ -1356,186 +1355,6 @@ const PreferenceToggle = ({ title, description, defaultChecked }) => (
       />
       <div className="w-14 h-7 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:start-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-blue-500"></div>
     </label>
-  </div>
-);
-
-/* Password Change Modal */
-const PasswordChangeModal = ({ onClose, onSuccess }) => {
-  const [formData, setFormData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false,
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-
-    if (formData.newPassword !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-
-    if (formData.newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      // API call to change password
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulated
-      onSuccess();
-    } catch (err) {
-      setError("Failed to change password");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <motion.div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-    >
-      <motion.div
-        className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden"
-        initial={{ scale: 0.9, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.9, y: 20 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-amber-500 to-orange-600">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white">
-                <FaKey className="text-xl" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white">
-                  Change Password
-                </h3>
-                <p className="text-white/80 text-sm">Update your password</p>
-              </div>
-            </div>
-            <motion.button
-              onClick={onClose}
-              className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <FaTimes />
-            </motion.button>
-          </div>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {error && (
-            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 text-sm">
-              {error}
-            </div>
-          )}
-
-          <PasswordInput
-            label="Current Password"
-            value={formData.currentPassword}
-            onChange={(e) =>
-              setFormData({ ...formData, currentPassword: e.target.value })
-            }
-            show={showPasswords.current}
-            onToggle={() =>
-              setShowPasswords({
-                ...showPasswords,
-                current: !showPasswords.current,
-              })
-            }
-          />
-
-          <PasswordInput
-            label="New Password"
-            value={formData.newPassword}
-            onChange={(e) =>
-              setFormData({ ...formData, newPassword: e.target.value })
-            }
-            show={showPasswords.new}
-            onToggle={() =>
-              setShowPasswords({ ...showPasswords, new: !showPasswords.new })
-            }
-          />
-
-          <PasswordInput
-            label="Confirm New Password"
-            value={formData.confirmPassword}
-            onChange={(e) =>
-              setFormData({ ...formData, confirmPassword: e.target.value })
-            }
-            show={showPasswords.confirm}
-            onToggle={() =>
-              setShowPasswords({
-                ...showPasswords,
-                confirm: !showPasswords.confirm,
-              })
-            }
-          />
-
-          <div className="flex gap-3 pt-4">
-            <motion.button
-              type="submit"
-              disabled={saving}
-              className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white font-bold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
-              whileHover={!saving ? { scale: 1.02 } : {}}
-              whileTap={!saving ? { scale: 0.98 } : {}}
-            >
-              {saving ? (
-                <>
-                  <FaSpinner className="animate-spin" /> Updating...
-                </>
-              ) : (
-                <>
-                  <FaCheck /> Update Password
-                </>
-              )}
-            </motion.button>
-          </div>
-        </form>
-      </motion.div>
-    </motion.div>
-  );
-};
-
-const PasswordInput = ({ label, value, onChange, show, onToggle }) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-      {label}
-    </label>
-    <div className="relative">
-      <input
-        type={show ? "text" : "password"}
-        value={value}
-        onChange={onChange}
-        className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-        required
-      />
-      <button
-        type="button"
-        onClick={onToggle}
-        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-      >
-        {show ? <FaEyeSlash /> : <FaEye />}
-      </button>
-    </div>
   </div>
 );
 

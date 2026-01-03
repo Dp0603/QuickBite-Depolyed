@@ -344,14 +344,14 @@ const AdminChangePassword = () => {
           <FaArrowLeft /> Back to Settings
         </motion.button>
 
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           {/* Hero Header */}
           <HeroHeader />
 
           {/* Main Content */}
-          <div className="grid lg:grid-cols-5 gap-8">
+          <div className="grid lg:grid-cols-3 gap-8">
             {/* Password Form */}
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-2">
               <PasswordForm
                 form={form}
                 showPasswords={showPasswords}
@@ -368,7 +368,7 @@ const AdminChangePassword = () => {
             </div>
 
             {/* Security Tips Sidebar */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-1 grid grid-rows-2 gap-8 h-full">
               <SecurityTips />
               <PasswordRequirements passwordStrength={passwordStrength} />
             </div>
@@ -480,7 +480,7 @@ const PasswordForm = ({
   handleSubmit,
 }) => (
   <motion.div
-    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 overflow-hidden"
+    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 overflow-hidden h-full"
     initial={{ opacity: 0, x: -20 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: 0.2 }}
@@ -748,7 +748,7 @@ const StrengthCheck = ({ passed, label }) => (
 /* Security Tips */
 const SecurityTips = () => (
   <motion.div
-    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 overflow-hidden mb-6"
+    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 overflow-hidden mb-6 h-full"
     initial={{ opacity: 0, x: 20 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: 0.3 }}
@@ -804,7 +804,7 @@ const TipItem = ({ icon, text, color }) => {
       >
         {icon}
       </div>
-      <p className="text-sm text-gray-600 dark:text-gray-400">{text}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400 text-nowrap">{text}</p>
     </div>
   );
 };
@@ -812,7 +812,7 @@ const TipItem = ({ icon, text, color }) => {
 /* Password Requirements */
 const PasswordRequirements = ({ passwordStrength }) => (
   <motion.div
-    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 overflow-hidden"
+    className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-200 dark:border-white/10 overflow-hidden h-full"
     initial={{ opacity: 0, x: 20 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay: 0.4 }}
@@ -871,7 +871,7 @@ const RequirementItem = ({ passed, text, optional }) => (
     >
       {passed ? <FaCheck className="text-xs" /> : null}
     </div>
-    <span>
+    <span className="text-nowrap">
       {text}
       {optional && (
         <span className="ml-1 text-xs text-gray-400">(optional)</span>

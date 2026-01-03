@@ -240,7 +240,6 @@ const AdminSettings = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const [notification, setNotification] = useState(null);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -353,9 +352,10 @@ const AdminSettings = () => {
               {activeTab === "security" && (
                 <SecuritySettings
                   key="security"
-                  onChangePassword={() => setShowPasswordModal(true)}
+                  onChangePassword={() => navigate("/admin/change-password")}
                 />
               )}
+
               {activeTab === "system" && (
                 <SystemSettings
                   key="system"
@@ -399,19 +399,6 @@ const AdminSettings = () => {
             </motion.div>
           </div>
         </div>
-
-        {/* Password Change Modal */}
-        <AnimatePresence>
-          {showPasswordModal && (
-            <PasswordChangeModal
-              onClose={() => setShowPasswordModal(false)}
-              onSuccess={() => {
-                setShowPasswordModal(false);
-                showNotification("success", "Password changed successfully!");
-              }}
-            />
-          )}
-        </AnimatePresence>
 
         {/* Backup Modal */}
         <AnimatePresence>
@@ -497,7 +484,10 @@ const NotificationToast = ({ type, message, onClose }) => (
       >
         {message}
       </p>
-      <button onClick={onClose} className="ml-2 text-gray-400 hover:text-gray-600">
+      <button
+        onClick={onClose}
+        className="ml-2 text-gray-400 hover:text-gray-600"
+      >
         <FaTimes />
       </button>
     </div>
@@ -539,7 +529,9 @@ const HeroHeader = ({ onSave, saving }) => (
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
               <FaCog className="text-white" />
             </div>
-            <span className="text-white/90 font-semibold">System Configuration</span>
+            <span className="text-white/90 font-semibold">
+              System Configuration
+            </span>
           </div>
 
           <h1 className="text-3xl md:text-4xl font-black text-white drop-shadow-lg mb-2">
@@ -585,10 +577,25 @@ const SettingsNav = ({ activeTab, setActiveTab }) => {
   const tabs = [
     { id: "general", label: "General", icon: <FaGlobe />, color: "blue" },
     { id: "business", label: "Business", icon: <FaStore />, color: "orange" },
-    { id: "notifications", label: "Notifications", icon: <FaBell />, color: "purple" },
-    { id: "security", label: "Security", icon: <FaShieldAlt />, color: "emerald" },
+    {
+      id: "notifications",
+      label: "Notifications",
+      icon: <FaBell />,
+      color: "purple",
+    },
+    {
+      id: "security",
+      label: "Security",
+      icon: <FaShieldAlt />,
+      color: "emerald",
+    },
     { id: "system", label: "System", icon: <FaServer />, color: "cyan" },
-    { id: "danger", label: "Danger Zone", icon: <FaExclamationTriangle />, color: "red" },
+    {
+      id: "danger",
+      label: "Danger Zone",
+      icon: <FaExclamationTriangle />,
+      color: "red",
+    },
   ];
 
   return (
@@ -1184,7 +1191,14 @@ const DangerZone = ({ onDeleteData }) => (
 );
 
 /* Reusable Components */
-const SettingsSection = ({ icon, title, description, gradient, children, danger }) => (
+const SettingsSection = ({
+  icon,
+  title,
+  description,
+  gradient,
+  children,
+  danger,
+}) => (
   <motion.div
     className={`bg-white dark:bg-slate-900 rounded-2xl shadow-lg border overflow-hidden ${
       danger
@@ -1194,16 +1208,36 @@ const SettingsSection = ({ icon, title, description, gradient, children, danger 
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
   >
-    <div className={`p-6 border-b ${danger ? "border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-900/10" : "border-gray-200 dark:border-white/10"}`}>
+    <div
+      className={`p-6 border-b ${
+        danger
+          ? "border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-900/10"
+          : "border-gray-200 dark:border-white/10"
+      }`}
+    >
       <div className="flex items-center gap-3">
-        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg`}>
+        <div
+          className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-lg`}
+        >
           <span className="text-white">{icon}</span>
         </div>
         <div>
-          <h3 className={`text-xl font-bold ${danger ? "text-red-700 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>
+          <h3
+            className={`text-xl font-bold ${
+              danger
+                ? "text-red-700 dark:text-red-400"
+                : "text-gray-900 dark:text-white"
+            }`}
+          >
             {title}
           </h3>
-          <p className={`text-sm ${danger ? "text-red-600 dark:text-red-400/80" : "text-gray-500 dark:text-gray-400"}`}>
+          <p
+            className={`text-sm ${
+              danger
+                ? "text-red-600 dark:text-red-400/80"
+                : "text-gray-500 dark:text-gray-400"
+            }`}
+          >
             {description}
           </p>
         </div>
@@ -1213,7 +1247,15 @@ const SettingsSection = ({ icon, title, description, gradient, children, danger 
   </motion.div>
 );
 
-const FormInput = ({ label, icon, name, value, onChange, placeholder, type = "text" }) => (
+const FormInput = ({
+  label,
+  icon,
+  name,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+}) => (
   <div>
     <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
       <span className="text-orange-500">{icon}</span> {label}
@@ -1264,7 +1306,14 @@ const ToggleSwitch = ({ checked, onChange }) => (
   </button>
 );
 
-const NotificationToggle = ({ icon, title, description, checked, onChange, color }) => {
+const NotificationToggle = ({
+  icon,
+  title,
+  description,
+  checked,
+  onChange,
+  color,
+}) => {
   const colors = {
     blue: "from-blue-500 to-cyan-600",
     purple: "from-purple-500 to-indigo-600",
@@ -1276,12 +1325,16 @@ const NotificationToggle = ({ icon, title, description, checked, onChange, color
   return (
     <div className="flex items-center justify-between p-5 rounded-xl bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-white/10">
       <div className="flex items-center gap-4">
-        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors[color]} flex items-center justify-center text-white shadow-md`}>
+        <div
+          className={`w-12 h-12 rounded-xl bg-gradient-to-br ${colors[color]} flex items-center justify-center text-white shadow-md`}
+        >
           {icon}
         </div>
         <div>
           <p className="font-bold text-gray-900 dark:text-white">{title}</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {description}
+          </p>
         </div>
       </div>
       <ToggleSwitch checked={checked} onChange={onChange} />
@@ -1351,7 +1404,9 @@ const PasswordChangeModal = ({ onClose, onSuccess }) => {
                 <FaKey className="text-xl" />
               </div>
               <div>
-                <h3 className="text-xl font-bold text-white">Change Password</h3>
+                <h3 className="text-xl font-bold text-white">
+                  Change Password
+                </h3>
                 <p className="text-white/80 text-sm">Update your password</p>
               </div>
             </div>
@@ -1373,45 +1428,51 @@ const PasswordChangeModal = ({ onClose, onSuccess }) => {
             </div>
           )}
 
-          {["currentPassword", "newPassword", "confirmPassword"].map((field) => (
-            <div key={field}>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                {field === "currentPassword"
-                  ? "Current Password"
-                  : field === "newPassword"
-                  ? "New Password"
-                  : "Confirm New Password"}
-              </label>
-              <div className="relative">
-                <input
-                  type={showPasswords[field.replace("Password", "")] ? "text" : "password"}
-                  value={formData[field]}
-                  onChange={(e) =>
-                    setFormData({ ...formData, [field]: e.target.value })
-                  }
-                  className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowPasswords({
-                      ...showPasswords,
-                      [field.replace("Password", "")]:
-                        !showPasswords[field.replace("Password", "")],
-                    })
-                  }
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPasswords[field.replace("Password", "")] ? (
-                    <FaEyeSlash />
-                  ) : (
-                    <FaEye />
-                  )}
-                </button>
+          {["currentPassword", "newPassword", "confirmPassword"].map(
+            (field) => (
+              <div key={field}>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {field === "currentPassword"
+                    ? "Current Password"
+                    : field === "newPassword"
+                    ? "New Password"
+                    : "Confirm New Password"}
+                </label>
+                <div className="relative">
+                  <input
+                    type={
+                      showPasswords[field.replace("Password", "")]
+                        ? "text"
+                        : "password"
+                    }
+                    value={formData[field]}
+                    onChange={(e) =>
+                      setFormData({ ...formData, [field]: e.target.value })
+                    }
+                    className="w-full px-4 py-3 pr-12 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPasswords({
+                        ...showPasswords,
+                        [field.replace("Password", "")]:
+                          !showPasswords[field.replace("Password", "")],
+                      })
+                    }
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPasswords[field.replace("Password", "")] ? (
+                      <FaEyeSlash />
+                    ) : (
+                      <FaEye />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
 
           <motion.button
             type="submit"
@@ -1469,7 +1530,9 @@ const BackupModal = ({ onClose, onSuccess }) => {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">Create Backup</h3>
-                <p className="text-white/80 text-sm">Download database backup</p>
+                <p className="text-white/80 text-sm">
+                  Download database backup
+                </p>
               </div>
             </div>
             <motion.button
@@ -1572,7 +1635,9 @@ const DeleteConfirmModal = ({ onClose, onConfirm }) => {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white">Delete Data</h3>
-                <p className="text-white/80 text-sm">This action is irreversible</p>
+                <p className="text-white/80 text-sm">
+                  This action is irreversible
+                </p>
               </div>
             </div>
             <motion.button
@@ -1625,8 +1690,12 @@ const DeleteConfirmModal = ({ onClose, onConfirm }) => {
               onClick={handleDelete}
               disabled={confirmText !== "DELETE" || deleting}
               className="flex-1 flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-red-500 text-white font-bold shadow-lg hover:bg-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              whileHover={confirmText === "DELETE" && !deleting ? { scale: 1.02 } : {}}
-              whileTap={confirmText === "DELETE" && !deleting ? { scale: 0.98 } : {}}
+              whileHover={
+                confirmText === "DELETE" && !deleting ? { scale: 1.02 } : {}
+              }
+              whileTap={
+                confirmText === "DELETE" && !deleting ? { scale: 0.98 } : {}
+              }
             >
               {deleting ? (
                 <>
