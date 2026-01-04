@@ -24,12 +24,12 @@ import {
   FaSortAmountUp,
   FaDownload,
 } from "react-icons/fa";
+import AdminAddUserDrawer from "./AdminAddUserDrawer";
 import { motion, AnimatePresence } from "framer-motion";
 
 /* -------------------------------------------------------------- */
 /* UTILITIES                                                       */
 /* -------------------------------------------------------------- */
-
 const useCountUp = (to = 0, duration = 0.8) => {
   const [val, setVal] = useState(0);
   useEffect(() => {
@@ -103,6 +103,10 @@ const AdminUsers = () => {
   const [sortOrder, setSortOrder] = useState("asc");
   const [selectedUser, setSelectedUser] = useState(null);
   const [showActionMenu, setShowActionMenu] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState("add"); // add | view | edit
+  const [drawerUser, setDrawerUser] = useState(null);
+  const [deleteUser, setDeleteUser] = useState(null);
 
   const USERS_PER_PAGE = 10;
 
@@ -177,6 +181,23 @@ const AdminUsers = () => {
   const handleExport = () => {
     window.open("/api/admin/export/users-xlsx", "_blank");
   };
+  const handleDeleteUser = async () => {
+    if (!deleteUser) return;
+
+    try {
+      await axios.delete(`/api/admin/delete/user/${deleteUser._id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      setDeleteUser(null);
+      fetchUsers();
+    } catch (err) {
+      console.error("Failed to delete user:", err);
+      alert("Failed to delete user");
+    }
+  };
 
   // Stats
   const stats = useMemo(() => {
@@ -232,6 +253,53 @@ const AdminUsers = () => {
       setSortOrder("asc");
     }
   };
+  const DeleteUserModal = ({ user, onClose, onConfirm }) => {
+    if (!user) return null;
+
+    return (
+      <AnimatePresence>
+        <motion.div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          <motion.div
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-md p-6"
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 20 }}
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Delete User
+            </h3>
+
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to delete{" "}
+              <span className="font-bold text-red-600">{user.name}</span>? This
+              action cannot be undone.
+            </p>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-50 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={onConfirm}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg"
+              >
+                Delete
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/30 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -246,6 +314,11 @@ const AdminUsers = () => {
           totalUsers={stats.total}
           activeUsers={stats.active}
           onExport={handleExport}
+          onAddUser={() => {
+            setDrawerMode("add");
+            setDrawerUser(null);
+            setDrawerOpen(true);
+          }}
         />
 
         {/* Stats Cards */}
@@ -316,6 +389,17 @@ const AdminUsers = () => {
           onSort={toggleSort}
           showActionMenu={showActionMenu}
           setShowActionMenu={setShowActionMenu}
+          onView={(user) => {
+            setDrawerMode("view");
+            setDrawerUser(user);
+            setDrawerOpen(true);
+          }}
+          onEdit={(user) => {
+            setDrawerMode("edit");
+            setDrawerUser(user);
+            setDrawerOpen(true);
+          }}
+          onDelete={setDeleteUser}
         />
 
         {/* Pagination */}
@@ -326,7 +410,22 @@ const AdminUsers = () => {
           itemsPerPage={USERS_PER_PAGE}
           onPageChange={setCurrentPage}
         />
+        <AdminAddUserDrawer
+          open={drawerOpen}
+          mode={drawerMode}
+          user={drawerUser}
+          onClose={() => {
+            setDrawerOpen(false);
+            setDrawerUser(null);
+          }}
+          onSuccess={fetchUsers}
+        />
       </motion.div>
+      <DeleteUserModal
+        user={deleteUser}
+        onClose={() => setDeleteUser(null)}
+        onConfirm={handleDeleteUser}
+      />
     </div>
   );
 };
@@ -336,7 +435,7 @@ const AdminUsers = () => {
 /* -------------------------------------------------------------- */
 
 /* Hero Header */
-const HeroHeader = ({ totalUsers, activeUsers, onExport }) => (
+const HeroHeader = ({ totalUsers, activeUsers, onExport, onAddUser }) => (
   <motion.div
     className="relative overflow-hidden rounded-3xl shadow-2xl mb-8 border border-blue-200 dark:border-white/10"
     initial={{ opacity: 0, y: -20 }}
@@ -383,6 +482,7 @@ const HeroHeader = ({ totalUsers, activeUsers, onExport }) => (
             <FaDownload /> Export Users
           </motion.button>
           <motion.button
+            onClick={onAddUser}
             className="flex items-center gap-2 px-5 py-3 bg-white/20 backdrop-blur-xl text-white font-bold rounded-xl border border-white/30 hover:bg-white/30 transition-all"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -507,6 +607,9 @@ const UsersTable = ({
   onSort,
   showActionMenu,
   setShowActionMenu,
+  onView,
+  onEdit,
+  onDelete,
 }) => {
   const actionMenuRef = useRef(null);
   useEffect(() => {
@@ -771,21 +874,31 @@ const UsersTable = ({
                                 exit={{ opacity: 0, y: -10 }}
                               >
                                 <button
-                                  onClick={() => setShowActionMenu(null)}
+                                  onClick={() => {
+                                    setShowActionMenu(null);
+                                    onView(user);
+                                  }}
                                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
                                 >
                                   <FaEye className="text-blue-500" /> View
                                   Details
                                 </button>
+
                                 <button
-                                  onClick={() => setShowActionMenu(null)}
+                                  onClick={() => {
+                                    setShowActionMenu(null);
+                                    onEdit(user);
+                                  }}
                                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-3 text-gray-700 dark:text-gray-300"
                                 >
                                   <FaEdit className="text-amber-500" /> Edit
                                   User
                                 </button>
                                 <button
-                                  onClick={() => setShowActionMenu(null)}
+                                  onClick={() => {
+                                    setShowActionMenu(null);
+                                    onDelete(user);
+                                  }}
                                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center gap-3 text-red-600"
                                 >
                                   <FaTrash className="text-red-500" /> Delete

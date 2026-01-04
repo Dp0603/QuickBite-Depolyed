@@ -7,6 +7,7 @@ const {
   getAllOrders,
   getDashboardStats,
   updateUserRole,
+  updateUser,
   toggleUserStatus,
   deleteEntity,
   getAnalyticsSummary,
@@ -43,6 +44,9 @@ router.get("/dashboard-stats", getDashboardStats);
 
 // 🔄 Update user role
 router.put("/users/role/:userId", updateUserRole);
+
+// ✏️ Update user details
+router.put("/users/:id", updateUser);
 
 // 🚫 Block/unblock user
 router.patch("/users/status/:userId", toggleUserStatus);

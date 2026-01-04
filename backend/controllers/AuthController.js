@@ -59,6 +59,10 @@ const register = async (req, res) => {
     console.log("✅ Email sent successfully!");
     res.status(201).json({
       message: "Registered successfully. Check your email to verify account.",
+      user: {
+    _id: user._id,
+    email: user.email,
+      },
     });
   } catch (error) {
     console.error("❌ Error in register controller:", error.message);
