@@ -305,9 +305,13 @@ const PremiumDeleteModal = ({ user, onClose, onConfirm }) => {
   );
 };
 
-const PremiumDotsButton = ({ onClick, isActive }) => (
+const PremiumDotsButton = ({ onClick, isActive, ariaLabel }) => (
   <motion.button
     onClick={onClick}
+    aria-label={ariaLabel}
+    aria-haspopup="menu"
+    aria-expanded={isActive}
+    title="User actions"
     className={`relative p-2 rounded-lg transition-all duration-200 ${
       isActive
         ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
@@ -650,6 +654,9 @@ const AdminUsers = () => {
             setDrawerOpen(true);
           }}
           onDelete={setDeleteUser}
+          setSearchTerm={setSearchTerm}
+          setRoleFilter={setRoleFilter}
+          setStatusFilter={setStatusFilter}
         />
 
         <Pagination
@@ -845,6 +852,9 @@ const UsersTable = ({
   onView,
   onEdit,
   onDelete,
+  setSearchTerm,
+  setRoleFilter,
+  setStatusFilter,
 }) => {
   const actionMenuRef = useRef(null);
 
@@ -916,11 +926,23 @@ const UsersTable = ({
           <FaUsers className="text-3xl text-slate-400" />
         </div>
         <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
-          No Users Found
+          No users match your filters
         </h3>
-        <p className="text-slate-500">
-          Try adjusting your filters or search terms.
+
+        <p className="text-slate-500 mb-4">
+          Try clearing filters or searching for a different role.
         </p>
+
+        <button
+          onClick={() => {
+            setSearchTerm("");
+            setRoleFilter("");
+            setStatusFilter("");
+          }}
+          className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+        >
+          Reset Filters
+        </button>
       </div>
     );
   }
@@ -958,7 +980,7 @@ const UsersTable = ({
                   transition={{ delay: index * 0.03 }}
                   className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <div className="flex items-center gap-4">
                       <div className="relative">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
@@ -982,28 +1004,36 @@ const UsersTable = ({
                     </div>
                   </td>
 
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-sm font-medium">
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
+                    <div className="hidden md:flex items-center gap-2 text-slate-600 dark:text-slate-400 text-sm font-medium">
                       <FaEnvelope className="text-slate-400 text-xs" />
+                      {user.email}
+                    </div>
+
+                    {/* Mobile / compact view */}
+                    <div className="md:hidden text-xs text-slate-500 dark:text-slate-400 truncate">
                       {user.email}
                     </div>
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <PremiumRoleMenu
                       currentRole={user.role}
                       onChange={(r) => onRoleChange(user._id, r)}
                     />
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
                     <StatusBadge isActive={user.isActive} />
                   </td>
 
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-end gap-3">
+                  <td className="px-4 lg:px-6 py-3 lg:py-4">
+                    <div className="flex items-center justify-end gap-3 opacity-60 hover:opacity-100 transition-opacity">
                       {/* Subtler Toggle Button */}
                       <button
+                        aria-label={
+                          user.isActive ? "Block user" : "Unblock user"
+                        }
                         onClick={() => onToggleStatus(user._id)}
                         className={`p-2 rounded-lg transition-colors ${
                           user.isActive
@@ -1023,6 +1053,7 @@ const UsersTable = ({
                             )
                           }
                           isActive={showActionMenu === user._id}
+                          ariaLabel="User actions"
                         />
                         <PremiumActionMenu
                           user={user}
@@ -1077,6 +1108,7 @@ const Pagination = ({
 
       <div className="flex items-center gap-2">
         <button
+          aria-label="Previous page"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
           className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
@@ -1115,6 +1147,7 @@ const Pagination = ({
         </div>
 
         <button
+          aria-label="Next page"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
           className="p-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-white dark:hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
