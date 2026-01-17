@@ -12,6 +12,28 @@ import {
   FaStore,
   FaUserCircle,
 } from "react-icons/fa";
+import API from "../../api/axios";
+
+const ROLE_STYLES = {
+  customer: {
+    container: "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20",
+    icon: "bg-blue-500 text-white shadow-lg",
+    text: "text-blue-600 dark:text-blue-400",
+    check: "text-blue-500",
+  },
+  restaurant: {
+    container: "border-orange-500 bg-orange-50/50 dark:bg-orange-900/20",
+    icon: "bg-orange-500 text-white shadow-lg",
+    text: "text-orange-600 dark:text-orange-400",
+    check: "text-orange-500",
+  },
+  admin: {
+    container: "border-purple-500 bg-purple-50/50 dark:bg-purple-900/20",
+    icon: "bg-purple-500 text-white shadow-lg",
+    text: "text-purple-600 dark:text-purple-400",
+    check: "text-purple-500",
+  },
+};
 
 const AdminAddUserDrawer = ({ open, mode, user, onClose, onSuccess }) => {
   const [form, setForm] = useState({
@@ -48,49 +70,35 @@ const AdminAddUserDrawer = ({ open, mode, user, onClose, onSuccess }) => {
       setLoading(true);
       setError("");
 
-      const endpoint =
-        mode === "add" ? "/api/auth/register" : `/api/admin/users/${user._id}`;
-      const method = mode === "add" ? "POST" : "PUT";
-
-      const res = await fetch(endpoint, {
-        method,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(
-          mode === "add"
-            ? form
-            : {
-                name: form.name,
-                role: form.role,
-                ...(form.password && { password: form.password }),
-              }
-        ),
-      });
-
-      if (!res.ok) throw new Error("Operation failed");
-
-      // Handle dual-call for new user role if needed
+      // ADD USER
       if (mode === "add") {
-        const data = await res.json();
-        const userId = data?.user?._id;
+        const res = await API.post("/auth/register", form);
+
+        const userId = res.data?.user?._id;
+
+        // Update role if not customer
         if (userId && form.role !== "customer") {
-          await fetch(`/api/admin/users/role/${userId}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify({ role: form.role }),
+          await API.put(`/admin/users/role/${userId}`, {
+            role: form.role,
           });
         }
+      }
+
+      // EDIT USER
+      if (mode === "edit") {
+        await API.put(`/admin/users/${user._id}`, {
+          name: form.name,
+          role: form.role,
+          ...(form.password && { password: form.password }),
+        });
       }
 
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err.message || "Something went wrong");
+      setError(
+        err.response?.data?.message || err.message || "Something went wrong"
+      );
     } finally {
       setLoading(false);
     }
@@ -276,20 +284,20 @@ const AdminAddUserDrawer = ({ open, mode, user, onClose, onSuccess }) => {
                         key={role.id}
                         disabled={mode === "view"}
                         onClick={() => setForm({ ...form, role: role.id })}
-                        className={`relative flex items-center p-4 rounded-2xl border-2 transition-all duration-200 group
-                          ${
-                            form.role === role.id
-                              ? `border-${role.color}-500 bg-${role.color}-50/50 dark:bg-${role.color}-900/20`
-                              : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
-                          }`}
+                        className={`relative flex items-center p-4 rounded-2xl border-2 transition-all duration-200
+  ${
+    form.role === role.id
+      ? ROLE_STYLES[role.id].container
+      : "border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700"
+  }`}
                       >
                         <div
                           className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors
-                          ${
-                            form.role === role.id
-                              ? `bg-${role.color}-500 text-white shadow-lg`
-                              : "bg-slate-100 dark:bg-slate-800 text-slate-400"
-                          }`}
+  ${
+    form.role === role.id
+      ? ROLE_STYLES[role.id].icon
+      : "bg-slate-100 dark:bg-slate-800 text-slate-400"
+  }`}
                         >
                           <role.icon size={20} />
                         </div>
@@ -297,7 +305,7 @@ const AdminAddUserDrawer = ({ open, mode, user, onClose, onSuccess }) => {
                           <p
                             className={`font-bold text-sm ${
                               form.role === role.id
-                                ? `text-${role.color}-600 dark:text-${role.color}-400`
+                                ? ROLE_STYLES[role.id].text
                                 : "text-slate-700 dark:text-slate-300"
                             }`}
                           >
@@ -310,7 +318,9 @@ const AdminAddUserDrawer = ({ open, mode, user, onClose, onSuccess }) => {
                         {form.role === role.id && (
                           <motion.div
                             layoutId="activeCheck"
-                            className={`absolute right-4 text-${role.color}-500`}
+                            className={`absolute right-4 ${
+                              ROLE_STYLES[role.id].check
+                            }`}
                           >
                             <FaCheckCircle size={20} />
                           </motion.div>

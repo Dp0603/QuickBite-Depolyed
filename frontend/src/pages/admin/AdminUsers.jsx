@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from "react";
-import axios from "axios";
+import API from "../../api/axios";
 import {
   FaBan,
   FaCheckCircle,
@@ -74,6 +74,11 @@ const sortUsers = (users, sortBy, sortOrder) => {
     } else {
       aVal = aVal?.toString().toLowerCase() || "";
       bVal = bVal?.toString().toLowerCase() || "";
+    }
+
+    // ✅ STABLE SORT FALLBACK (ADD THIS)
+    if (aVal === bVal) {
+      return a._id.localeCompare(b._id);
     }
 
     if (sortOrder === "asc") return aVal > bVal ? 1 : -1;
@@ -441,9 +446,8 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("/api/admin/users", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      const res = await API.get("/admin/users");
+
       setUsers(res.data.data || []);
     } catch (err) {
       console.error("Failed to fetch users:", err);
@@ -462,13 +466,7 @@ const AdminUsers = () => {
 
   const handleToggleStatus = async (id) => {
     try {
-      await axios.patch(
-        `/api/admin/users/status/${id}`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+      await API.patch(`/admin/users/status/${id}`);
       setUsers((prev) =>
         prev.map((u) => (u._id === id ? { ...u, isActive: !u.isActive } : u))
       );
@@ -479,13 +477,7 @@ const AdminUsers = () => {
 
   const handleRoleChange = async (id, newRole) => {
     try {
-      await axios.put(
-        `/api/admin/users/role/${id}`,
-        { role: newRole },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+      await API.put(`/admin/users/role/${id}`, { role: newRole });
       setUsers((prev) =>
         prev.map((u) => (u._id === id ? { ...u, role: newRole } : u))
       );
@@ -501,9 +493,8 @@ const AdminUsers = () => {
   const handleDeleteUser = async () => {
     if (!deleteUser) return;
     try {
-      await axios.delete(`/api/admin/delete/user/${deleteUser._id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
+      await API.delete(`/admin/delete/user/${deleteUser._id}`);
+
       setDeleteUser(null);
       fetchUsers();
     } catch (err) {
